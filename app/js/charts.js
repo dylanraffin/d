@@ -23,7 +23,13 @@
   const RO = window.ResizeObserver ? new ResizeObserver(es => {
     for (const e of es) { const h = e.target, w = Math.round(e.contentRect.width); if (h._draw && h._w && Math.abs(h._w - w) > 4) { h._w = w; h._draw(); } }
   }) : null;
-  function mount(host, draw) { host._draw = draw; draw(); host._w = Math.round(host.clientWidth); if (RO && !host._obs) { RO.observe(host); host._obs = true; } }
+  const OBS = new Set();
+  function mount(host, draw) {
+    host._draw = draw; draw(); host._w = Math.round(host.clientWidth);
+    if (!RO) return;
+    for (const h of OBS) if (!h.isConnected) { RO.unobserve(h); OBS.delete(h); }
+    if (!OBS.has(host)) { RO.observe(host); OBS.add(host); }
+  }
 
   /* Infobulle : valeur en gras, libellé en second ; clé en trait (courbes) ou en point (barres) */
   function tipEl(host) {
