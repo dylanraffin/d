@@ -42,7 +42,7 @@
     const idx = [];
     for (let r = 0; r < R - 1; r++) for (let s = 0; s < SEG; s++) {
       const a = r * SEG + s, b = r * SEG + (s + 1) % SEG, c = a + SEG, d = b + SEG;
-      idx.push(a, d, b, a, c, d);
+      idx.push(a, b, d, a, d, c);   // sens direct vu de l'extérieur : normales sortantes
     }
     g.setIndex(idx);
     return g;
@@ -88,7 +88,7 @@
       biceps: band(t, .24, .92, .1) * ss(-.05, .55, c), triceps: band(t, .16, .92, .1) * ss(-.05, .55, -c) }),
     fore: t => ({ forearms: band(t, -.05, .72, .1) }),
     torso: (s, sn, cs) => ({ pecs: band(s, .33, .5, .035) * ss(.28, .7, sn), abs: band(s, .02, .32, .045) * ss(.5, .82, sn) * (1 - ss(.55, .82, Math.abs(cs))),
-      lats: band(s, .17, .46, .06) * ss(-.15, .3, .25 - sn) * ss(.3, .75, Math.abs(cs)), traps: band(s, .42, .63, .04) * ss(-.25, .45, -sn),
+      lats: band(s, .12, .45, .06) * ss(-.1, .45, .25 * Math.abs(cs) - sn), traps: band(s, .42, .63, .04) * ss(-.25, .45, -sn),
       lowback: band(s, -.02, .25, .05) * ss(.45, .85, -sn) * (1 - ss(.5, .85, Math.abs(cs))), glutes: band(s, -.13, .06, .04) * ss(.15, .65, -sn) })
   };
   const GLOW_HOOK = sh => {
@@ -150,13 +150,12 @@
       if (!ghost) this.painted.push(paintable(tg, i => { const r = Math.floor(i / SEG), th = (i % SEG) / SEG * Math.PI * 2; return PAINT.torso(TORSO[r][0], Math.sin(th), Math.cos(th)); }));
       this.lo = frame(); this.up = frame(); this.hd = frame();
       for (const s of [-1, 1]) {
-        muscle(this.lo, 'glutes', s * .068, -.035, -.07, .066, .08, .044);
-        muscle(this.up, 'lats', s * .15, -.16, -.03, .036, .11, .06);
+        muscle(this.lo, 'glutes', s * .066, -.035, -.068, .064, .076, .038);
       }
       muscle(this.up, 'traps', 0, .01, -.05, .1, .06, .032);
       const anchorOnly = (parent, id, x, y, z) => { const o = new T.Object3D(); o.position.set(x, y, z); parent.add(o); (this.anchors[id] = this.anchors[id] || []).push(o); return o; };
       anchorOnly(this.lo, 'abs', 0, .17, .1); anchorOnly(this.up, 'abs', 0, -.27, .11);
-      for (const s of [-1, 1]) { anchorOnly(this.lo, 'lowback', s * .045, .14, -.1); anchorOnly(this.up, 'pecs', s * .085, -.1, .13); }
+      for (const s of [-1, 1]) { anchorOnly(this.lo, 'lowback', s * .045, .14, -.1); anchorOnly(this.up, 'pecs', s * .085, -.1, .13); anchorOnly(this.up, 'lats', s * .17, -.17, -.04); }
 
       const skull = mk(GEO.sph, skin, this.hd); skull.position.set(0, .01, -.005); skull.scale.set(.092, .105, .1);
       const jaw = mk(GEO.sph, skin, this.hd); jaw.position.set(0, -.05, .022); jaw.scale.set(.062, .058, .07);
