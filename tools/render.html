@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Page de rendu hors ligne (planches et vidéos de démo), pilotée par tools/render.mjs -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Big+Shoulders+Display:wght@600;700;800&display=swap">
+<style>
+body{margin:0;background:#15191a;color:#cfd6d2;font:12px system-ui,sans-serif}
+.row{display:flex;gap:6px;align-items:center;margin:6px}
+.row span{width:96px}
+.row canvas{width:240px;height:192px;display:block;border-radius:10px;background:radial-gradient(120% 95% at 50% 60%,#252c2a 0%,#141918 52%,#0b0e0d 100%)}
+.v{position:relative;width:800px;height:640px}.v canvas{position:absolute;inset:0;width:100%;height:100%}
+</style></head>
+<body><div id="out"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../app/js/core.js"></script>
+<script src="../app/js/anim.js"></script>
+<script src="../app/js/player.js"></script>
+<script src="../app/js/moves.js"></script>
+<script src="../app/js/moves-upper.js"></script>
+<script src="../app/js/moves-arms.js"></script>
+<script src="../app/js/anim3d-core.js"></script>
+<script src="../app/js/anim3d-studio.js"></script>
+<script src="../app/js/anim3d-player.js"></script>
+<script>
+/* Planche : chaque mouvement à plusieurs instants */
+function sheet(ids, us) {
+  const out = document.getElementById('out'), list = ids.length ? ids.map(i => GYM.moveById[i]) : GYM.moves;
+  for (const ex of list) {
+    const row = document.createElement('div'); row.className = 'row'; row.innerHTML = '<span>' + ex.id + '</span>'; out.appendChild(row);
+    for (const u of us) { const c = document.createElement('canvas'); row.appendChild(c); GYM.anim3d.still(c, ex, u); }
+  }
+}
+/* Vidéo : rendu image par image (30 i/s réguliers), intro + répétitions + points clés */
+async function clip(id, start, loops, fps) {
+  for (const f of ['800 40px "Big Shoulders Display"', '700 40px "Big Shoulders Display"', '700 14px Barlow', '600 14px Barlow', '500 14px Barlow']) { try { await document.fonts.load(f); } catch (e) { /* repli */ } }
+  const ex = GYM.moveById[id], out = document.getElementById('out');
+  out.innerHTML = '<div class="v"><canvas id="c"></canvas><canvas id="o"></canvas></div>';
+  const c = document.getElementById('c'), o = document.getElementById('o');
+  const pl = new GYM.anim3d.Player3D(c, ex, { overlay: o, autoplay: false });
+  pl.io && pl.io.disconnect(); pl.ro && pl.ro.disconnect(); cancelAnimationFrame(pl._raf); pl._raf = 0; pl.visible = false;
+  pl.born = performance.now() - 1e4; pl.auto = true; pl.guides = true;
+  const c0 = { t0: 0, intro: 1.7, body: pl.tl.total * loops, outro: 3 }; pl.clip = c0;
+  const W = c.width, H = c.height, rc = document.createElement('canvas'); rc.width = W; rc.height = H; const rx = rc.getContext('2d');
+  const bg = rx.createRadialGradient(W / 2, H * .6, 10, W / 2, H * .6, Math.max(W, H) * .8); bg.addColorStop(0, '#252c2a'); bg.addColorStop(.52, '#141918'); bg.addColorStop(1, '#0b0e0d');
+  const n = Math.round((c0.intro + c0.body + c0.outro) * fps);
+  for (let i = 0; i < n; i++) {
+    pl.clock = pl.time = i / fps; pl.draw();
+    rx.fillStyle = bg; rx.fillRect(0, 0, W, H); rx.drawImage(c, 0, 0, W, H); rx.drawImage(o, 0, 0, W, H);
+    await window.saveFrame(start + i, rc.toDataURL('image/jpeg', .9));
+  }
+  pl.destroy(); return n;
+}
+</script></body></html>

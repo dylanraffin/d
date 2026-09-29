@@ -154,5 +154,5 @@
     drawFrame(canvas.getContext('2d'), canvas.width, canvas.height, ex, cam, V, { u, act: .8, frac: 0 }, {});
   }
 
-  G.Player = Player; G.animStill = still; G.animTimeline = timeline;
+  G.Player = Player; G.animStill = still; G.animTimeline = timeline; G.animAt = at;
 })(window.GYM = window.GYM || {});

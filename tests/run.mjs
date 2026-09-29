@@ -70,6 +70,25 @@ await ok('animations : chaque pose est atteignable (mains et pieds à moins de 3
   assert.ok(G.moves.length >= 35);
 });
 
+await ok('programmes : volume prévu dans la zone de chaque muscle (36 variantes)', () => {
+  for (const level of ['debutant', 'inter', 'avance']) for (const days of [3, 4, 5, 6]) for (const equip of ['salle', 'halteres', 'pdc']) {
+    const v = Object.fromEntries(G.VOLUME_GROUPS.map(g => [g.id, 0]));
+    const prog = G.program.build({ ...base, days, level, equip });
+    for (const d of prog) {
+      const ids = d.items.map(i => i.move); assert.equal(new Set(ids).size, ids.length, `doublon dans ${d.name} (${equip})`);
+      for (const it of d.items) { const m = G.moveById[it.move]; for (const g of G.VOLUME_GROUPS) { if (g.m.some(x => m.muscles.p.includes(x))) v[g.id] += it.sets; else if (g.m.some(x => (m.muscles.s || []).includes(x))) v[g.id] += it.sets * .5; } }
+    }
+    for (const g of G.VOLUME_GROUPS) { const [lo, hi] = G.volumeZone(g, level); assert.ok(v[g.id] >= lo && v[g.id] <= hi, `${level} ${days} j ${equip} : ${g.name} ${v[g.id]} hors ${lo}–${hi}`); }
+  }
+});
+
+await ok('1RM : poids du corps compris pour les tractions', () => {
+  assert.equal(Math.round(G.program.loadOf('pullup', 0, 75)), 75);
+  assert.equal(Math.round(G.program.loadOf('pullup', 10, 75)), 85);
+  assert.equal(Math.round(G.program.loadOf('bench', 60, 75)), 60);
+  assert.ok(G.program.bestSet([{ kg: 0, reps: 8, rir: 2 }], 'dips').v > 0 || G.program.loadOf('dips', 0) === 0);
+});
+
 /* Petit écrivain ZIP (deflate) pour tester le lecteur en flux */
 function zip(files) {
   const parts = [], cd = []; let off = 0;

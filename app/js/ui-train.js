@@ -137,7 +137,7 @@
     const d = G.store.draft, sessions = G.store.sessionsList(), before = P.bests(sessions);
     const exercises = d.exercises.map(ex => ({ move: ex.move, sets: ex.sets.filter(x => x.done).map(x => ({ kg: parseNum(x.kg), reps: parseNum(x.reps), rir: x.rir === '' ? '' : +x.rir })) })).filter(e => e.sets.length);
     if (!exercises.length) { G.toast('Valide au moins une série (bouton ✓) avant de terminer.'); return; }
-    const prs = exercises.map(ex => { const b = P.bestSet(ex.sets), prev = before[ex.move]?.v || 0; return prev > 0 && b.v > prev * 1.001 ? { move: ex.move, v: Math.round(b.v * 10) / 10, prev: Math.round(prev * 10) / 10, kg: b.s.kg, reps: b.s.reps } : null; }).filter(Boolean);
+    const prs = exercises.map(ex => { const b = P.bestSet(ex.sets, ex.move), prev = before[ex.move]?.v || 0; return prev > 0 && b.v > prev * 1.001 ? { move: ex.move, v: Math.round(b.v * 10) / 10, prev: Math.round(prev * 10) / 10, kg: b.s.kg, reps: b.s.reps } : null; }).filter(Boolean);
     const s = { dayKey: d.dayKey, dayName: d.dayName, date: d.date, startedAt: d.startedAt, endedAt: new Date().toISOString(), week: d.week, exercises, notes: d.notes || '', prs };
     s.stats = Object.assign(P.sessionStats(s), { min: Math.round((Date.parse(s.endedAt) - Date.parse(s.startedAt)) / 60000) });
     G.store.put('sessions', d.id, s); G.store.del('drafts', 'current'); U.rest = null;

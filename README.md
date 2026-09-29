@@ -9,9 +9,9 @@ App de musculation et de nutrition de Dylan, reliée à Dylan OS (agents **Train
 | Onglet | Contenu |
 |---|---|
 | Séance | Programme de prise de muscle (3 à 6 séances par semaine, salle, haltères ou poids du corps), séances en rotation (pratique avec un planning de tournage irrégulier), cycle de 6 semaines avec décharge, charge conseillée à chaque exercice (double progression), échauffement calculé, disques à mettre de chaque côté, minuteur de repos, records détectés en fin de séance. |
-| Progrès | 1RM estimé par exercice, volume hebdomadaire par muscle (zone 10 à 20 séries), poids et moyenne sur 7 jours, sommeil et fréquence cardiaque (Apple Santé), revue des 30 derniers jours, records, historique. |
-| Nutrition | Besoins détaillés (calcul affiché), macros, plan de repas calculé au gramme selon ton régime et tes exclusions, journal du jour, poids du matin, bilan hebdomadaire qui ajuste les calories, liste de courses sur 7 jours. |
-| Mouvements | 35 exercices animés en 3D : glisse pour tourner autour, ralenti, vues côté / 3/4 / face / dos, position de départ et d’arrivée en fantôme, trajectoire de la barre, muscles qui travaillent en surbrillance, points clés, erreurs fréquentes, export vidéo et liens vers de vraies vidéos. |
+| Progrès | Tuiles avec tendance, force par exercice en petits multiples (1RM estimé, records entourés, poids du corps compris pour tractions et dips), volume de la semaine fait / prévu avec la zone conseillée de chaque muscle, poids avec la zone visée par ton objectif projetée sur 2 semaines, sommeil, FC au repos et variabilité cardiaque (Apple Santé), revue du mois, records, historique. Chaque graphique a une infobulle et un tableau. |
+| Nutrition | Besoins détaillés (calcul affiché), macros, plan de repas calculé au gramme selon ton régime et tes exclusions, journal du jour, calories et protéines des 14 derniers jours face à ta cible, poids du matin, bilan hebdomadaire qui ajuste les calories, liste de courses sur 7 jours. |
+| Mouvements | 35 exercices animés en 3D façon motion design : mannequin éclairé en studio, muscles qui s’allument (rouge : principaux, ambre : secondaires), caméra en orbite lente, titre de phase animé, anneau de tempo, angle articulaire en direct, trajectoire de la barre, flèches de direction. Vue côté, 3/4, face ou dos, ralenti, export vidéo MP4 avec carton d’intro et points clés, liens vers de vraies vidéos. |
 | Coach | Questions à Claude avec tes données (séances, nutrition, poids, Apple Santé). |
 | Profil | Réglages, remplacement d’exercices, import Apple Santé, export et import des données. |
 
@@ -33,10 +33,12 @@ Une app web ne peut pas lire HealthKit directement : Apple le réserve aux apps 
 
 ## Skills Dylan OS
 
-- `.claude/skills/nutrition-coach/SKILL.md` : nouvel agent **Nutrition Coach** (besoins, plan, courses, bilan hebdo), relié à la base de l’app.
-- `.claude/skills/training-coach/SKILL.md` : **Training Coach v2**, même format que ta version actuelle, qui lit maintenant les séances de l’app.
+- `.claude/skills/nutrition-coach/SKILL.md` : agent **Nutrition Coach** (besoins, plan, courses, bilan hebdo), relié à la base de l’app.
+- `.claude/skills/training-coach/SKILL.md` : **Training Coach v2**, même format que ta version actuelle, qui lit les séances de l’app.
+- `.claude/skills/form-check/SKILL.md` : agent **Form Check** : tu envoies une photo ou une vidéo de ton mouvement, il rend 3 corrections prioritaires d’après les fiches de l’app.
+- `.claude/skills/training-app-dev/SKILL.md` : comment faire évoluer l’app (ajouter un mouvement animé, tester, produire planche et vidéo, republier).
 
-Ils sont actifs automatiquement quand Claude Code travaille dans ce dépôt. Pour les avoir dans claude.ai : zippe chaque dossier de skill et importe-le dans la section Skills de tes paramètres ; remplace alors l’ancien Training Coach. Pense à ajouter Nutrition Coach au registre du Cerveau (pôle Perso).
+Ils sont actifs automatiquement quand Claude Code travaille dans ce dépôt. Pour les avoir dans claude.ai : zippe chaque dossier de skill et importe-le dans la section Skills de tes paramètres ; remplace alors l’ancien Training Coach. Pense à ajouter Nutrition Coach et Form Check au registre du Cerveau (pôle Perso).
 
 ## Méthode et sources
 
@@ -52,7 +54,10 @@ Pas de conseil médical ni sur les compléments : pour une douleur, une blessure
 
 ## Développement
 
-- `app/` : l’app (HTML, CSS, JavaScript sans dépendance). `app/artifact.html` est la page publiée dans Claude, `app/index.html` la version autonome.
-- `app/js/anim.js` et `player.js` : mannequin 3D, cinématique inverse, lecteur. `moves*.js` : poses et fiches des exercices.
-- `app/js/program.js`, `nutrition.js`, `foods.js`, `health.js` : logique d’entraînement, de nutrition et import Santé.
-- Tests : `npm test` (Node 22, aucune installation).
+- `app/` : l’app (HTML, CSS, JavaScript sans étape de build). `app/artifact.html` est la page publiée dans Claude, `app/index.html` la version autonome. three.js r128 vient de cdnjs ; sans WebGL, l’app repasse au rendu 2D.
+- `app/js/anim.js` : squelette et cinématique inverse ; `moves*.js` : poses et fiches des 35 exercices.
+- `app/js/anim3d-core.js`, `anim3d-studio.js`, `anim3d-player.js` : mannequin 3D, studio (lumières, ombres, cadrage, vignettes en cache), lecteur motion design et export vidéo.
+- `app/js/program.js`, `nutrition.js`, `foods.js`, `health.js`, `charts.js` : logique d’entraînement, de nutrition, import Santé et graphiques.
+- `npm test` : tests de logique (Node 22, sans installation).
+- `npm run test:ui` : test de l’interface dans Chromium (Playwright).
+- `npm run render:sheet` et `npm run render:video` : planche des mouvements et vidéo de démo dans `media/` (vidéo : ffmpeg avec libx264 via `FFMPEG`).

@@ -4,9 +4,15 @@
   "private": true,
   "description": "App de musculation et de nutrition de Dylan (Dylan OS).",
   "scripts": {
-    "test": "node tests/run.mjs"
+    "test": "node tests/run.mjs",
+    "test:ui": "node tools/smoke.mjs",
+    "render:sheet": "node tools/render.mjs sheet",
+    "render:video": "node tools/render.mjs video"
   },
   "engines": {
     "node": ">=22"
+  },
+  "devDependencies": {
+    "three": "0.128.0"
   }
 }

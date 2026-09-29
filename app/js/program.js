@@ -40,14 +40,14 @@
   const D = (key, name, focus, items) => ({ key, name, focus, items });
   const TEMPLATES = {
     3: [
-      D('A', 'Full body A', 'Squat · Développé · Rowing', [['squat', 3, 'main'], ['hpush', 3, 'main'], ['hpull', 3, 'sec'], ['sidedelt', 2, 'pump'], ['biceps', 2, 'iso'], ['hamiso', 2, 'iso']]),
-      D('B', 'Full body B', 'Hanches · Épaules · Tirage', [['hinge', 3, 'sec'], ['vpush', 3, 'sec'], ['vpull', 3, 'sec'], ['squat2', 2, 'iso'], ['triceps', 2, 'iso'], ['calf', 2, 'pump']]),
+      D('A', 'Full body A', 'Squat · Développé · Rowing', [['squat', 3, 'main'], ['hpush', 4, 'main'], ['hpull', 3, 'sec'], ['sidedelt', 2, 'pump'], ['biceps', 2, 'iso'], ['hamiso', 2, 'iso'], ['calf', 3, 'pump']]),
+      D('B', 'Full body B', 'Hanches · Tirage · Pecs', [['hinge', 3, 'sec'], ['vpull', 3, 'sec'], ['chestiso', 3, 'iso'], ['vpush', 2, 'sec'], ['squat2', 2, 'iso'], ['triceps', 2, 'iso'], ['calf', 3, 'pump']]),
       D('C', 'Full body C', 'Unilatéral · Incliné · Dos', [['lunge', 3, 'sec'], ['ipush', 3, 'sec'], ['hpull2', 3, 'sec'], ['glute', 2, 'sec'], ['reardelt', 2, 'pump'], ['biceps2', 2, 'iso'], ['core', 2, 'core']])
     ],
     4: [
-      D('H1', 'Haut A', 'Pecs · Dos · Épaules', [['hpush', 3, 'main'], ['hpull', 3, 'sec'], ['vpush', 2, 'sec'], ['vpull', 3, 'sec'], ['sidedelt', 3, 'pump'], ['biceps', 2, 'iso'], ['triceps', 2, 'iso']]),
+      D('H1', 'Haut A', 'Pecs · Dos · Épaules', [['hpush', 4, 'main'], ['hpull', 3, 'sec'], ['vpush', 2, 'sec'], ['vpull', 3, 'sec'], ['sidedelt', 3, 'pump'], ['biceps', 2, 'iso'], ['triceps', 2, 'iso']]),
       D('B1', 'Bas A', 'Quadriceps · Ischios', [['squat', 3, 'main'], ['hinge', 3, 'sec'], ['quadiso', 2, 'iso'], ['hamiso', 3, 'iso'], ['calf', 3, 'pump'], ['core', 2, 'core']]),
-      D('H2', 'Haut B', 'Incliné · Dorsaux · Bras', [['ipush', 3, 'sec'], ['vpull2', 3, 'main'], ['hpull3', 3, 'sec'], ['chestiso', 2, 'iso'], ['reardelt', 3, 'pump'], ['biceps2', 2, 'iso'], ['triceps2', 2, 'iso']]),
+      D('H2', 'Haut B', 'Incliné · Dorsaux · Bras', [['ipush', 3, 'sec'], ['vpull2', 3, 'main'], ['hpull3', 3, 'sec'], ['chestiso', 3, 'iso'], ['reardelt', 3, 'pump'], ['biceps2', 2, 'iso'], ['triceps2', 2, 'iso']]),
       D('B2', 'Bas B', 'Fessiers · Unilatéral', [['squat2', 3, 'sec'], ['glute', 3, 'sec'], ['lunge', 2, 'sec'], ['hamiso', 2, 'iso'], ['quadiso', 2, 'iso'], ['calf', 3, 'pump'], ['core2', 2, 'core']])
     ],
     5: [
@@ -58,11 +58,11 @@
       D('Le', 'Jambes', 'Volume jambes', [['squat2', 3, 'sec'], ['glute', 3, 'sec'], ['lunge', 2, 'sec'], ['hamiso', 3, 'iso'], ['calf', 3, 'pump'], ['core', 3, 'core']])
     ],
     6: [
-      D('PuA', 'Push A', 'Développé · Épaules', [['hpush', 3, 'main'], ['ipush', 3, 'sec'], ['vpush', 2, 'sec'], ['sidedelt', 3, 'pump'], ['triceps', 3, 'iso']]),
-      D('PlA', 'Pull A', 'Tractions · Rowing', [['vpull', 3, 'main'], ['hpull', 3, 'sec'], ['reardelt', 3, 'pump'], ['biceps', 3, 'iso'], ['biceps2', 2, 'iso']]),
+      D('PuA', 'Push A', 'Développé · Épaules', [['hpush', 3, 'main'], ['ipush', 3, 'sec'], ['vpush', 2, 'sec'], ['sidedelt', 2, 'pump'], ['triceps', 3, 'iso']]),
+      D('PlA', 'Pull A', 'Tractions · Rowing', [['vpull', 3, 'main'], ['hpull', 3, 'sec'], ['reardelt', 2, 'pump'], ['biceps', 3, 'iso'], ['biceps2', 2, 'iso']]),
       D('LeA', 'Jambes A', 'Squat · Ischios', [['squat', 3, 'main'], ['hinge', 3, 'sec'], ['quadiso', 2, 'iso'], ['hamiso', 3, 'iso'], ['calf', 3, 'pump']]),
       D('PuB', 'Push B', 'Incliné · Dips', [['ipush', 3, 'sec'], ['dips', 3, 'sec'], ['chestiso', 3, 'iso'], ['sidedelt', 3, 'pump'], ['triceps2', 3, 'iso']]),
-      D('PlB', 'Pull B', 'Dorsaux · Haut du dos', [['vpull2', 3, 'sec'], ['hpull2', 3, 'sec'], ['hpull3', 2, 'sec'], ['reardelt2', 3, 'pump'], ['biceps3', 3, 'iso']]),
+      D('PlB', 'Pull B', 'Dorsaux · Haut du dos', [['vpull2', 3, 'sec'], ['hpull2', 3, 'sec'], ['hpull3', 2, 'sec'], ['reardelt2', 2, 'pump'], ['biceps3', 3, 'iso']]),
       D('LeB', 'Jambes B', 'Fessiers · Unilatéral', [['squat2', 3, 'sec'], ['glute', 3, 'sec'], ['lunge', 3, 'sec'], ['hamiso', 3, 'iso'], ['calf', 3, 'pump'], ['core', 3, 'core']])
     ]
   };
@@ -93,15 +93,20 @@
     const tpl = TEMPLATES[days] || TEMPLATES[4];
     return tpl.map(d => ({
       key: d.key, name: d.name, focus: d.focus,
-      items: d.items.map(([slot, sets, rk], i) => {
+      items: dedupe(d.items.map(([slot, sets, rk], i) => {
         let s = sets;
-        if (level === 'debutant' && rk !== 'main' && s > 2) s -= 1;
+        if (level === 'debutant' && (rk === 'sec' || rk === 'iso') && s > 2) s -= 1;
         if (level === 'avance' && i < 2) s += 1;
         const move = swaps[d.key + ':' + slot] || pick(slot, equip);
         const m = G.moveById[move];
         return { slot, move, sets: s, reps: m && m.timed ? [30, 60] : REPS[rk].slice(), rk, rest: REST[rk], timed: !!(m && m.timed) };
-      })
+      }))
     }));
+  }
+  /* Sans matériel, plusieurs créneaux tombent sur le même exercice : on les fusionne (+1 série, 5 max) */
+  function dedupe(items) {
+    const seen = new Map();
+    return items.filter(it => { const f = seen.get(it.move); if (f) { f.sets = Math.min(5, f.sets + 1); return false; } seen.set(it.move, it); return true; });
   }
   function alternatives(slot, equip) {
     const all = new Set([...SLOTS[slot][0], ...SLOTS[slot][1], ...SLOTS[slot][2]]);
@@ -125,7 +130,11 @@
 
   /* 1RM estimé : Epley en comptant les reps en réserve */
   const e1rm = (kg, reps, rir = 0) => (!kg || !reps) ? 0 : kg * (1 + (reps + (+rir || 0)) / 30);
-  const bestSet = sets => sets.reduce((b, s) => { const v = e1rm(+s.kg, +s.reps, s.rir); return v > b.v ? { v, s } : b; }, { v: 0, s: null });
+  /* Exercices au poids du corps : la charge réelle inclut le corps (tractions, dips) ou une partie (pompes ≈ 64 %) */
+  const BW_SHARE = { pullup: 1, dips: 1, pushup: .64 };
+  const bodyweight = () => +((G.store && G.store.profile && G.store.profile.weight) || 0);
+  const loadOf = (move, kg, bw = bodyweight()) => (+kg || 0) + (BW_SHARE[move] || 0) * bw;
+  const bestSet = (sets, move) => sets.reduce((b, s) => { const v = e1rm(loadOf(move, s.kg), +s.reps, s.rir); return v > b.v ? { v, s } : b; }, { v: 0, s: null });
 
   /* Historique d'un mouvement : [{date, sets}] trié */
   function historyOf(moveId, sessions) {
@@ -218,7 +227,7 @@
   function bests(sessions, beforeDate) {
     const b = {};
     for (const s of sessions) { if (beforeDate && s.date >= beforeDate) continue;
-      for (const ex of (s.exercises || [])) { const v = bestSet((ex.sets || []).filter(x => x.done !== false)).v; if (v > (b[ex.move]?.v || 0)) b[ex.move] = { v, date: s.date }; } }
+      for (const ex of (s.exercises || [])) { const v = bestSet((ex.sets || []).filter(x => x.done !== false), ex.move).v; if (v > (b[ex.move]?.v || 0)) b[ex.move] = { v, date: s.date }; } }
     return b;
   }
 
@@ -228,7 +237,7 @@
     const planned = Math.round((+profile.days || 4) * 30 / 7);
     const moves = {};
     for (const s of sessions) for (const ex of (s.exercises || [])) {
-      const v = bestSet((ex.sets || []).filter(x => x.done !== false)).v; if (!v) continue;
+      const v = bestSet((ex.sets || []).filter(x => x.done !== false), ex.move).v; if (!v) continue;
       (moves[ex.move] = moves[ex.move] || []).push({ date: s.date, v });
     }
     const prog = [], stall = [];
@@ -242,5 +251,5 @@
     return { count: recent.length, planned, adherence: planned ? recent.length / planned : 0, top: prog.slice(0, 3), stall };
   }
 
-  G.program = { SLOTS, TEMPLATES, MESO, REPS, build, pick, alternatives, applyWeek, weekInfo, nextDay, e1rm, bestSet, historyOf, suggest, warmups, plates, PLATES, weeklyVolume, sessionStats, bests, review };
+  G.program = { SLOTS, TEMPLATES, MESO, REPS, build, pick, alternatives, applyWeek, weekInfo, nextDay, e1rm, bestSet, loadOf, BW_SHARE, historyOf, suggest, warmups, plates, PLATES, weeklyVolume, sessionStats, bests, review };
 })(window.GYM = window.GYM || {});

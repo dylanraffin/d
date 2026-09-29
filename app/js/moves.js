@@ -11,13 +11,17 @@
     reardelts: 'Arrière d’épaule', biceps: 'Biceps', triceps: 'Triceps', forearms: 'Avant-bras', abs: 'Abdominaux'
   };
   /* Groupes suivis pour le volume hebdomadaire (séries dures par groupe) */
+  /* Groupes suivis pour le volume hebdomadaire (séries dures ; principal = 1, secondaire = 0,5).
+     Zones indicatives (niveau intermédiaire) : plus basses pour les petits muscles, qui travaillent déjà en indirect. */
   G.VOLUME_GROUPS = [
-    { id: 'pecs', name: 'Pectoraux', m: ['pecs'] }, { id: 'dos', name: 'Dos', m: ['lats', 'traps'] },
-    { id: 'epaules', name: 'Épaules', m: ['delts', 'reardelts'] }, { id: 'biceps', name: 'Biceps', m: ['biceps'] },
-    { id: 'triceps', name: 'Triceps', m: ['triceps'] }, { id: 'quads', name: 'Quadriceps', m: ['quads'] },
-    { id: 'ischios', name: 'Ischios', m: ['hams'] }, { id: 'fessiers', name: 'Fessiers', m: ['glutes'] },
-    { id: 'mollets', name: 'Mollets', m: ['calves'] }, { id: 'abdos', name: 'Abdos', m: ['abs'] }
+    { id: 'pecs', name: 'Pectoraux', m: ['pecs'], lo: 10, hi: 20 }, { id: 'dos', name: 'Dos', m: ['lats', 'traps'], lo: 10, hi: 24 },
+    { id: 'epaules', name: 'Épaules', m: ['delts', 'reardelts'], lo: 8, hi: 32 }, { id: 'biceps', name: 'Biceps', m: ['biceps'], lo: 8, hi: 20 },
+    { id: 'triceps', name: 'Triceps', m: ['triceps'], lo: 6, hi: 18 }, { id: 'quads', name: 'Quadriceps', m: ['quads'], lo: 8, hi: 20 },
+    { id: 'ischios', name: 'Ischios', m: ['hams'], lo: 6, hi: 16 }, { id: 'fessiers', name: 'Fessiers', m: ['glutes'], lo: 4, hi: 26 },
+    { id: 'mollets', name: 'Mollets', m: ['calves'], lo: 6, hi: 16 }, { id: 'abdos', name: 'Abdos', m: ['abs'], lo: 3, hi: 16 }
   ];
+  /* Zone selon le niveau : un débutant progresse avec moins, un avancé tolère plus */
+  G.volumeZone = (g, level) => level === 'debutant' ? [Math.round(g.lo * .8), Math.round(g.hi * .9)] : level === 'avance' ? [g.lo, Math.round(g.hi * 1.3)] : [g.lo, g.hi];
   G.LIB_GROUPS = [
     { id: 'jambes', name: 'Jambes' }, { id: 'pecs', name: 'Pectoraux' }, { id: 'dos', name: 'Dos' },
     { id: 'epaules', name: 'Épaules' }, { id: 'bras', name: 'Bras' }, { id: 'abdos', name: 'Abdos' }

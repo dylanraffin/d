@@ -71,12 +71,25 @@
     return `<div class="stack"><div class="row-sb"><div class="row"><button class="icon-btn" data-act="nd" data-d="-1" aria-label="Jour précédent">${G.icon('left')}</button><b style="min-width:150px;text-align:center">${G.fmtDate(date, { y: true })}</b><button class="icon-btn" data-act="nd" data-d="1" aria-label="Jour suivant">${G.icon('right')}</button></div>${date !== G.today() ? '<button class="btn ghost sm" data-act="nd" data-d="0">Aujourd’hui</button>' : ''}</div>
       ${has ? '' : '<p class="note warn">Chiffres d’exemple. Crée ton profil pour obtenir tes besoins réels.</p>'}
       <div class="cols"><div class="stack">${targetsCard(T, p, has, hs)}${planCard(plan, date, day, has)}</div>
-      <div class="stack">${logCard(date, day, T)}${weightCard(date, day, tr)}
+      <div class="stack">${logCard(date, day, T)}
+        <section class="card"><div class="sec-h"><h3 class="h3">Tes 14 derniers jours</h3><span class="small muted">journal alimentaire</span></div>
+          <p class="small"><b>Calories</b> <span class="muted">kcal par jour</span></p><div id="ch-kcal"></div>
+          <p class="small" style="margin-top:12px"><b>Protéines</b> <span class="muted">g par jour</span></p><div id="ch-prot"></div></section>
+        ${weightCard(date, day, tr)}
         <section class="card"><h3 class="h3">Bilan de la semaine</h3><p class="note ${adv.status === 'ok' ? 'good' : adv.status === 'wait' ? '' : 'warn'}" style="margin-top:10px">${esc(adv.text)}</p>${adv.adj && has ? `<button class="btn" style="margin-top:10px" data-act="kcal-adj" data-v="${adv.adj}">Appliquer ${adv.adj > 0 ? '+' : ''}${adv.adj} kcal</button>` : ''}${p.kcalAdjust ? `<button class="link" data-act="kcal-reset" style="margin-top:8px">Remettre les ajustements à zéro (${p.kcalAdjust > 0 ? '+' : ''}${p.kcalAdjust} kcal)</button>` : ''}</section>
         <section class="card shop"><div class="sec-h"><h3 class="h3">Liste de courses · 7 jours</h3><button class="btn ghost sm" data-act="shop-copy">${G.icon('copy')} Copier</button></div>
           ${Object.entries(G.FOOD_CAT).filter(([k]) => shop[k]).map(([k, name]) => `<h4>${name}</h4><ul>${shop[k].map(i => `<li>${esc(i.name)} : ${i.g >= 1000 ? G.num(i.g / 1000, 1) + ' kg' : G.num(i.g) + ' g'}${i.units ? ` (≈ ${i.units} ${esc(i.unitName)})` : ''}</li>`).join('')}</ul>`).join('')}</section>
         <section class="card"><h3 class="h3">Conseils</h3><div class="stack-s" style="margin-top:8px">${N.TIPS.map(([t, d]) => `<p class="small"><b>${esc(t)}.</b> ${esc(d)}</p>`).join('')}
           <p class="tiny muted">Compléments alimentaires, pathologie ou traitement : parles-en à un médecin ou à un diététicien.</p></div></section></div></div></div>`;
+  };
+
+  G.binds.nutrition = root => {
+    const p = G.profileOrExample(), T = N.targets(p, G.health.summary(G.store.data.health)); if (!T) return;
+    const end = U.nutriDate || G.today(), days = []; for (let k = 13; k >= 0; k--) days.push(G.addDays(end, -k));
+    const tot = d => N.dayLogTotals(G.store.data.days[d]);
+    const k = root.querySelector('#ch-kcal'), pr = root.querySelector('#ch-prot');
+    if (k) G.charts.columns(k, { label: 'Calories des 14 derniers jours', name: 'mangées', height: 150, data: days.map(d => ({ x: d, v: Math.round(tot(d).kcal) || null })), target: T.kcal, targetLabel: 'cible', tipFmt: v => G.num(v) + ' kcal' });
+    if (pr) G.charts.columns(pr, { label: 'Protéines des 14 derniers jours', name: 'mangées', height: 130, data: days.map(d => ({ x: d, v: Math.round(tot(d).p) || null })), target: T.P, targetLabel: 'cible', tipFmt: v => G.num(v) + ' g' });
   };
 
   const save = (date, d) => G.store.put('days', date, d);

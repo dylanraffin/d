@@ -16,7 +16,8 @@ Construire et ajuster le programme de musculation de Dylan (objectif : prise de 
 ## Ce que tu sais déjà (au 29 septembre 2026)
 - Objectif : prise de muscle.
 - Outil : l’app **Training Coach** (artefact privé) : https://claude.ai/artifact/UDGA6ryYaEdgKUYaVFkkS3
-  - Programme généré selon `profile/main` (3 à 6 séances par semaine, niveau, matériel), séances en rotation (pratique avec un planning de tournage irrégulier), 35 mouvements animés.
+  - Programme généré selon `profile/main` (3 à 6 séances par semaine, niveau, matériel), séances en rotation (pratique avec un planning de tournage irrégulier), 35 mouvements animés en 3D (muscles qui s’allument, angle articulaire, trajectoire, export vidéo).
+  - Zones de volume par muscle (séries dures par semaine, niveau intermédiaire) : pectoraux 10–20, dos 10–24, épaules 8–32 (avant + côté + arrière), biceps 8–20, triceps 6–18, quadriceps 8–20, ischios 6–16, fessiers 4–26, mollets 6–16, abdos 3–16 ; débutant ×0,8 en bas, avancé ×1,3 en haut.
   - Base de données : `profile/main` (réglages, `start` = début du cycle, `swaps` = exercices remplacés), `sessions/*` (date, séance, exercices, séries `kg`/`reps`/`rir`, notes, records), `drafts/current` (séance en cours), `health/AAAA-MM` (sommeil, FC repos, VFC, séances Apple Watch), `days/*` (poids du matin).
 - Profil (taille, poids, niveau, jours) : pas encore renseigné au 29/09. Lis `profile/main` ; s’il est vide, demande.
 
