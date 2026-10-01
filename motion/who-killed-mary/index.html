@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Who Killed Mary — Trailer 9:16</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Special Elite"; src: url("assets/fonts/special-elite-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Bodoni Moda"; src: url("assets/fonts/bodoni-moda-latin-900-normal.woff2") format("woff2"); font-weight: 900; }
+      @font-face { font-family: "Bodoni Moda"; src: url("assets/fonts/bodoni-moda-latin-900-italic.woff2") format("woff2"); font-weight: 900; font-style: italic; }
+
+      :root {
+        --ink: #14110c;
+        --ink-2: #1e1a12;
+        --yellow: #edda5d;
+        --yellow-deep: #d9c240;
+        --blood: #a8231a;
+        --paper: #f1ead6;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--ink); color: var(--paper); font-family: "Special Elite", monospace; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--ink); }
+      .clip { position: absolute; inset: 0; }
+      .stage { position: absolute; inset: 0; overflow: hidden; }
+      .type span { display: inline-block; white-space: pre; }
+
+      /* 01 · hook */
+      #s1 .stage { background: radial-gradient(ellipse at 50% 46%, #221d14 0%, var(--ink) 62%); }
+      #s1cam { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 46px; }
+      .tline { display: flex; align-items: center; font-size: 78px; line-height: 1; }
+      #t2 { color: var(--yellow); }
+      .cursor { display: block; width: 34px; height: 64px; background: var(--paper); margin-left: 6px; }
+
+      /* 02 · tape */
+      #s2 .stage { background: #0e0c08; }
+      #bigQ { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: "Bodoni Moda", serif; font-weight: 900; font-size: 1500px; line-height: 1; color: transparent; -webkit-text-stroke: 4px rgba(237,218,93,0.18); }
+      .tape { position: absolute; left: 50%; top: 50%; width: 3000px; height: 128px; margin: -64px 0 0 -1500px; overflow: hidden; background: var(--yellow); box-shadow: 0 14px 40px rgba(0,0,0,0.55); }
+      .tapeIn { position: absolute; left: 0; top: 0; height: 100%; display: flex; align-items: center; white-space: nowrap; font-family: "Bodoni Moda", serif; font-weight: 900; font-size: 66px; letter-spacing: 0.06em; color: var(--ink); }
+      .tapeIn span { display: block; padding: 0 26px; }
+      .tapeIn i { display: block; width: 18px; height: 18px; background: var(--blood); transform: rotate(45deg); flex: none; }
+      .tape::after { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 4px; background: rgba(20,17,12,0.85); box-shadow: 0 104px 0 rgba(20,17,12,0.85); }
+
+      /* 03 · board */
+      #s3 .stage { background: radial-gradient(ellipse at 45% 40%, #2c2417 0%, #17130d 55%, #0d0b07 100%); }
+      #board { position: absolute; inset: 0; }
+      #lead { position: absolute; left: 0; top: 150px; width: 100%; display: flex; justify-content: center; font-size: 66px; color: var(--paper); }
+      #leadSub { position: absolute; left: 0; top: 240px; width: 100%; display: flex; justify-content: center; font-size: 30px; letter-spacing: 0.3em; color: var(--yellow); }
+      .card { position: absolute; width: 470px; height: 500px; padding: 20px; background: var(--paper); box-shadow: 0 30px 50px rgba(0,0,0,0.6), 0 2px 0 rgba(255,255,255,0.4) inset; }
+      .crop { width: 430px; height: 350px; background-image: url("assets/img/cover.webp"); background-repeat: no-repeat; filter: contrast(1.08) saturate(1.05); }
+      .cap { margin-top: 26px; display: flex; justify-content: center; font-size: 33px; color: var(--ink); white-space: pre; }
+      .cap b { color: var(--blood); font-weight: 400; }
+      .pin { position: absolute; left: 50%; top: -14px; width: 38px; height: 38px; margin-left: -19px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff7a6b 0%, #c4271c 45%, #6d0f09 100%); box-shadow: 0 6px 10px rgba(0,0,0,0.6); }
+      #cardA { left: 80px; top: 360px; }
+      #cardB { left: 530px; top: 850px; }
+      #cardC { left: 100px; top: 1330px; }
+      #strings { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: visible; }
+      #marker { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: visible; }
+
+      /* 04 · title */
+      #s4 .stage { background: var(--yellow); }
+      #titleWrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 140px; }
+      .word { display: block; font-family: "Bodoni Moda", serif; font-weight: 900; line-height: 0.86; color: var(--ink); white-space: nowrap; }
+      .cond { display: block; transform: scaleX(0.74); }
+      #wWho { font-size: 520px; }
+      #wKilled { font-size: 400px; }
+      #wMary { font-size: 380px; display: flex; }
+      #wMary span { display: block; }
+      #qmark { color: var(--blood); }
+      #every { position: absolute; left: 0; bottom: 210px; width: 100%; display: flex; justify-content: center; font-size: 62px; color: var(--blood); }
+      .smear { position: absolute; left: -200px; width: 1500px; height: 520px; background: linear-gradient(90deg, #7e130d, var(--blood) 30%, #c2342a 70%, rgba(168,35,26,0.0)); border-radius: 260px 120px 200px 260px; transform-origin: 0% 50%; }
+      #smearMary { position: absolute; left: 130px; top: 0; width: 820px; height: 70px; border-radius: 40px 20px 30px 40px; background: linear-gradient(90deg, rgba(168,35,26,0), var(--blood) 25%, #c2342a 80%, rgba(168,35,26,0)); opacity: 0.85; transform-origin: 0% 50%; }
+
+      /* 05 · book */
+      #s5 .stage { background: radial-gradient(ellipse at 50% 44%, #3a3013 0%, #19150c 46%, var(--ink) 75%); }
+      #topLine { position: absolute; left: 0; top: 160px; width: 100%; display: flex; justify-content: center; font-size: 46px; letter-spacing: 0.32em; color: var(--yellow); }
+      #bookScene { position: absolute; left: 50%; top: 290px; width: 640px; height: 1016px; margin-left: -320px; perspective: 2200px; }
+      #book { position: absolute; inset: 0; transform-style: preserve-3d; }
+      #coverFace { position: absolute; inset: 0; background: url("assets/img/cover.webp") center / 100% 100% no-repeat; border-radius: 4px 14px 14px 4px; box-shadow: inset 6px 0 10px rgba(0,0,0,0.25); overflow: hidden; }
+      #spine { position: absolute; left: 0; top: 0; width: 70px; height: 100%; background: linear-gradient(90deg, #9d8d2c, #cdb846 45%, #8a7b22); transform-origin: 0% 50%; transform: rotateY(90deg); }
+      #pages { position: absolute; right: 6px; top: 8px; width: 64px; height: calc(100% - 16px); background: repeating-linear-gradient(90deg, #efe6cc 0 3px, #d6ccb0 3px 4px); transform-origin: 100% 50%; transform: rotateY(-90deg); }
+      #glint { position: absolute; top: -20%; left: -60%; width: 40%; height: 140%; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,240,0.55), rgba(255,255,255,0)); transform: rotate(18deg); mix-blend-mode: soft-light; }
+      #shadow { position: absolute; left: 50%; top: 1290px; width: 700px; height: 90px; margin-left: -350px; border-radius: 50%; background: radial-gradient(ellipse, rgba(0,0,0,0.75), rgba(0,0,0,0) 70%); }
+      #stamp { position: absolute; left: 50%; top: 1420px; width: 860px; margin-left: -430px; display: flex; flex-direction: column; align-items: center; padding: 34px 0 30px; border: 8px solid var(--blood); outline: 3px solid var(--blood); outline-offset: -20px; background: var(--paper); color: var(--blood); filter: url(#rough); box-shadow: 0 24px 40px rgba(0,0,0,0.5); }
+      #stamp .s1 { font-size: 50px; letter-spacing: 0.42em; margin-right: -0.42em; }
+      #stamp .s2 { font-family: "Bodoni Moda", serif; font-weight: 900; font-size: 140px; line-height: 0.95; letter-spacing: 0.04em; }
+      #dust { position: absolute; left: 540px; top: 1560px; width: 0; height: 0; }
+      .mote { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: #c9a98a; opacity: 0; }
+
+      /* global */
+      #flash { position: absolute; inset: 0; background: #fffdf2; opacity: 0; pointer-events: none; }
+      #grainWrap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 0.16; mix-blend-mode: overlay; }
+      #grain { position: absolute; left: -200px; top: -200px; width: 1480px; height: 2320px; }
+      #vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 100%); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="15" data-fps="60">
+
+      <!-- 01 · Hook: typewriter -->
+      <section id="s1" class="clip" data-start="0" data-duration="2.55" data-track-index="0">
+        <div class="stage"><div id="s1cam">
+          <div class="tline type" id="t1"></div>
+          <div class="tline type" id="t2"></div>
+        </div></div>
+      </section>
+
+      <!-- 02 · Tape -->
+      <section id="s2" class="clip" data-start="2.5" data-duration="2.3" data-track-index="1">
+        <div class="stage" id="s2stage">
+          <div id="bigQ">?</div>
+          <div id="tapes"></div>
+        </div>
+      </section>
+
+      <!-- 03 · Choose your lead -->
+      <section id="s3" class="clip" data-start="4.6" data-duration="5.1" data-track-index="2">
+        <div class="stage">
+          <div id="board">
+            <div id="lead" class="type"></div>
+            <div id="leadSub" class="type"></div>
+            <svg id="strings" viewBox="0 0 1080 1920"><path id="string" d="M 315 346 C 520 560, 700 700, 765 836 C 820 960, 520 1180, 335 1316" fill="none" stroke="#b3221b" stroke-width="5" stroke-linecap="round" /></svg>
+            <div class="card" id="cardA"><div class="crop" id="cropA"></div><div class="cap type" id="capA"></div><div class="pin"></div></div>
+            <div class="card" id="cardB"><div class="crop" id="cropB"></div><div class="cap type" id="capB"></div><div class="pin"></div></div>
+            <div class="card" id="cardC"><div class="crop" id="cropC"></div><div class="cap type" id="capC"></div><div class="pin"></div></div>
+            <svg id="marker" viewBox="0 0 1080 1920"><path id="circle" d="M 590 1395 C 640 1600, 520 1860, 300 1850 C 60 1840, 40 1560, 80 1400 C 120 1250, 400 1260, 600 1320 C 640 1335, 650 1360, 640 1380" fill="none" stroke="#e0352a" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04 · Title -->
+      <section id="s4" class="clip" data-start="9.5" data-duration="2.85" data-track-index="3">
+        <div class="stage" id="s4stage">
+          <div id="titleWrap">
+            <div class="word" id="wWho"><span class="cond">Who</span></div>
+            <div class="word" id="wKilled"><span class="cond">Killed</span></div>
+            <div class="word" id="wMary"><span class="cond" style="display:flex; position: relative;"><span>Mary</span><span id="qmark">?</span><div id="smearMary"></div></span></div>
+          </div>
+          <div id="every" class="type"></div>
+          <div id="smears"></div>
+        </div>
+      </section>
+
+      <!-- 05 · Book + date -->
+      <section id="s5" class="clip" data-start="12.25" data-duration="2.75" data-track-index="4">
+        <div class="stage">
+          <div id="topLine" class="type"></div>
+          <div id="shadow"></div>
+          <div id="bookScene"><div id="book">
+            <div id="spine"></div>
+            <div id="pages"></div>
+            <div id="coverFace"><div id="glint"></div></div>
+          </div></div>
+          <div id="stamp"><div class="s1">AVAILABLE IN</div><div class="s2">OCTOBER</div></div>
+          <div id="dust"></div>
+        </div>
+      </section>
+
+      <div id="flash"></div>
+      <div id="grainWrap">
+        <svg id="grain" viewBox="0 0 1480 2320" preserveAspectRatio="none">
+          <filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="7" stitchTiles="stitch" /><feColorMatrix type="saturate" values="0" /></filter>
+          <rect width="1480" height="2320" filter="url(#noise)" />
+        </svg>
+      </div>
+      <div id="vignette"></div>
+      <svg width="0" height="0" style="position:absolute">
+        <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" /><feDisplacementMap in="SourceGraphic" scale="5" /></filter>
+      </svg>
+
+      <audio id="score" src="assets/audio/score.wav" data-start="0" data-duration="15" data-track-index="10" data-volume="1"></audio>
+    </div>
+
+    <script>
+      (function () {
+        const $ = (s) => document.querySelector(s);
+        const el = (tag, cls, parent, text) => {
+          const n = document.createElement(tag);
+          if (cls) n.className = cls;
+          if (text != null) n.textContent = text;
+          if (parent) parent.appendChild(n);
+          return n;
+        };
+        let seed = 1031;
+        const rnd = () => {
+          seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+        const tl = gsap.timeline({ paused: true });
+        const BLOOD = "#a8231a";
+
+        // Typewriter: each character pops on at its own time (sound cues use the same times).
+        const typeOn = (host, text, t0, step) => {
+          const spans = Array.from(text).map((c) => el("span", "", host, c));
+          spans.forEach((s, i) => tl.fromTo(s, { opacity: 0 }, { opacity: 1, duration: 0.01 }, t0 + i * step));
+          return spans;
+        };
+
+        // Grain jitter
+        for (let i = 0; i < 120; i++) tl.set("#grain", { x: Math.round((rnd() - 0.5) * 300), y: Math.round((rnd() - 0.5) * 300) }, i / 8);
+
+        /* ===== 01 · Hook ===== */
+        typeOn($("#t1"), "Mary is dead.", 0.25, 0.06);
+        typeOn($("#t2"), "You're the detective.", 1.3, 0.045);
+        const cur = el("div", "cursor", $("#t2"));
+        // Hidden letters keep their width, so the cursor only shows once the line is fully typed.
+        tl.fromTo(cur, { opacity: 0 }, { opacity: 1, duration: 0.01 }, 2.22);
+        tl.to(cur, { opacity: 0, duration: 0.12, ease: "steps(1)" }, 2.38);
+        tl.fromTo("#s1cam", { scale: 1 }, { scale: 1.08, duration: 2.55, ease: "power1.in" }, 0);
+        tl.fromTo("#flash", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.out", immediateRender: false }, 2.45);
+
+        /* ===== 02 · Tape ===== */
+        const tapeDefs = [
+          { y: -560, rot: -17, dir: 1, t: 2.6 },
+          { y: -140, rot: 12, dir: -1, t: 2.85 },
+          { y: 260, rot: -7, dir: 1, t: 3.1 },
+          { y: 650, rot: 21, dir: -1, t: 3.35 },
+        ];
+        tapeDefs.forEach((d) => {
+          const tape = el("div", "tape", $("#tapes"));
+          const inner = el("div", "tapeIn", tape);
+          for (let i = 0; i < 9; i++) { el("span", "", inner, "SOLVE IT YOURSELF"); el("i", "", inner); }
+          tl.set(tape, { y: d.y, rotation: d.rot }, 0);
+          tl.fromTo(tape, { x: d.dir * -3200 }, { x: 0, duration: 0.32, ease: "expo.out" }, d.t);
+          tl.fromTo(inner, { x: -300 }, { x: -300 + d.dir * -260, duration: 2.0, ease: "none" }, d.t);
+          tl.to(tape, { x: d.dir * 3200, duration: 0.3, ease: "power3.in" }, 4.2 + (d.t - 2.6) * 0.25);
+        });
+        tl.fromTo("#bigQ", { scale: 1.3, rotation: -12, opacity: 0 }, { scale: 1, rotation: 6, opacity: 1, duration: 2.2, ease: "power2.out" }, 2.5);
+        tl.fromTo("#s2stage", { x: 0 }, { x: 14, duration: 0.04, yoyo: true, repeat: 3, ease: "none" }, 3.35);
+
+        /* ===== 03 · Choose your lead ===== */
+        // Evidence crops pulled straight from the cover (x, y, w of the source region).
+        const crops = { "#cropA": [560, 90, 340], "#cropB": [580, 385, 340], "#cropC": [522, 880, 400] };
+        Object.entries(crops).forEach(([sel, [x, y, w]]) => {
+          const k = 430 / w;
+          const c = $(sel);
+          c.style.backgroundSize = `${(922 * k).toFixed(1)}px ${(1464 * k).toFixed(1)}px`;
+          c.style.backgroundPosition = `${(-x * k).toFixed(1)}px ${(-y * k).toFixed(1)}px`;
+        });
+        typeOn($("#lead"), "CHOOSE YOUR LEAD.", 4.7, 0.035);
+        typeOn($("#leadSub"), "EVERY CHOICE IS A CLUE", 5.0, 0.02);
+        const cards = [["#cardA", -5, 5.0, "THE LILY → ", "27"], ["#cardB", 4, 5.35, "THE SEQUINS → ", "54"], ["#cardC", -3, 5.7, "THE PRINTS → ", "81"]];
+        cards.forEach(([id, rot, t, label, page]) => {
+          tl.fromTo(id, { scale: 1.7, opacity: 0, rotation: rot + 14, y: -40 }, { scale: 1, opacity: 1, rotation: rot, y: 0, duration: 0.34, ease: "back.out(1.4)" }, t);
+          tl.fromTo(id + " .pin", { scale: 0, y: -30 }, { scale: 1, y: 0, duration: 0.25, ease: "back.out(3)" }, t + 0.22);
+          const cap = $(id + " .cap");
+          typeOn(cap, label + "PAGE ", t + 0.3, 0.025);
+          const b = el("b", "", cap);
+          typeOn(b, page, t + 0.3 + (label.length + 5) * 0.025, 0.05);
+        });
+        const strLen = Math.ceil($("#string").getTotalLength()) + 2;
+        tl.fromTo("#string", { attr: { "stroke-dasharray": strLen, "stroke-dashoffset": strLen } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.8, ease: "power2.inOut" }, 6.1);
+        tl.fromTo("#board", { scale: 1 }, { scale: 1.04, transformOrigin: "50% 50%", duration: 1.6, ease: "sine.inOut" }, 6.6);
+        const cLen = Math.ceil($("#circle").getTotalLength()) + 2;
+        tl.fromTo("#circle", { attr: { "stroke-dasharray": cLen, "stroke-dashoffset": cLen } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.5, ease: "power2.inOut" }, 8.15);
+        tl.to(["#cardA", "#cardB", "#lead", "#leadSub", "#strings"], { opacity: 0.25, duration: 0.3 }, 8.35);
+        tl.to("#cardC .cap b", { scale: 1.4, transformOrigin: "50% 50%", duration: 0.2, yoyo: true, repeat: 1 }, 8.5);
+        tl.to("#board", { scale: 5.6, transformOrigin: "345px 1505px", duration: 0.75, ease: "power3.in" }, 8.85);
+
+        /* ===== 04 · Title ===== */
+        const smearDefs = [[-40, 9.5], [440, 9.56], [920, 9.62], [1400, 9.68]];
+        smearDefs.forEach(([y, t]) => {
+          const s = el("div", "smear", $("#smears"));
+          s.style.top = y + "px";
+          tl.set(s, { rotation: -12 }, 0);
+          tl.fromTo(s, { scaleX: 0 }, { scaleX: 1.3, duration: 0.24, ease: "power3.out" }, t);
+          tl.to(s, { scaleX: 0, transformOrigin: "100% 50%", duration: 0.25, ease: "power3.in" }, 9.9);
+        });
+        tl.fromTo("#wWho", { scale: 2.4, opacity: 0, filter: "blur(18px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.32, ease: "expo.out" }, 9.95);
+        tl.fromTo("#wKilled", { yPercent: 70, skewY: 8, opacity: 0 }, { yPercent: 0, skewY: 0, opacity: 1, duration: 0.32, ease: "expo.out" }, 10.35);
+        tl.fromTo("#wMary", { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.42, ease: "back.out(1.8)" }, 10.75);
+        [9.95, 10.35, 10.75].forEach((t) => tl.fromTo("#titleWrap", { x: 0, y: 0 }, { x: 18, y: -10, duration: 0.035, yoyo: true, repeat: 3, ease: "none", immediateRender: false }, t));
+        tl.fromTo("#smearMary", { scaleX: 0, y: 190, rotation: -4 }, { scaleX: 1, duration: 0.3, ease: "power3.out" }, 11.15);
+        tl.fromTo("#qmark", { rotation: 0 }, { rotation: 12, transformOrigin: "50% 90%", duration: 0.5, ease: "elastic.out(1.2, 0.4)" }, 11.15);
+        typeOn($("#every"), "You choose. You solve.", 11.3, 0.03);
+        tl.to("#s4stage", { scale: 0.6, y: -45, duration: 0.4, ease: "power3.in" }, 11.9);
+
+        /* ===== 05 · Book ===== */
+        tl.fromTo("#book", { rotationY: 0, rotationX: 0, scale: 1.04 }, { rotationY: -24, rotationX: 5, scale: 1, duration: 0.9, ease: "expo.out" }, 12.25);
+        tl.to("#book", { rotationY: -14, rotationX: 2, y: -14, duration: 1.85, ease: "sine.inOut" }, 13.15);
+        tl.fromTo("#shadow", { scaleX: 0.9, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.8, ease: "power2.out" }, 12.3);
+        typeOn($("#topLine"), "A QUEST BOOK", 12.5, 0.045);
+        tl.fromTo("#glint", { x: 0 }, { x: 1300, duration: 0.9, ease: "power2.inOut" }, 13.7);
+        tl.fromTo("#stamp", { scale: 2.6, opacity: 0, rotation: -2 }, { scale: 1, opacity: 1, rotation: -7, duration: 0.2, ease: "power4.in" }, 13.0);
+        tl.fromTo("#bookScene", { y: 0 }, { y: 8, duration: 0.05, yoyo: true, repeat: 1, ease: "none", immediateRender: false }, 13.2);
+        for (let i = 0; i < 26; i++) {
+          const m = el("div", "mote", $("#dust"));
+          const a = Math.PI + rnd() * Math.PI, d = 160 + rnd() * 380;
+          tl.fromTo(m, { x: (rnd() - 0.5) * 700, y: 0, opacity: 0.9, scale: 0.5 + rnd() * 1.2 },
+            { x: "+=" + (Math.cos(a) * d * 0.4).toFixed(0), y: Math.sin(a) * d * 0.5, opacity: 0, duration: 0.7 + rnd() * 0.5, ease: "power2.out", immediateRender: false }, 13.2);
+        }
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>
