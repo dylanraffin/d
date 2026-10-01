@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Who Killed Mary — Trailer B (corrupted tape) 9:16</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Special Elite"; src: url("assets/fonts/special-elite-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Bodoni Moda"; src: url("assets/fonts/bodoni-moda-latin-900-normal.woff2") format("woff2"); font-weight: 900; }
+      @font-face { font-family: "VT323"; src: url("assets/fonts/vt323-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+
+      :root {
+        --ink: #0c0a07;
+        --yellow: #edda5d;
+        --blood: #c32a1f;
+        --vhs-blue: #1f33d8;
+        --osd: #f4f4ec;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #000; color: var(--osd); font-family: "VT323", monospace; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
+      #tv { position: absolute; inset: 0; overflow: hidden; background: #000; }
+      .clip { position: absolute; inset: 0; }
+      .stage { position: absolute; inset: 0; overflow: hidden; }
+      .osdTxt { font-family: "VT323", monospace; color: var(--osd); text-shadow: -3px 0 rgba(255,40,70,0.75), 3px 0 rgba(0,210,255,0.75), 0 0 18px rgba(255,255,255,0.25); white-space: pre; }
+
+      /* glitch rig: three channel layers + tear slices + pixel-drag streaks */
+      .rig { position: absolute; background: #000; isolation: isolate; overflow: hidden; }
+      .layer { position: absolute; inset: 0; background-image: url("assets/img/cover.webp"); background-size: 100% 100%; background-repeat: no-repeat; }
+      .chan { mix-blend-mode: screen; }
+      .slice { clip-path: inset(0px 0px 100% 0px); }
+      .drag { opacity: 0; }
+
+      /* 01 boot */
+      #s1 .stage { background: var(--vhs-blue); }
+      #play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 34px; font-size: 200px; }
+      #play .tri { width: 0; height: 0; border-top: 70px solid transparent; border-bottom: 70px solid transparent; border-left: 110px solid var(--osd); filter: drop-shadow(-3px 0 rgba(255,40,70,0.75)) drop-shadow(3px 0 rgba(0,210,255,0.75)); }
+
+      /* 02 torn cover */
+      #s2 .stage { background: #000; }
+      .flashWord { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 210px; opacity: 0; }
+
+      /* 03 evidence montage */
+      .shot { position: absolute; inset: 0; background-image: url("assets/img/cover.webp"); background-repeat: no-repeat; background-color: #000; opacity: 0; }
+      .shot.inv { filter: invert(1) hue-rotate(180deg) contrast(1.2); }
+      .shotLab { position: absolute; left: 70px; bottom: 210px; font-size: 64px; color: var(--osd); background: rgba(0,0,0,0.55); padding: 4px 18px; }
+      .black { background: #000; background-image: none; }
+      #ttp { position: absolute; left: 0; top: 760px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; }
+      #ttp .l1 { font-size: 150px; line-height: 1; background: rgba(0,0,0,0.6); padding: 0 24px; }
+      #redact { width: 330px; height: 130px; background: var(--ink); border: 6px solid var(--blood); display: flex; align-items: center; justify-content: center; font-size: 110px; color: var(--blood); }
+
+      /* 04 scramble */
+      #s4 .stage { background: radial-gradient(ellipse at 50% 50%, #17130c 0%, #050403 70%); }
+      #line { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+      .slot { position: relative; width: 41px; height: 90px; overflow: hidden; }
+      .strip { position: absolute; left: 0; top: 0; width: 100%; }
+      .strip i { display: block; height: 130px; line-height: 90px; text-align: center; font-style: normal; font-family: "Special Elite", monospace; font-size: 72px; color: var(--osd); text-shadow: -3px 0 rgba(255,40,70,0.7), 3px 0 rgba(0,210,255,0.7); }
+      .strip i.red { color: #ff3b2f; }
+      #lost { position: absolute; inset: 0; background: var(--vhs-blue); display: flex; align-items: center; justify-content: center; font-size: 150px; opacity: 0; }
+
+      /* 05 title */
+      #s5 .stage { background: var(--yellow); }
+      #titleWrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 60px; }
+      .cword { display: block; font-family: "Bodoni Moda", serif; font-weight: 900; line-height: 0.86; white-space: nowrap; opacity: 0; }
+      .cond { position: relative; display: block; transform: scaleX(0.74); }
+      .cond span { display: block; }
+      .cond .r, .cond .c { position: absolute; left: 0; top: 0; mix-blend-mode: multiply; }
+      .cond .r { color: #ff3b30; }
+      .cond .c { color: #00c2ff; }
+      .cond .k { position: relative; color: var(--ink); }
+      #wWho { font-size: 520px; }
+      #wKilled { font-size: 400px; }
+      #wMary { font-size: 400px; }
+      #qm { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-top: 120px; font-family: "Bodoni Moda", serif; font-weight: 900; font-size: 1500px; line-height: 1; color: var(--blood); opacity: 0; }
+
+      /* 06 end */
+      #s6 .stage { background: radial-gradient(ellipse at 50% 40%, #2a2410 0%, #0b0905 60%, #000 100%); }
+      #endCam { position: absolute; inset: 0; }
+      #quest, #solve { position: absolute; left: 0; top: 140px; width: 100%; display: flex; justify-content: center; font-size: 92px; }
+      #solve { color: #ff4a3d; opacity: 0; }
+      #avail { position: absolute; left: 0; top: 1480px; width: 100%; display: flex; flex-direction: column; align-items: center; }
+      #avail .a1 { display: flex; font-size: 96px; line-height: 1; }
+      #avail .a2 { display: flex; font-size: 250px; line-height: 0.9; color: var(--yellow); }
+      #avail span { display: block; }
+
+      /* global VHS overlays */
+      #osd { position: absolute; inset: 0; pointer-events: none; font-size: 64px; }
+      #osdPlay { position: absolute; left: 70px; top: 60px; display: flex; align-items: center; gap: 18px; }
+      #osdPlay .tri { width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent; border-left: 32px solid var(--osd); }
+      #osdTape { position: absolute; left: 70px; bottom: 60px; }
+      #osdCount { position: absolute; right: 70px; bottom: 60px; width: 230px; height: 70px; }
+      #osdCount span { position: absolute; right: 0; top: 0; opacity: 0; }
+      #static { position: absolute; inset: 0; overflow: hidden; opacity: 0; pointer-events: none; }
+      #staticSvg { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+      #track { position: absolute; left: 0; top: 0; width: 1080px; height: 170px; opacity: 0; pointer-events: none; mix-blend-mode: screen;
+        background: repeating-linear-gradient(0deg, rgba(255,255,255,0) 0 6px, rgba(255,255,255,0.35) 6px 8px, rgba(255,255,255,0) 8px 17px), linear-gradient(180deg, rgba(255,255,255,0), rgba(220,230,255,0.28) 50%, rgba(255,255,255,0)); }
+      #scan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 2px, rgba(0,0,0,0) 2px 4px); }
+      #grainWrap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 0.2; mix-blend-mode: overlay; }
+      #grain { position: absolute; left: -200px; top: -200px; width: 1480px; height: 2320px; }
+      #vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.7) 100%); }
+      #crtDot { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: #fff; box-shadow: 0 0 40px 12px rgba(255,255,255,0.8); opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="20" data-fps="60">
+      <div id="tv">
+
+        <!-- 01 · VHS boot -->
+        <section id="s1" class="clip" data-start="0" data-duration="1.45" data-track-index="0">
+          <div class="stage"><div id="play" class="osdTxt"><div class="tri"></div><span>PLAY</span></div></div>
+        </section>
+
+        <!-- 02 · The cover tears itself apart -->
+        <section id="s2" class="clip" data-start="1.4" data-duration="3.25" data-track-index="1">
+          <div class="stage" id="s2stage">
+            <div id="rig2host"></div>
+            <div class="flashWord osdTxt" id="fw1">LOOK</div>
+            <div class="flashWord osdTxt" id="fw2">CLOSER</div>
+            <div class="flashWord osdTxt" id="fw3">YOU</div>
+            <div class="flashWord osdTxt" id="fw4">MISSED</div>
+            <div class="flashWord osdTxt" id="fw5">SOMETHING</div>
+          </div>
+        </section>
+
+        <!-- 03 · Evidence montage -->
+        <section id="s3" class="clip" data-start="4.6" data-duration="3.65" data-track-index="2">
+          <div class="stage" id="shots">
+            <div id="ttp"><div class="l1 osdTxt">TURN TO PAGE</div><div id="redact">??</div></div>
+          </div>
+        </section>
+
+        <!-- 04 · Detective → suspect -->
+        <section id="s4" class="clip" data-start="8.2" data-duration="3.25" data-track-index="3">
+          <div class="stage" id="s4stage">
+            <div id="line"></div>
+            <div id="lost" class="osdTxt">NO SIGNAL</div>
+          </div>
+        </section>
+
+        <!-- 05 · Title, corrupted -->
+        <section id="s5" class="clip" data-start="11.4" data-duration="3.25" data-track-index="4">
+          <div class="stage" id="s5stage">
+            <div id="qm">?</div>
+            <div id="titleWrap">
+              <div class="cword" id="wWho"><div class="cond"><span class="r">Who</span><span class="c">Who</span><span class="k">Who</span></div></div>
+              <div class="cword" id="wKilled"><div class="cond"><span class="r">Killed</span><span class="c">Killed</span><span class="k">Killed</span></div></div>
+              <div class="cword" id="wMary"><div class="cond"><span class="r">Mary</span><span class="c">Mary</span><span class="k">Mary</span></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 06 · The book + date -->
+        <section id="s6" class="clip" data-start="14.6" data-duration="5.4" data-track-index="5">
+          <div class="stage">
+            <div id="endCam"><div id="rig6host"></div></div>
+            <div id="quest" class="osdTxt">A QUEST BOOK</div>
+            <div id="solve" class="osdTxt">CAN YOU SOLVE IT?</div>
+            <div id="avail" class="osdTxt"><div class="a1" id="a1"></div><div class="a2" id="a2"></div></div>
+          </div>
+        </section>
+
+        <!-- global tape artefacts -->
+        <div id="track"></div>
+        <div id="static"><svg id="staticSvg" viewBox="0 0 1080 1920" preserveAspectRatio="none"><filter id="snow" x="0" y="0" width="1" height="1"><feTurbulence id="snowTurb" type="fractalNoise" baseFrequency="1.4" numOctaves="1" seed="21" /><feColorMatrix type="saturate" values="0" /><feComponentTransfer><feFuncR type="linear" slope="1.8" intercept="-0.3" /><feFuncG type="linear" slope="1.8" intercept="-0.3" /><feFuncB type="linear" slope="1.8" intercept="-0.3" /></feComponentTransfer></filter><rect width="1080" height="1920" filter="url(#snow)" /></svg></div>
+        <div id="osd" class="osdTxt">
+          <div id="osdPlay"><div class="tri"></div><span>PLAY</span></div>
+          <div id="osdTape">TAPE 01</div>
+          <div id="osdCount"></div>
+        </div>
+        <div id="scan"></div>
+        <div id="grainWrap"><svg id="grain" viewBox="0 0 1480 2320" preserveAspectRatio="none"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="7" stitchTiles="stitch" /><feColorMatrix type="saturate" values="0" /></filter><rect width="1480" height="2320" filter="url(#noise)" /></svg></div>
+        <div id="vignette"></div>
+      </div>
+      <div id="crtDot"></div>
+
+      <svg width="0" height="0" style="position:absolute">
+        <filter id="chR" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" /></filter>
+        <filter id="chG" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" /></filter>
+        <filter id="chB" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" /></filter>
+      </svg>
+
+      <audio id="score" src="assets/audio/score-b.wav" data-start="0" data-duration="20" data-track-index="10" data-volume="1"></audio>
+    </div>
+
+    <script>
+      (function () {
+        const $ = (s) => document.querySelector(s);
+        const el = (tag, cls, parent, text) => {
+          const n = document.createElement(tag);
+          if (cls) n.className = cls;
+          if (text != null) n.textContent = text;
+          if (parent) parent.appendChild(n);
+          return n;
+        };
+        let seed = 1313;
+        const rnd = () => {
+          seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+        const tl = gsap.timeline({ paused: true });
+        const STEP = 1 / 30;
+        const T = (t) => +t.toFixed(4);
+        // Glitch spikes: the audio score (build-audio-b.mjs) fires its glitch hits on these same times.
+        const SPIKES = [1.45, 1.95, 2.55, 3.1, 3.6, 3.95, 4.25, 4.45, 10.9, 11.0, 11.15, 11.25, 11.5, 11.95, 12.4, 12.85, 13.3, 13.75, 14.6, 16.6, 17.2, 18.4];
+        const env = (t, base) => Math.min(1, base + SPIKES.reduce((m, s) => (t >= s ? Math.max(m, Math.exp(-(t - s) / 0.13)) : m), 0));
+
+        /* ---------- global tape artefacts ---------- */
+        for (let i = 0; i < 160; i++) tl.set("#grain", { x: Math.round((rnd() - 0.5) * 300), y: Math.round((rnd() - 0.5) * 300) }, T(i / 8));
+        const cnt = $("#osdCount");
+        for (let s = 0; s < 20; s++) {
+          const sp = el("span", "", cnt, "0:00:" + String(s).padStart(2, "0"));
+          tl.set(sp, { opacity: 1 }, s);
+          if (s < 19) tl.set(sp, { opacity: 0 }, s + 1);
+        }
+        tl.to("#osdPlay .tri", { opacity: 0, duration: 0.5, ease: "steps(1)", yoyo: true, repeat: 38 }, 0);
+        const staticOn = (t0, t1, peak) => {
+          // A fresh noise seed every frame: moving one big filtered plate gets clipped by Chrome.
+          for (let t = t0; t < t1; t += STEP) {
+            tl.set("#static", { opacity: peak * (0.7 + 0.3 * rnd()) }, T(t));
+            tl.set("#snowTurb", { attr: { seed: Math.floor(rnd() * 9999) } }, T(t));
+          }
+          tl.set("#static", { opacity: 0 }, T(t1));
+        };
+        staticOn(0.95, 1.42, 1);
+        staticOn(11.22, 11.42, 0.9);
+        staticOn(14.5, 14.66, 1);
+        [[1.4, 0.9], [4.4, 0.7], [10.85, 0.5], [16.55, 0.8]].forEach(([t, d]) => {
+          tl.set("#track", { opacity: 1 }, t);
+          tl.fromTo("#track", { y: -200 }, { y: 2000, duration: d, ease: "none", immediateRender: false }, t);
+          tl.set("#track", { opacity: 0 }, T(t + d));
+        });
+
+        /* ---------- glitch rig ---------- */
+        function makeRig(host, w, h, left, top) {
+          const rig = el("div", "rig", host);
+          Object.assign(rig.style, { width: w + "px", height: h + "px", left: left + "px", top: top + "px" });
+          const chans = ["chR", "chG", "chB"].map((f) => { const c = el("div", "layer chan", rig); c.style.filter = `url(#${f})`; return c; });
+          const slices = Array.from({ length: 7 }, () => el("div", "layer slice", rig));
+          const drags = Array.from({ length: 3 }, () => el("div", "layer drag", rig));
+          return { rig, chans, slices, drags, w, h };
+        }
+        function driveRig(R, t0, t1, base, amp) {
+          for (let t = t0; t < t1; t += STEP) {
+            const e = env(t, base), at = T(t);
+            const dx = ((rnd() - 0.5) * 2 + 0.6) * amp * e;
+            tl.set(R.chans[0], { x: dx, y: (rnd() - 0.5) * 8 * e }, at);
+            tl.set(R.chans[2], { x: -dx * 0.9, y: (rnd() - 0.5) * 8 * e }, at);
+            R.slices.forEach((s, i) => {
+              if (i < Math.ceil(e * 7) && rnd() < e) {
+                const top = rnd() * R.h, hh = 6 + rnd() * 150 * e;
+                tl.set(s, { clipPath: `inset(${top.toFixed(0)}px 0px ${Math.max(0, R.h - top - hh).toFixed(0)}px 0px)`, x: Math.round((rnd() - 0.5) * 2 * 380 * e) }, at);
+              } else tl.set(s, { clipPath: "inset(0px 0px 100% 0px)", x: 0 }, at);
+            });
+            R.drags.forEach((d) => {
+              if (e > 0.5 && rnd() < 0.55) {
+                const yb = rnd() * R.h * 0.75, x1 = rnd() * R.w * 0.8, x2 = Math.min(R.w, x1 + 40 + rnd() * 280);
+                tl.set(d, { opacity: 1, transformOrigin: `50% ${yb.toFixed(0)}px`, scaleY: 45, clipPath: `inset(${yb.toFixed(0)}px ${(R.w - x2).toFixed(0)}px 0px ${x1.toFixed(0)}px)` }, at);
+              } else tl.set(d, { opacity: 0 }, at);
+            });
+          }
+          R.slices.forEach((s) => tl.set(s, { clipPath: "inset(0px 0px 100% 0px)", x: 0 }, T(t1)));
+          R.drags.forEach((d) => tl.set(d, { opacity: 0 }, T(t1)));
+        }
+
+        /* ===== 01 · VHS boot ===== */
+        tl.fromTo("#play", { opacity: 0 }, { opacity: 1, duration: 0.01 }, 0.12);
+        tl.to("#play", { opacity: 0, duration: 0.01 }, 0.55);
+        tl.to("#play", { opacity: 1, duration: 0.01 }, 0.7);
+        tl.fromTo("#play", { scaleY: 1, skewX: 0 }, { scaleY: 0.2, skewX: 40, duration: 0.25, ease: "power3.in" }, 0.85);
+
+        /* ===== 02 · Torn cover ===== */
+        const R2 = makeRig($("#rig2host"), 1080, 1715, 0, 102);
+        driveRig(R2, 1.4, 4.6, 0.1, 60);
+        tl.fromTo(R2.rig, { scale: 1.15 }, { scale: 1, duration: 3.2, ease: "power2.out" }, 1.4);
+        [["#fw1", 1.95, 2.25, -6], ["#fw2", 2.55, 2.85, 4], ["#fw3", 3.1, 3.35, -3], ["#fw4", 3.6, 3.85, 7], ["#fw5", 3.95, 4.3, -4]].forEach(([id, a, b, r]) => {
+          tl.set(id, { opacity: 1, rotation: r }, a);
+          tl.fromTo(id, { scale: 1.35 }, { scale: 1, duration: b - a, ease: "expo.out", immediateRender: false }, a);
+          for (let t = a; t < b; t += STEP) tl.set(id, { x: Math.round((rnd() - 0.5) * 60), skewX: Math.round((rnd() - 0.5) * 20) }, T(t));
+          tl.set(id, { opacity: 0 }, b);
+        });
+
+        /* ===== 03 · Evidence montage ===== */
+        const crops = {
+          lily: [600, 100, 260], sequins: [690, 340, 200], prints: [700, 820, 222], who: [90, 250, 340],
+          mary: [100, 900, 300], author: [100, 1020, 250], printsClose: [760, 900, 130], lilyClose: [680, 130, 150],
+        };
+        const labels = { lily: "EVIDENCE: LILY", sequins: "EVIDENCE: SEQUIN", prints: "EVIDENCE: PRINTS", printsClose: "EVIDENCE: PRINTS", lilyClose: "EVIDENCE: LILY", who: "SUSPECT: ???", mary: "VICTIM: MARY", author: "WITNESS: ???" };
+        const shotsDef = [
+          [4.6, "lily"], [4.88, "sequins"], [5.12, "prints"], [5.35, "black"], [5.42, "who"], [5.65, "mary"], [5.85, "lily", 1],
+          [6.08, "printsClose"], [6.35, "sequins"], [6.6, "author"], [6.85, "who"], [7.05, "prints"], [7.25, "mary", 1],
+          [7.5, "lilyClose"], [7.75, "prints"], [8.1, "black"],
+        ];
+        let prevShot = null;
+        shotsDef.forEach(([t, key, inv], i) => {
+          const s = el("div", "shot" + (key === "black" ? " black" : "") + (inv ? " inv" : ""), $("#shots"));
+          $("#shots").insertBefore(s, $("#ttp"));
+          if (key !== "black") {
+            const [x, y, w] = crops[key], k = 1080 / w;
+            s.style.backgroundSize = `${(922 * k).toFixed(1)}px ${(1464 * k).toFixed(1)}px`;
+            s.style.backgroundPosition = `${(-x * k).toFixed(1)}px ${(-y * k).toFixed(1)}px`;
+            el("div", "shotLab osdTxt", s, labels[key]);
+            const hold = (shotsDef[i + 1] ? shotsDef[i + 1][0] : 8.25) - t;
+            tl.fromTo(s, { scale: 1.35, rotation: (rnd() - 0.5) * 8 }, { scale: 1, rotation: 0, duration: hold, ease: "expo.out" }, t);
+          }
+          tl.set(s, { opacity: 1 }, t);
+          if (prevShot) tl.set(prevShot, { opacity: 0 }, t);
+          prevShot = s;
+        });
+        tl.set("#ttp", { opacity: 1 }, 6.4);
+        tl.fromTo("#ttp", { scale: 1.2 }, { scale: 1, duration: 0.4, ease: "expo.out", immediateRender: false }, 6.4);
+        for (let t = 6.4; t < 8.1; t += 0.1) tl.set("#redact", { opacity: rnd() < 0.3 ? 0.35 : 1, x: Math.round((rnd() - 0.5) * 14) }, T(t));
+        tl.set("#ttp", { opacity: 0 }, 8.1);
+
+        /* ===== 04 · Detective → suspect ===== */
+        const from = "You're the detective.";
+        const to = " You're the suspect. ";
+        const pool = "#%&@$*?!/<>=+ABDEFGHKMNPRSTVWXZ0123456789";
+        const SH = 130; // row pitch taller than the 90px window so neighbouring glyphs never peek in
+        const slots = Array.from(from).map((c, i) => {
+          const slot = el("div", "slot", $("#line"));
+          const strip = el("div", "strip", slot);
+          el("i", "", strip, " ");
+          el("i", "", strip, c);
+          for (let k = 0; k < 6; k++) el("i", "", strip, pool[Math.floor(rnd() * pool.length)]);
+          const fin = el("i", "", strip, to[i]);
+          if (i >= 12 && i <= 19) fin.classList.add("red");
+          return strip;
+        });
+        slots.forEach((strip, i) => {
+          tl.set(strip, { y: 0 }, 0);
+          tl.set(strip, { y: -SH }, T(8.3 + i * 0.03));
+          const resolve = 9.6 + i * 0.024;
+          for (let t = 9.3 + (i % 3) * 0.01; t < resolve; t += STEP) tl.set(strip, { y: -SH * (2 + Math.floor(rnd() * 6)) }, T(t));
+          tl.set(strip, { y: -SH * 8 }, T(resolve));
+        });
+        tl.fromTo("#line", { scale: 1 }, { scale: 1.07, duration: 2.6, ease: "power1.in" }, 8.3);
+        for (let t = 10.85; t < 11.25; t += STEP) {
+          const e = env(t, 0);
+          tl.set("#line", { x: Math.round((rnd() - 0.5) * 220 * e), skewX: Math.round((rnd() - 0.5) * 50 * e), scaleY: 1 + (rnd() - 0.5) * 0.8 * e }, T(t));
+        }
+        tl.set("#lost", { opacity: 1 }, 11.25);
+
+        /* ===== 05 · Title ===== */
+        const words = [["#wWho", 11.5], ["#wKilled", 11.95], ["#wMary", 12.4]];
+        words.forEach(([id, t]) => {
+          tl.set(id, { opacity: 1 }, t);
+          [[1.7, 0], [1.15, 0.035], [1.35, 0.07], [1.0, 0.105]].forEach(([s, o]) => tl.set(id, { scale: s }, T(t + o)));
+        });
+        tl.set("#qm", { opacity: 1 }, 12.85);
+        tl.fromTo("#qm", { scale: 0.2, rotation: -40 }, { scale: 1, rotation: 8, duration: 0.55, ease: "back.out(1.6)", immediateRender: false }, 12.85);
+        for (let t = 11.5; t < 14.1; t += STEP) {
+          const e = env(t, 0.06), at = T(t);
+          words.forEach(([id]) => {
+            const dx = Math.round(((rnd() - 0.5) * 2 + 0.5) * 34 * e + 4);
+            tl.set(id + " .r", { x: dx, y: Math.round((rnd() - 0.5) * 10 * e) }, at);
+            tl.set(id + " .c", { x: -dx, y: Math.round((rnd() - 0.5) * 10 * e) }, at);
+            tl.set(id + " .cond", { x: Math.round((rnd() - 0.5) * 70 * e), skewX: Math.round((rnd() - 0.5) * 30 * e) }, at);
+          });
+        }
+        // Melt: a clone of the title is stretched down from a band, like a chewed tape.
+        const melt = $("#titleWrap").cloneNode(true);
+        melt.removeAttribute("id");
+        melt.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
+        melt.querySelectorAll(".cword").forEach((n) => (n.style.opacity = 1));
+        $("#s5stage").appendChild(melt);
+        tl.set(melt, { opacity: 0 }, 0);
+        tl.set(melt, { opacity: 1, transformOrigin: "50% 760px", clipPath: "inset(760px 0px 0px 0px)" }, 14.1);
+        tl.fromTo(melt, { scaleY: 1 }, { scaleY: 30, duration: 0.45, ease: "power2.in", immediateRender: false }, 14.1);
+        tl.to("#titleWrap", { x: 30, duration: 0.45, ease: "steps(6)" }, 14.1);
+
+        /* ===== 06 · Book + date ===== */
+        const R6 = makeRig($("#rig6host"), 760, 1207, 160, 250);
+        driveRig(R6, 14.6, 19.3, 0.035, 40);
+        tl.fromTo("#endCam", { scale: 1.08 }, { scale: 1.0, duration: 4.7, ease: "power2.out" }, 14.6);
+        tl.fromTo("#quest", { opacity: 0 }, { opacity: 1, duration: 0.01 }, 14.8);
+        tl.set("#quest", { opacity: 0 }, 17.2);
+        tl.set("#solve", { opacity: 1 }, 17.2);
+        tl.fromTo("#solve", { scale: 1.4 }, { scale: 1, duration: 0.3, ease: "expo.out", immediateRender: false }, 17.2);
+        tl.to("#solve", { opacity: 0.2, duration: 0.3, ease: "steps(1)", yoyo: true, repeat: 3 }, 18.0);
+        const a1 = Array.from("AVAILABLE IN").map((c) => el("span", "", $("#a1"), c));
+        const a2 = Array.from("OCTOBER").map((c) => el("span", "", $("#a2"), c));
+        a1.forEach((s, i) => tl.fromTo(s, { opacity: 0 }, { opacity: 1, duration: 0.01 }, T(15.3 + i * 0.04)));
+        a2.forEach((s, i) => tl.fromTo(s, { opacity: 0 }, { opacity: 1, duration: 0.01 }, T(15.85 + i * 0.07)));
+        [16.6, 18.4].forEach((t) => {
+          for (let k = 0; k < 5; k++) tl.set("#avail", { x: Math.round((rnd() - 0.5) * 60), skewX: Math.round((rnd() - 0.5) * 24) }, T(t + k * STEP));
+          tl.set("#avail", { x: 0, skewX: 0 }, T(t + 5 * STEP));
+        });
+
+        /* ===== CRT power-off ===== */
+        tl.to("#tv", { scaleY: 0.004, filter: "brightness(3)", duration: 0.15, ease: "power3.in" }, 19.35);
+        tl.to("#tv", { scaleX: 0, duration: 0.14, ease: "power3.in" }, 19.5);
+        tl.fromTo("#crtDot", { opacity: 0, scale: 1 }, { opacity: 1, scale: 1, duration: 0.05, immediateRender: false }, 19.6);
+        tl.to("#crtDot", { opacity: 0, scale: 0.2, duration: 0.3, ease: "power2.in" }, 19.66);
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>
