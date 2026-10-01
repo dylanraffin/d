@@ -76,6 +76,11 @@
       #h3 .hitWord.outline { color: transparent; -webkit-text-stroke: 7px var(--ink); position: absolute; }
       #h4 { background: var(--ink); color: var(--gold); }
       #h4 .hitWord { font-family: "Instrument Serif", serif; font-style: italic; text-transform: none; font-size: 300px; padding: 0 40px; }
+      .hitWord.stack { line-height: 0.9; font-size: 250px; }
+      #h1 .hitWord.stack { font-size: 285px; }
+      #h2 .hitWord.stack { font-size: 190px; line-height: 0.95; }
+      .hitWord .ln { display: block; text-align: center; }
+      #h4 .hitWord.stack { font-size: 230px; line-height: 0.95; }
       #h5 { background: var(--ink); }
       #rows { position: absolute; left: 50%; top: 50%; width: 3600px; height: 2600px; margin: -1300px 0 0 -1800px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
       .row { display: flex; white-space: nowrap; font-family: "Anton", sans-serif; font-size: 230px; line-height: 1.02; align-items: center; gap: 70px; }
@@ -91,7 +96,7 @@
       #s4 .stage { background: radial-gradient(ellipse at 60% 60%, #15151b 0%, var(--ink) 70%); }
       .starDot { position: absolute; border-radius: 50%; background: var(--cream); }
       #wish { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-      #wishText { display: flex; flex-wrap: wrap; justify-content: center; width: 900px; font-family: "Instrument Serif", serif; font-style: italic; font-size: 230px; line-height: 1.05; color: var(--cream); white-space: pre; }
+      #wishText { display: flex; flex-direction: column; align-items: center; width: 1000px; font-family: "Instrument Serif", serif; font-style: italic; font-size: 210px; line-height: 1.05; color: var(--cream); white-space: pre; }
       #wishText span { display: block; }
       #shoot { position: absolute; left: 0; top: 0; width: 0; height: 0; }
       #shootRot { position: absolute; left: 0; top: 0; width: 0; height: 0; }
@@ -118,7 +123,10 @@
       #mc { display: flex; font-family: "Inter", sans-serif; font-weight: 600; font-size: 74px; letter-spacing: 0.34em; margin-right: -0.34em; color: var(--cream); margin-top: 6px; }
       #mc span { display: block; }
       #oclock { display: block; margin-top: -6px; padding: 0 30px 20px; font-family: "Instrument Serif", serif; font-style: italic; font-size: 150px; line-height: 1; color: var(--gold); white-space: nowrap; }
-      #url { margin-top: 18px; display: flex; font-family: "JetBrains Mono", monospace; font-size: 26px; letter-spacing: 0.3em; color: var(--cream); }
+      #motto { margin-top: 26px; display: flex; align-items: center; gap: 22px; font-family: "Inter", sans-serif; font-weight: 600; font-size: 24px; letter-spacing: 0.32em; color: var(--gold); }
+      #motto span { display: block; white-space: pre; }
+      #motto .rule { width: 46px; height: 2px; background: var(--gold); transform-origin: 50% 50%; }
+      #url { margin-top: 16px; display: flex; font-family: "JetBrains Mono", monospace; font-size: 26px; letter-spacing: 0.3em; color: var(--cream); }
       #url span { display: block; white-space: pre; }
       #cursor { width: 16px; height: 30px; background: var(--gold); margin-left: 6px; }
       #flash { position: absolute; inset: 0; background: #fff6e0; opacity: 0; }
@@ -208,10 +216,10 @@
       <!-- 03 · Kinetic type hits -->
       <section id="s3" class="clip" data-start="5.98" data-duration="3.62" data-track-index="3">
         <div class="stage">
-          <div class="hit" id="h1"><span class="hitWord">It's</span></div>
-          <div class="hit" id="h2"><span class="hitWord">Eleven</span></div>
-          <div class="hit" id="h3"><span class="hitWord fillw">Eleven</span><span class="hitWord outline">Eleven</span></div>
-          <div class="hit" id="h4"><span class="hitWord">o'clock</span></div>
+          <div class="hit" id="h1"><span class="hitWord stack"><span class="ln">Time</span><span class="ln">to meet</span></span></div>
+          <div class="hit" id="h2"><span class="hitWord stack"><span class="ln">Casting</span><span class="ln">Directors</span></span></div>
+          <div class="hit" id="h3"><span class="hitWord fillw">Agents</span><span class="hitWord outline">Agents</span></div>
+          <div class="hit" id="h4"><span class="hitWord stack"><span class="ln">film</span><span class="ln">directors</span></span></div>
           <div class="hit" id="h5"><div id="rows"></div><div id="goldLine"></div></div>
         </div>
       </section>
@@ -243,6 +251,7 @@
               <div id="mc"></div>
               <div id="oclock">o'clock</div>
             </div>
+            <div id="motto"></div>
             <div id="url"></div>
           </div></div>
           <div id="burst"></div>
@@ -259,7 +268,7 @@
           <span class="sceneLab" id="lab1">01/05 — FLIP</span>
           <span class="sceneLab" id="lab2">02/05 — CLOCK</span>
           <span class="sceneLab" id="lab3">03/05 — TYPE</span>
-          <span class="sceneLab" id="lab4">04/05 — WISH</span>
+          <span class="sceneLab" id="lab4">04/05 — LEARN</span>
           <span class="sceneLab" id="lab5">05/05 — MARK</span>
         </div>
         <div class="hudT" id="hudBR"><div id="rec"></div><div id="tc"></div></div>
@@ -325,10 +334,11 @@
         el("span", "", tc, "00"); sep();
         const sT = mkDigit(10), sU = mkDigit(10); sep();
         const fT = mkDigit(10), fU = mkDigit(10);
-        tl.to(fU, { y: -220, ease: "steps(10)", duration: 1 / 3, repeat: 44 }, 0);
-        tl.to(fT, { y: -66, ease: "steps(3)", duration: 1, repeat: 14 }, 0);
-        tl.to(sU, { y: -220, ease: "steps(10)", duration: 10 }, 0);
-        tl.fromTo(sU, { y: 0 }, { y: -110, ease: "steps(5)", duration: 5, immediateRender: false }, 10);
+        // GSAP steps(n) yields n+1 levels across the tween, so n-1 steps over (n-1) rows shows n digits.
+        tl.to(fU, { y: -198, ease: "steps(9)", duration: 1 / 3, repeat: 44 }, 0);
+        tl.to(fT, { y: -44, ease: "steps(2)", duration: 1, repeat: 14 }, 0);
+        tl.to(sU, { y: -198, ease: "steps(9)", duration: 10 }, 0);
+        tl.fromTo(sU, { y: 0 }, { y: -88, ease: "steps(4)", duration: 5, immediateRender: false }, 10);
         tl.set(sT, { y: -22 }, 10);
         tl.to("#rec", { opacity: 0.15, duration: 0.5, ease: "steps(1)", yoyo: true, repeat: 29 }, 0);
         // Film grain jitter
@@ -456,15 +466,15 @@
         // Marquee rows
         const rows = $("#rows");
         const rowDefs = [
-          { cls: "fill", word: "O'CLOCK", dir: 1 },
-          { cls: "outline", word: "11:11", dir: -1 },
           { cls: "outline", word: "11:11", dir: 1 },
+          { cls: "fill", word: "AGENTS", dir: -1 },
+          { cls: "outline", word: "CASTING DIRECTORS", dir: 1 },
           { cls: "fill", word: "11:11", dir: -1 },
           { cls: "gold", word: "MASTERCLASS", dir: 1 },
-          { cls: "fill", word: "O'CLOCK", dir: -1 },
+          { cls: "fill", word: "FILM DIRECTORS", dir: -1 },
           { cls: "outline", word: "11:11", dir: 1 },
-          { cls: "gold", word: "MASTERCLASS", dir: -1 },
-          { cls: "outline", word: "11:11", dir: 1 },
+          { cls: "gold", word: "AGENTS", dir: -1 },
+          { cls: "outline", word: "CASTING DIRECTORS", dir: 1 },
         ];
         const rowEls = rowDefs.map((d) => {
           const r = el("div", "row " + d.cls, rows);
@@ -496,7 +506,7 @@
         }
         const wishEl = $("#wishText");
         const wishChars = [];
-        ["make a", "wish."].forEach((line) => {
+        ["learn from", "the best."].forEach((line) => {
           const ln = el("div", "", wishEl);
           ln.style.display = "flex"; ln.style.whiteSpace = "pre";
           Array.from(line).forEach((ch) => wishChars.push(el("span", "", ln, ch)));
@@ -538,6 +548,13 @@
         const digitSpans = timeParts.filter((p) => p.tagName === "SPAN");
         const dotEls = timeParts.filter((p) => p.tagName === "DIV");
         const mcChars = Array.from("MASTERCLASS").map((c) => el("span", "", $("#mc"), c));
+        const motto = $("#motto");
+        const ruleL = el("div", "rule", motto);
+        const mottoWrap = el("div", "", motto); mottoWrap.style.display = "flex";
+        const mottoChars = Array.from("QUALITY OVER QUANTITY").map((c) => el("span", "", mottoWrap, c));
+        const ruleR = el("div", "rule", motto);
+        tl.fromTo(mottoChars, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out", stagger: 0.018 }, 12.15);
+        tl.fromTo([ruleL, ruleR], { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "expo.out" }, 12.2);
         const urlChars = Array.from("1111MASTERCLASS.COM").map((c) => el("span", "", $("#url"), c));
         el("div", "", $("#url")).id = "cursor";
         const lt = $("#lockTicks");
