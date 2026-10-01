@@ -1,0 +1,16 @@
+{
+  "name": "1111-oclock-motion",
+  "private": true,
+  "scripts": {
+    "audio": "node build-audio.mjs",
+    "check": "hyperframes check",
+    "render": "hyperframes render --no-browser-gpu --quality delivery --fps 60 --output renders/1111-oclock.mp4"
+  },
+  "dependencies": {
+    "@fontsource/anton": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "gsap": "^3.14.2"
+  }
+}
