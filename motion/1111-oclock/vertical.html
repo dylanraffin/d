@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>11:11 Masterclass O'clock — Motion Reel 9:16</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Anton"; src: url("assets/fonts/anton-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Instrument Serif"; src: url("assets/fonts/instrument-serif-latin-400-italic.woff2") format("woff2"); font-style: italic; font-weight: 400; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+
+      :root {
+        --ink: #0b0b0e;
+        --ink-2: #18181d;
+        --cream: #f3ede2;
+        --gold: #f2b33d;
+        --gold-deep: #c98a12;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--ink); color: var(--cream); font-family: "Inter", sans-serif; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--ink); }
+      .clip { position: absolute; inset: 0; }
+      .stage { position: absolute; inset: 0; overflow: hidden; }
+      .center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+
+      /* ---------- Scene 1 : split-flap ---------- */
+      #s1 .stage { background: radial-gradient(ellipse at 50% 45%, #1a1a20 0%, var(--ink) 70%); }
+      #s1cam { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      #flipScale { transform: scale(1.32); }
+      #flipRow { --card: #1b1b21; --glyph: #f3ede2; display: flex; flex-wrap: wrap; justify-content: center; width: 522px; column-gap: 22px; row-gap: 0; }
+      .card { position: relative; width: 250px; height: 360px; }
+      .card-in { position: absolute; inset: 0; }
+      .set { position: absolute; inset: 0; opacity: 0; perspective: 1100px; }
+      .set.first { opacity: 1; }
+      .half { position: absolute; left: 0; width: 100%; height: 50%; overflow: hidden; background: var(--card); }
+      .half.top { top: 0; border-radius: 22px 22px 0 0; }
+      .half.bot { top: 50%; border-radius: 0 0 22px 22px; }
+      .half.top::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0)); }
+      .half.bot::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.25), rgba(0,0,0,0)); }
+      .g { position: absolute; left: 0; width: 100%; height: 360px; line-height: 360px; text-align: center; font-family: "Anton", sans-serif; font-size: 300px; color: var(--glyph); }
+      .half.bot .g { top: -180px; }
+      .half.top .g { top: 0; }
+      .flapT { transform-origin: 50% 100%; backface-visibility: hidden; z-index: 3; }
+      .flapB { transform-origin: 50% 0%; backface-visibility: hidden; z-index: 4; }
+      .shade { position: absolute; inset: 0; background: #000; opacity: 0; z-index: 2; }
+      .hinge { position: absolute; left: -2px; right: -2px; top: 178px; height: 4px; background: var(--ink); z-index: 20; }
+      .colon { position: relative; width: 100%; height: 96px; }
+      .dot { position: absolute; top: 26px; width: 44px; height: 44px; border-radius: 50%; background: var(--gold); }
+      .dot.a { left: 189px; }
+      .dot.b { left: 289px; }
+      #s1bar { position: absolute; left: 140px; top: 1560px; width: 800px; height: 4px; background: rgba(243,237,226,0.12); }
+      #s1barFill { position: absolute; inset: 0; background: var(--gold); transform-origin: 0% 50%; }
+      #s1meta { position: absolute; left: 140px; top: 1590px; display: flex; justify-content: space-between; width: 800px; font-family: "JetBrains Mono", monospace; font-size: 24px; letter-spacing: 0.2em; color: var(--cream); }
+
+      #wipeGold { position: absolute; left: 50%; top: 50%; width: 2400px; height: 2400px; margin: -1200px 0 0 -1200px; border-radius: 50%; background: var(--gold); }
+
+      /* ---------- Scene 2 : clock ---------- */
+      #s2 .stage { background: radial-gradient(ellipse at 50% 50%, #17171c 0%, var(--ink) 65%); }
+      #clock { position: absolute; left: 50%; top: 50%; width: 1080px; height: 1080px; margin: -540px 0 0 -540px; overflow: visible; }
+      .circText { font-family: "Inter", sans-serif; font-weight: 600; font-size: 24px; letter-spacing: 9px; fill: var(--cream); }
+      .hourNum { font-family: "JetBrains Mono", monospace; font-size: 30px; fill: rgba(243,237,226,0.55); }
+      .s2side { position: absolute; left: 0; width: 100%; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 30px; letter-spacing: 0.3em; color: var(--cream); }
+      #s2L { top: 330px; }
+      #s2R { top: 1560px; }
+
+      /* ---------- Scene 3 : kinetic type ---------- */
+      .hit { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; overflow: hidden; }
+      .hitWord { display: block; font-family: "Anton", sans-serif; font-size: 285px; line-height: 1; text-transform: uppercase; white-space: nowrap; }
+      #h1 { background: var(--gold); color: var(--ink); }
+      #h1 .hitWord { font-size: 560px; }
+      #h2 { background: var(--ink); color: var(--cream); }
+      #h3 { background: var(--cream); color: var(--ink); }
+      #h3 .hitWord.outline { color: transparent; -webkit-text-stroke: 7px var(--ink); position: absolute; }
+      #h4 { background: var(--ink); color: var(--gold); }
+      #h4 .hitWord { font-family: "Instrument Serif", serif; font-style: italic; text-transform: none; font-size: 300px; padding: 0 40px; }
+      #h5 { background: var(--ink); }
+      #rows { position: absolute; left: 50%; top: 50%; width: 3600px; height: 2600px; margin: -1300px 0 0 -1800px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+      .row { display: flex; white-space: nowrap; font-family: "Anton", sans-serif; font-size: 230px; line-height: 1.02; align-items: center; gap: 70px; }
+      .row span.t { display: block; }
+      .row.outline span.t { color: transparent; -webkit-text-stroke: 3px rgba(243,237,226,0.8); }
+      .row.fill span.t { color: var(--cream); }
+      .row.gold span.t { color: var(--gold); }
+      .star4 { display: block; width: 90px; height: 90px; background: var(--gold); clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%); flex: none; }
+      .row.gold .star4 { background: var(--cream); }
+      #goldLine { position: absolute; left: 50%; top: 50%; width: 2600px; height: 8px; margin: -4px 0 0 -1300px; background: linear-gradient(90deg, rgba(242,179,61,0), var(--gold) 30%, #fff3d6 50%, var(--gold) 70%, rgba(242,179,61,0)); }
+
+      /* ---------- Scene 4 : wish ---------- */
+      #s4 .stage { background: radial-gradient(ellipse at 60% 60%, #15151b 0%, var(--ink) 70%); }
+      .starDot { position: absolute; border-radius: 50%; background: var(--cream); }
+      #wish { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      #wishText { display: flex; flex-wrap: wrap; justify-content: center; width: 900px; font-family: "Instrument Serif", serif; font-style: italic; font-size: 230px; line-height: 1.05; color: var(--cream); white-space: pre; }
+      #wishText span { display: block; }
+      #shoot { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+      #shootRot { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+      #shootHead { position: absolute; left: -45px; top: -45px; width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, #ffffff 0%, #ffe7b0 18%, rgba(242,179,61,0.55) 40%, rgba(242,179,61,0) 70%); }
+      #shootTrail { position: absolute; left: -760px; top: -3px; width: 760px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, rgba(242,179,61,0), rgba(242,179,61,0.5) 60%, #fff4d8); transform-origin: 100% 50%; }
+      .spark { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #ffe2a0; opacity: 0; }
+
+      /* ---------- Scene 5 : lockup ---------- */
+      #s5 .stage { background: radial-gradient(ellipse at 50% 48%, #1a1a20 0%, var(--ink) 68%); }
+      #ring { position: absolute; left: 50%; top: 50%; width: 1040px; height: 1040px; margin: -520px 0 0 -520px; overflow: visible; }
+      #lockScale { position: absolute; inset: 0; }
+      #lock { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #lockInner { position: relative; display: flex; flex-direction: column; align-items: center; }
+      #bigTime { position: relative; display: flex; align-items: center; font-family: "Anton", sans-serif; font-size: 330px; line-height: 1; color: var(--cream); }
+      .mask { display: block; overflow: hidden; padding: 0 4px; }
+      .mask span { display: block; }
+      .bcolon { position: relative; width: 70px; height: 330px; }
+      .bdot { position: absolute; left: 14px; width: 42px; height: 42px; border-radius: 50%; background: var(--gold); }
+      .bdot.a { top: 102px; }
+      .bdot.b { top: 196px; }
+      #shine { position: absolute; left: 0; top: 0; width: 100%; height: 330px; display: flex; justify-content: center; align-items: center; font-family: "Anton", sans-serif; font-size: 330px; line-height: 1; color: #ffe9b8; pointer-events: none; }
+      #shine .mask span { color: #fff1cf; }
+      #shine .bdot { background: #fff1cf; }
+      #mc { display: flex; font-family: "Inter", sans-serif; font-weight: 600; font-size: 74px; letter-spacing: 0.34em; margin-right: -0.34em; color: var(--cream); margin-top: 6px; }
+      #mc span { display: block; }
+      #oclock { display: block; margin-top: -6px; padding: 0 30px 20px; font-family: "Instrument Serif", serif; font-style: italic; font-size: 150px; line-height: 1; color: var(--gold); white-space: nowrap; }
+      #url { margin-top: 18px; display: flex; font-family: "JetBrains Mono", monospace; font-size: 26px; letter-spacing: 0.3em; color: var(--cream); }
+      #url span { display: block; white-space: pre; }
+      #cursor { width: 16px; height: 30px; background: var(--gold); margin-left: 6px; }
+      #flash { position: absolute; inset: 0; background: #fff6e0; opacity: 0; }
+      #burst { position: absolute; left: 540px; top: 960px; width: 0; height: 0; }
+      .bspark { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); opacity: 0; }
+      #shock { position: absolute; left: 50%; top: 50%; width: 1000px; height: 1000px; margin: -500px 0 0 -500px; border-radius: 50%; border: 6px solid var(--gold); opacity: 0; }
+
+      /* ---------- Global overlays ---------- */
+      #hud { position: absolute; inset: 0; mix-blend-mode: difference; pointer-events: none; font-family: "JetBrains Mono", monospace; font-size: 18px; letter-spacing: 0.18em; color: #e9e3d7; }
+      .corner { position: absolute; width: 42px; height: 42px; border-color: #e9e3d7; border-style: solid; border-width: 0; }
+      .c-tl { left: 48px; top: 48px; border-top-width: 2px; border-left-width: 2px; }
+      .c-tr { right: 48px; top: 48px; border-top-width: 2px; border-right-width: 2px; }
+      .c-bl { left: 48px; bottom: 48px; border-bottom-width: 2px; border-left-width: 2px; }
+      .c-br { right: 48px; bottom: 48px; border-bottom-width: 2px; border-right-width: 2px; }
+      .hudT { position: absolute; white-space: nowrap; }
+      #hudTL { left: 108px; top: 58px; }
+      #hudTR { right: 108px; top: 58px; }
+      #hudBL { left: 108px; bottom: 58px; height: 22px; width: 400px; }
+      #hudBR { right: 108px; bottom: 58px; display: flex; align-items: center; }
+      #tc { display: flex; align-items: center; }
+      .sceneLab { position: absolute; left: 0; bottom: 0; opacity: 0; }
+      .tcd { position: relative; width: 15px; height: 22px; overflow: hidden; }
+      .tcs { position: absolute; left: 0; top: 0; width: 15px; }
+      .tcs i { display: block; height: 22px; line-height: 22px; font-style: normal; text-align: center; }
+      .tsep { display: block; width: 14px; text-align: center; }
+      #rec { width: 12px; height: 12px; border-radius: 50%; background: #e9e3d7; margin-right: 14px; }
+      #grainWrap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 0.13; mix-blend-mode: overlay; }
+      #grain { position: absolute; left: -200px; top: -200px; width: 1480px; height: 2320px; }
+      #vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55) 100%); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="15" data-fps="60">
+
+      <!-- 01 · Split-flap countdown to 11:11 -->
+      <section id="s1" class="clip" data-start="0" data-duration="3.05" data-track-index="0">
+        <div class="stage">
+          <div id="s1cam">
+            <div id="flipScale"><div id="flipRow">
+              <div class="card" id="cH1"><div class="card-in"></div><div class="hinge"></div></div>
+              <div class="card" id="cH2"><div class="card-in"></div><div class="hinge"></div></div>
+              <div class="colon" id="s1colon"><div class="dot a"></div><div class="dot b"></div></div>
+              <div class="card" id="cM1"><div class="card-in"></div><div class="hinge"></div></div>
+              <div class="card" id="cM2"><div class="card-in"></div><div class="hinge"></div></div>
+            </div></div>
+            <div id="s1bar"><div id="s1barFill"></div></div>
+            <div id="s1meta"><span id="s1metaL">11:11 MASTERCLASS</span><span id="s1metaR">O'CLOCK</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="sWipe" class="clip" data-start="2.55" data-duration="0.9" data-track-index="1">
+        <div class="stage"><div id="wipeGold"></div></div>
+      </section>
+
+      <!-- 02 · Clock spins to 11:11:11 -->
+      <section id="s2" class="clip" data-start="2.95" data-duration="3.1" data-track-index="2">
+        <div class="stage" id="s2stage">
+          <svg id="clock" viewBox="-540 -540 1080 1080">
+            <g id="clockAll">
+              <g id="circGroup">
+                <path id="circPath" d="M 0,-452 a 452,452 0 1,1 0,904 a 452,452 0 1,1 0,-904" fill="none" />
+                <text class="circText"><textPath href="#circPath" id="circTP"></textPath></text>
+              </g>
+              <circle id="ringOuter" r="400" fill="none" stroke="#f3ede2" stroke-width="3" transform="rotate(-90)" />
+              <circle id="ringInner" r="345" fill="none" stroke="rgba(243,237,226,0.18)" stroke-width="1.5" />
+              <g id="ticks"></g>
+              <g id="nums"></g>
+              <g id="hands">
+                <rect class="ghost" x="-4" y="-300" width="8" height="330" rx="4" fill="#f3ede2" opacity="0.10" />
+                <rect class="ghost" x="-4" y="-300" width="8" height="330" rx="4" fill="#f3ede2" opacity="0.18" />
+                <rect class="ghost" x="-4" y="-300" width="8" height="330" rx="4" fill="#f3ede2" opacity="0.3" />
+                <rect id="hourHand" x="-8" y="-200" width="16" height="230" rx="8" fill="#f3ede2" />
+                <rect id="minHand" x="-4" y="-300" width="8" height="330" rx="4" fill="#f3ede2" />
+                <g id="secHand"><rect x="-1.5" y="-340" width="3" height="400" fill="#f2b33d" /><circle cy="40" r="10" fill="#f2b33d" /></g>
+              </g>
+              <circle id="shock2" r="400" fill="none" stroke="#f2b33d" stroke-width="4" opacity="0" />
+            </g>
+            <circle id="cap" r="20" fill="#f2b33d" />
+            <circle id="capIn" r="6" fill="#0b0b0e" />
+          </svg>
+          <div class="s2side" id="s2L">HH:MM:SS</div>
+          <div class="s2side" id="s2R">11:11:11</div>
+        </div>
+      </section>
+
+      <!-- 03 · Kinetic type hits -->
+      <section id="s3" class="clip" data-start="5.98" data-duration="3.62" data-track-index="3">
+        <div class="stage">
+          <div class="hit" id="h1"><span class="hitWord">It's</span></div>
+          <div class="hit" id="h2"><span class="hitWord">Eleven</span></div>
+          <div class="hit" id="h3"><span class="hitWord fillw">Eleven</span><span class="hitWord outline">Eleven</span></div>
+          <div class="hit" id="h4"><span class="hitWord">o'clock</span></div>
+          <div class="hit" id="h5"><div id="rows"></div><div id="goldLine"></div></div>
+        </div>
+      </section>
+
+      <!-- 04 · Make a wish -->
+      <section id="s4" class="clip" data-start="9.45" data-duration="1.75" data-track-index="4">
+        <div class="stage">
+          <div id="stars"></div>
+          <div id="wish"><div id="wishText"></div></div>
+          <div id="sparks"></div>
+          <div id="shoot"><div id="shootRot"><div id="shootTrail"></div><div id="shootHead"></div></div></div>
+        </div>
+      </section>
+
+      <!-- 05 · Logo lockup -->
+      <section id="s5" class="clip" data-start="10.95" data-duration="4.05" data-track-index="5">
+        <div class="stage">
+          <svg id="ring" viewBox="-500 -500 1000 1000">
+            <g id="ringRot">
+              <circle id="lockRing" r="470" fill="none" stroke="#f2b33d" stroke-width="2" transform="rotate(-90)" />
+              <g id="lockTicks"></g>
+            </g>
+          </svg>
+          <div id="shock"></div>
+          <div id="lockScale"><div id="lock">
+            <div id="lockInner">
+              <div id="bigTime"></div>
+              <div id="shine"></div>
+              <div id="mc"></div>
+              <div id="oclock">o'clock</div>
+            </div>
+            <div id="url"></div>
+          </div></div>
+          <div id="burst"></div>
+          <div id="flash"></div>
+        </div>
+      </section>
+
+      <!-- HUD + texture -->
+      <div id="hud">
+        <div class="corner c-tl"></div><div class="corner c-tr"></div><div class="corner c-bl"></div><div class="corner c-br"></div>
+        <div class="hudT" id="hudTL">11:11 MASTERCLASS</div>
+        <div class="hudT" id="hudTR">MOTION REEL / 2026</div>
+        <div class="hudT" id="hudBL">
+          <span class="sceneLab" id="lab1">01/05 — FLIP</span>
+          <span class="sceneLab" id="lab2">02/05 — CLOCK</span>
+          <span class="sceneLab" id="lab3">03/05 — TYPE</span>
+          <span class="sceneLab" id="lab4">04/05 — WISH</span>
+          <span class="sceneLab" id="lab5">05/05 — MARK</span>
+        </div>
+        <div class="hudT" id="hudBR"><div id="rec"></div><div id="tc"></div></div>
+      </div>
+      <div id="grainWrap">
+        <svg id="grain" viewBox="0 0 1480 2320" preserveAspectRatio="none">
+          <filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="11" stitchTiles="stitch" /><feColorMatrix type="saturate" values="0" /></filter>
+          <rect width="1480" height="2320" filter="url(#noise)" />
+        </svg>
+      </div>
+      <div id="vignette"></div>
+
+      <audio id="score" src="assets/audio/score.wav" data-start="0" data-duration="15" data-track-index="10" data-volume="1"></audio>
+    </div>
+
+    <script>
+      (function () {
+        const SVGNS = "http://www.w3.org/2000/svg";
+        const $ = (s) => document.querySelector(s);
+        const $$ = (s) => Array.from(document.querySelectorAll(s));
+        const el = (tag, cls, parent, text) => {
+          const n = document.createElement(tag);
+          if (cls) n.className = cls;
+          if (text != null) n.textContent = text;
+          if (parent) parent.appendChild(n);
+          return n;
+        };
+        const sv = (tag, attrs, parent) => {
+          const n = document.createElementNS(SVGNS, tag);
+          for (const k in attrs) n.setAttribute(k, attrs[k]);
+          if (parent) parent.appendChild(n);
+          return n;
+        };
+        // Seeded PRNG: every "random" placement is reproducible frame to frame.
+        let seed = 1111;
+        const rnd = () => {
+          seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+
+        const tl = gsap.timeline({ paused: true });
+        const GOLD = "#f2b33d", INK = "#0b0b0e", CREAM = "#f3ede2";
+
+        /* ================= HUD ================= */
+        const labs = ["#lab1", "#lab2", "#lab3", "#lab4", "#lab5"];
+        const labT = [0, 3.0, 6.0, 9.45, 11.0];
+        labs.forEach((id, i) => {
+          tl.set(id, { opacity: 1 }, labT[i] || 0.001);
+          if (i > 0) tl.set(labs[i - 1], { opacity: 0 }, labT[i]);
+        });
+        tl.set("#lab1", { opacity: 1 }, 0);
+        // Timecode built from stepped digit strips (pure transforms, seek-safe).
+        const tc = $("#tc");
+        const mkDigit = (n) => {
+          const d = el("div", "tcd", tc);
+          const s = el("div", "tcs", d);
+          for (let i = 0; i <= n; i++) el("i", "", s, String(i % (n === 10 ? 10 : n)));
+          return s;
+        };
+        const sep = () => el("span", "tsep", tc, ":");
+        el("span", "", tc, "00"); sep();
+        const sT = mkDigit(10), sU = mkDigit(10); sep();
+        const fT = mkDigit(10), fU = mkDigit(10);
+        tl.to(fU, { y: -220, ease: "steps(10)", duration: 1 / 3, repeat: 44 }, 0);
+        tl.to(fT, { y: -66, ease: "steps(3)", duration: 1, repeat: 14 }, 0);
+        tl.to(sU, { y: -220, ease: "steps(10)", duration: 10 }, 0);
+        tl.fromTo(sU, { y: 0 }, { y: -110, ease: "steps(5)", duration: 5, immediateRender: false }, 10);
+        tl.set(sT, { y: -22 }, 10);
+        tl.to("#rec", { opacity: 0.15, duration: 0.5, ease: "steps(1)", yoyo: true, repeat: 29 }, 0);
+        // Film grain jitter
+        for (let i = 0; i < 120; i++) {
+          tl.set("#grain", { x: Math.round((rnd() - 0.5) * 300), y: Math.round((rnd() - 0.5) * 300) }, i / 8);
+        }
+
+        /* ================= 01 · FLIP ================= */
+        const makeHalf = (pos, digit, extra) => {
+          const h = el("div", "half " + pos + (extra ? " " + extra : ""));
+          el("div", "g", h, digit);
+          if (extra) el("div", "shade", h);
+          return h;
+        };
+        function buildCard(cardSel, start, flips) {
+          const host = $(cardSel + " .card-in");
+          const s0 = el("div", "set first", host);
+          s0.appendChild(makeHalf("top", start));
+          s0.appendChild(makeHalf("bot", start));
+          let prev = start, prevSet = s0;
+          flips.forEach(([to, t, dur]) => {
+            const s = el("div", "set", host);
+            s.appendChild(makeHalf("top", to));
+            s.appendChild(makeHalf("bot", prev));
+            const fT = makeHalf("top", prev, "flapT");
+            const fB = makeHalf("bot", to, "flapB");
+            s.appendChild(fT); s.appendChild(fB);
+            tl.set(s, { opacity: 1 }, t);
+            tl.set(prevSet, { opacity: 0 }, t);
+            tl.fromTo(fT, { rotationX: 0 }, { rotationX: -90, duration: dur / 2, ease: "power2.in" }, t);
+            tl.fromTo(fT.querySelector(".shade"), { opacity: 0 }, { opacity: 0.7, duration: dur / 2, ease: "power2.in" }, t);
+            tl.fromTo(fB, { rotationX: 90 }, { rotationX: 0, duration: dur / 2, ease: "back.out(2.2)" }, t + dur / 2);
+            tl.fromTo(fB.querySelector(".shade"), { opacity: 0.55 }, { opacity: 0, duration: dur / 2, ease: "power1.out" }, t + dur / 2);
+            prev = to; prevSet = s;
+          });
+        }
+        const FAST = 0.1;
+        buildCard("#cH1", "1", []);
+        buildCard("#cH2", "1", []);
+        buildCard("#cM1", "0", [["1", 1.55, 0.3]]);
+        buildCard("#cM2", "2", [
+          ["3", 0.42, FAST], ["4", 0.53, FAST], ["5", 0.64, FAST], ["6", 0.75, FAST], ["7", 0.86, FAST], ["8", 0.97, FAST],
+          ["9", 1.18, 0.26], ["0", 1.55, 0.3], ["1", 2.0, 0.32],
+        ]);
+        // Cards drop in
+        tl.fromTo("#flipRow > *", { y: -90, opacity: 0, rotationX: 70, transformPerspective: 1400 },
+          { y: 0, opacity: 1, rotationX: 0, duration: 0.55, ease: "expo.out", stagger: 0.06 }, 0.0);
+        // Slow camera drift in 3D
+        tl.fromTo("#s1cam", { scale: 0.86, rotationY: -16, rotationX: 9, transformPerspective: 2200 },
+          { scale: 1.0, rotationY: 5, rotationX: -2, duration: 2.32, ease: "power1.inOut" }, 0);
+        tl.fromTo("#s1barFill", { scaleX: 0 }, { scaleX: 1, duration: 2.0, ease: "power2.in" }, 0.32);
+        tl.fromTo("#s1meta", { opacity: 0, y: 14 }, { opacity: 0.7, y: 0, duration: 0.6, ease: "power2.out" }, 0.45);
+        tl.to("#s1colon .dot", { opacity: 0.25, duration: 0.06, yoyo: true, repeat: 1, stagger: 0 }, 1.0);
+        tl.to("#s1colon .dot", { opacity: 0.25, duration: 0.06, yoyo: true, repeat: 1 }, 1.5);
+        // 11:11 lands — the whole row turns gold
+        tl.to("#flipRow", { "--card": GOLD, "--glyph": INK, duration: 0.12, ease: "none" }, 2.32);
+        tl.to("#s1colon .dot", { backgroundColor: INK, duration: 0.12 }, 2.32);
+        tl.fromTo("#flipRow", { scale: 1 }, { scale: 1.07, duration: 0.09, ease: "power2.out", yoyo: true, repeat: 1 }, 2.32);
+        tl.to("#s1cam", { scale: 1.05, rotationY: 0, rotationX: 0, duration: 0.35, ease: "expo.out" }, 2.32);
+        tl.to("#s1metaR", { color: GOLD, duration: 0.1 }, 2.32);
+
+        // Gold circle wipe out of the colon
+        tl.fromTo("#wipeGold", { scale: 0 }, { scale: 1, duration: 0.4, ease: "power3.in" }, 2.6);
+
+        /* ================= 02 · CLOCK ================= */
+        tl.fromTo("#s2stage", { clipPath: "circle(0px at 50% 50%)" }, { clipPath: "circle(1150px at 50% 50%)", duration: 0.45, ease: "power3.out" }, 2.98);
+        const ticks = $("#ticks");
+        const tickEls = [];
+        for (let i = 0; i < 60; i++) {
+          const major = i % 5 === 0;
+          const g = sv("g", { transform: `rotate(${i * 6})` }, ticks);
+          const ln = sv("line", { x1: 0, x2: 0, y1: -392, y2: major ? -350 : -374, stroke: major ? GOLD : "rgba(243,237,226,0.6)", "stroke-width": major ? 5 : 2, "stroke-linecap": "round" }, g);
+          tickEls.push(ln);
+        }
+        const nums = $("#nums");
+        const numEls = [];
+        for (let h = 1; h <= 12; h++) {
+          const a = (h * 30 - 90) * Math.PI / 180;
+          const t = sv("text", { x: (Math.cos(a) * 300).toFixed(1), y: (Math.sin(a) * 300 + 10).toFixed(1), "text-anchor": "middle", class: "hourNum" }, nums);
+          t.textContent = String(h).padStart(2, "0");
+          if (h === 11) t.setAttribute("id", "num11");
+          numEls.push(t);
+        }
+        $("#circTP").textContent = "MASTERCLASS ✦ O'CLOCK ✦ ".repeat(6);
+        const C = 2 * Math.PI * 400;
+        tl.fromTo("#ringOuter", { attr: { "stroke-dasharray": C, "stroke-dashoffset": C } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.75, ease: "power2.inOut" }, 3.05);
+        tl.fromTo("#ringInner", { scale: 0.6, opacity: 0, svgOrigin: "0 0" }, { scale: 1, opacity: 1, duration: 0.8, ease: "expo.out" }, 3.15);
+        tl.fromTo(tickEls, { scale: 0, svgOrigin: "0 -392" }, { scale: 1, duration: 0.3, ease: "back.out(3)", stagger: 0.009 }, 3.12);
+        tl.fromTo(numEls, { opacity: 0, scale: 0.4, transformOrigin: "50% 50%" }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)", stagger: 0.035 }, 3.3);
+        tl.fromTo("#circGroup", { rotation: -40, opacity: 0, svgOrigin: "0 0" }, { rotation: 50, opacity: 1, duration: 3.0, ease: "power2.out" }, 3.0);
+        tl.fromTo(".s2side", { opacity: 0, y: 20 }, { opacity: 0.75, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.1 }, 3.45);
+        // Hands: spin from 12:00 to 11:11:11, ghosts trail behind as a motion blur
+        const SPIN0 = 3.3, SPIN = 1.7;
+        tl.fromTo("#hourHand", { rotation: 0, svgOrigin: "0 0" }, { rotation: 360 + 335.5, duration: SPIN, ease: "expo.inOut" }, SPIN0);
+        tl.fromTo("#minHand", { rotation: 0, svgOrigin: "0 0" }, { rotation: 360 * 11 + 66, duration: SPIN, ease: "expo.inOut" }, SPIN0);
+        $$("#hands .ghost").forEach((g, i) => {
+          tl.fromTo(g, { rotation: 0, svgOrigin: "0 0" }, { rotation: 360 * 11 + 66, duration: SPIN, ease: "expo.inOut" }, SPIN0 + (3 - i) * 0.035);
+        });
+        tl.fromTo("#secHand", { rotation: 0, svgOrigin: "0 0" }, { rotation: 360 * 4 + 66, duration: SPIN + 0.08, ease: "expo.inOut" }, SPIN0);
+        tl.fromTo("#hands", { opacity: 0 }, { opacity: 1, duration: 0.2 }, 3.2);
+        // Landing hit at 5.0
+        tl.fromTo("#shock2", { scale: 1, opacity: 0.9, svgOrigin: "0 0" }, { immediateRender: false, scale: 1.45, opacity: 0, duration: 0.7, ease: "power2.out" }, 5.0);
+        tl.to("#num11", { fill: GOLD, scale: 1.6, transformOrigin: "50% 50%", duration: 0.25, ease: "back.out(3)" }, 5.0);
+        tl.fromTo("#clockAll", { rotation: 0, svgOrigin: "0 0" }, { rotation: 3, duration: 0.08, yoyo: true, repeat: 1, ease: "power1.out" }, 5.0);
+        tl.to("#s2R", { color: GOLD, duration: 0.1 }, 5.0);
+        // Dive into the gold cap
+        tl.to("#clockAll", { scale: 5, opacity: 0, svgOrigin: "0 0", duration: 0.5, ease: "power3.in" }, 5.5);
+        tl.to(".s2side", { opacity: 0, duration: 0.2 }, 5.5);
+        tl.to("#capIn", { scale: 0, svgOrigin: "0 0", duration: 0.2 }, 5.5);
+        tl.to("#cap", { scale: 70, svgOrigin: "0 0", duration: 0.5, ease: "power3.in" }, 5.5);
+
+        /* ================= 03 · TYPE ================= */
+        const hits = [["#h1", 6.0], ["#h2", 6.4], ["#h3", 6.8], ["#h4", 7.2], ["#h5", 7.8]];
+        hits.forEach(([id, t], i) => {
+          tl.set(id, { opacity: 1 }, t);
+          if (i > 0) tl.set(hits[i - 1][0], { opacity: 0 }, t);
+        });
+        tl.fromTo("#h1 .hitWord", { scale: 1.6, rotation: -6 }, { scale: 1, rotation: 0, duration: 0.38, ease: "expo.out" }, 6.0);
+        tl.fromTo("#h2 .hitWord", { xPercent: 22, skewX: -18 }, { xPercent: 0, skewX: 0, duration: 0.38, ease: "expo.out" }, 6.4);
+        tl.fromTo("#h3 .fillw", { xPercent: -22, opacity: 1 }, { xPercent: 0, duration: 0.38, ease: "expo.out" }, 6.8);
+        tl.fromTo("#h3 .outline", { xPercent: -22, y: 0 }, { xPercent: 4, y: 26, duration: 0.38, ease: "expo.out" }, 6.8);
+        tl.fromTo("#h4 .hitWord", { clipPath: "inset(0% 100% 0% 0%)", rotation: -10, scale: 1.12 }, { clipPath: "inset(0% 0% 0% 0%)", rotation: -4, scale: 1, duration: 0.5, ease: "power3.out" }, 7.2);
+        tl.to("#h4 .hitWord", { scale: 1.06, duration: 0.6, ease: "none" }, 7.7);
+
+        // Marquee rows
+        const rows = $("#rows");
+        const rowDefs = [
+          { cls: "fill", word: "O'CLOCK", dir: 1 },
+          { cls: "outline", word: "11:11", dir: -1 },
+          { cls: "outline", word: "11:11", dir: 1 },
+          { cls: "fill", word: "11:11", dir: -1 },
+          { cls: "gold", word: "MASTERCLASS", dir: 1 },
+          { cls: "fill", word: "O'CLOCK", dir: -1 },
+          { cls: "outline", word: "11:11", dir: 1 },
+          { cls: "gold", word: "MASTERCLASS", dir: -1 },
+          { cls: "outline", word: "11:11", dir: 1 },
+        ];
+        const rowEls = rowDefs.map((d) => {
+          const r = el("div", "row " + d.cls, rows);
+          for (let i = 0; i < 8; i++) { el("span", "t", r, d.word); el("span", "star4", r); }
+          return r;
+        });
+        tl.set("#rows", { rotation: -8 }, 0);
+        rowEls.forEach((r, i) => {
+          const d = rowDefs[i].dir;
+          tl.fromTo(r, { x: -900 + d * 1400 }, { x: -900 + d * 300, duration: 0.45, ease: "expo.out" }, 7.8 + i * 0.04);
+          tl.to(r, { x: -900 + d * -150, duration: 1.0, ease: "none" }, 8.25 + i * 0.04);
+        });
+        tl.to("#rows", { scaleY: 0, duration: 0.28, ease: "power3.in" }, 9.05);
+        tl.fromTo("#goldLine", { rotation: -8, scaleX: 0 }, { scaleX: 1, duration: 0.25, ease: "expo.out" }, 9.22);
+        tl.to("#goldLine", { scaleX: 0, transformOrigin: "100% 50%", duration: 0.2, ease: "power3.in" }, 9.47);
+
+        /* ================= 04 · WISH ================= */
+        const stars = $("#stars");
+        for (let i = 0; i < 150; i++) {
+          const s = el("div", "starDot", stars);
+          const sz = 1.5 + rnd() * 3;
+          s.style.width = s.style.height = sz.toFixed(1) + "px";
+          s.style.left = (rnd() * 1080).toFixed(0) + "px";
+          s.style.top = (rnd() * 1920).toFixed(0) + "px";
+          const t0 = 9.45 + rnd() * 0.4;
+          const peak = 0.35 + rnd() * 0.6;
+          tl.fromTo(s, { opacity: 0 }, { opacity: peak, duration: 0.3, ease: "power1.out" }, t0);
+          tl.to(s, { opacity: peak * 0.25, duration: 0.25 + rnd() * 0.3, yoyo: true, repeat: 1, ease: "sine.inOut" }, t0 + 0.3 + rnd() * 0.5);
+        }
+        const wishEl = $("#wishText");
+        const wishChars = [];
+        ["make a", "wish."].forEach((line) => {
+          const ln = el("div", "", wishEl);
+          ln.style.display = "flex"; ln.style.whiteSpace = "pre";
+          Array.from(line).forEach((ch) => wishChars.push(el("span", "", ln, ch)));
+        });
+        tl.fromTo(wishChars, { opacity: 0, y: 40, filter: "blur(12px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power3.out", stagger: 0.035 }, 9.55);
+        tl.to(wishChars, { opacity: 0, y: -50, filter: "blur(10px)", duration: 0.35, ease: "power2.in", stagger: 0.025 }, 10.5);
+        // Shooting star: straight line from top-left into frame centre, accelerating.
+        const SX = -260, SY = 380, EX = 540, EY = 960, L0 = 10.25, LD = 0.75;
+        const ang = Math.atan2(EY - SY, EX - SX) * 180 / Math.PI;
+        tl.set("#shootRot", { rotation: ang }, 0);
+        tl.fromTo("#shoot", { x: SX, y: SY }, { x: EX, y: EY, duration: LD, ease: "power2.in" }, L0);
+        tl.fromTo("#shootTrail", { scaleX: 0.2 }, { scaleX: 1.4, duration: LD, ease: "power2.in" }, L0);
+        const sparks = $("#sparks");
+        for (let i = 0; i < 26; i++) {
+          const p = 0.15 + 0.85 * (i / 26);
+          const s = el("div", "spark", sparks);
+          s.style.left = (SX + (EX - SX) * p).toFixed(0) + "px";
+          s.style.top = (SY + (EY - SY) * p).toFixed(0) + "px";
+          const t = L0 + LD * Math.sqrt(p);
+          tl.fromTo(s, { opacity: 1, scale: 0.6 + rnd() }, { immediateRender: false, opacity: 0, x: (rnd() - 0.5) * 60, y: 30 + rnd() * 70, scale: 0, duration: 0.5 + rnd() * 0.3, ease: "power2.out" }, t);
+        }
+
+        /* ================= 05 · LOCKUP ================= */
+        const buildTime = (host, cls) => {
+          const parts = [];
+          ["1", "1", ":", "1", "1"].forEach((c) => {
+            if (c === ":") {
+              const col = el("div", "bcolon", host);
+              parts.push(el("div", "bdot a", col), el("div", "bdot b", col));
+            } else {
+              const m = el("span", "mask", host);
+              parts.push(el("span", "", m, c));
+            }
+          });
+          return parts;
+        };
+        const timeParts = buildTime($("#bigTime"));
+        buildTime($("#shine"));
+        const digitSpans = timeParts.filter((p) => p.tagName === "SPAN");
+        const dotEls = timeParts.filter((p) => p.tagName === "DIV");
+        const mcChars = Array.from("MASTERCLASS").map((c) => el("span", "", $("#mc"), c));
+        const urlChars = Array.from("1111MASTERCLASS.COM").map((c) => el("span", "", $("#url"), c));
+        el("div", "", $("#url")).id = "cursor";
+        const lt = $("#lockTicks");
+        const lockTickEls = [];
+        for (let i = 0; i < 44; i++) {
+          const g = sv("g", { transform: `rotate(${i * (360 / 44)})` }, lt);
+          lockTickEls.push(sv("line", { x1: 0, x2: 0, y1: -488, y2: i % 11 === 0 ? -510 : -496, stroke: i % 11 === 0 ? GOLD : "rgba(243,237,226,0.45)", "stroke-width": i % 11 === 0 ? 4 : 2, "stroke-linecap": "round" }, g));
+        }
+        const burst = $("#burst");
+        for (let i = 0; i < 40; i++) {
+          const b = el("div", "bspark", burst);
+          const a = rnd() * Math.PI * 2, dist = 260 + rnd() * 620;
+          const sc = 0.5 + rnd() * 1.4;
+          tl.fromTo(b, { x: 0, y: 0, opacity: 1, scale: sc, backgroundColor: i % 3 ? GOLD : CREAM },
+            { immediateRender: false, x: Math.cos(a) * dist, y: Math.sin(a) * dist, opacity: 0, scale: 0, duration: 0.8 + rnd() * 0.5, ease: "expo.out" }, 11.0);
+        }
+        tl.fromTo("#flash", { opacity: 0.85 }, { immediateRender: false, opacity: 0, duration: 0.35, ease: "power2.out" }, 11.0);
+        tl.fromTo("#shock", { scale: 0.05, opacity: 1 }, { immediateRender: false, scale: 1.5, opacity: 0, duration: 0.9, ease: "expo.out" }, 11.0);
+        tl.fromTo(digitSpans, { yPercent: 110 }, { yPercent: 0, duration: 0.75, ease: "expo.out", stagger: 0.06 }, 11.02);
+        tl.fromTo(dotEls, { scale: 0 }, { scale: 1, duration: 0.5, ease: "back.out(3)", stagger: 0.06 }, 11.12);
+        tl.fromTo("#lockInner", { scale: 1.12 }, { scale: 1, duration: 1.2, ease: "expo.out" }, 11.0);
+        const RC = 2 * Math.PI * 470;
+        tl.fromTo("#lockRing", { attr: { "stroke-dasharray": RC, "stroke-dashoffset": RC } }, { attr: { "stroke-dashoffset": 0 }, duration: 1.1, ease: "power3.inOut" }, 11.25);
+        tl.fromTo(lockTickEls, { opacity: 0, scale: 0, svgOrigin: "0 -488" }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(3)", stagger: 0.012 }, 11.35);
+        tl.fromTo("#ringRot", { rotation: -30, svgOrigin: "0 0" }, { rotation: 25, duration: 4.0, ease: "power2.out" }, 11.0);
+        tl.fromTo(mcChars, { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.55, ease: "expo.out", stagger: 0.035 }, 11.45);
+        // Tracking spread done with per-glyph x so it interpolates sub-pixel
+        mcChars.forEach((c, i) => tl.fromTo(c, { x: (i - 5) * 46 }, { x: 0, duration: 1.1, ease: "expo.out" }, 11.45));
+        tl.fromTo("#oclock", { clipPath: "inset(-20% 100% -20% 0%)", rotation: -18, y: 30 }, { clipPath: "inset(-20% 0% -20% 0%)", rotation: -9, y: 0, duration: 0.75, ease: "power3.inOut" }, 11.9);
+        tl.fromTo(urlChars, { opacity: 0 }, { opacity: 0.8, duration: 0.01, stagger: 0.03 }, 12.45);
+        tl.fromTo("#cursor", { opacity: 0 }, { opacity: 1, duration: 0.01 }, 12.4);
+        tl.to("#cursor", { opacity: 0, duration: 0.25, ease: "steps(1)", yoyo: true, repeat: 9 }, 13.0);
+        // Light sweep across 11:11
+        tl.fromTo("#shine", { clipPath: "polygon(-30% 0%, -10% 0%, -30% 100%, -50% 100%)" },
+          { clipPath: "polygon(130% 0%, 150% 0%, 130% 100%, 110% 100%)", duration: 0.85, ease: "power2.inOut" }, 12.9);
+        tl.fromTo("#lock", { scale: 1 }, { scale: 1.035, duration: 2.6, ease: "sine.inOut" }, 12.4);
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>
