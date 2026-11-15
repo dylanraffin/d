@@ -254,6 +254,8 @@ export default {
     'Choisir mon quartier…': 'Choose my neighborhood…',
     'Choisir…': 'Choose…',
     'Quartier': 'Neighborhood',
+    'Quartier :': 'Neighborhood:',
+    'Ville :': 'City:',
     'Choisis un quartier.': 'Pick a neighborhood.',
     'Quartier enregistré.': 'Neighborhood saved.',
     'Utiliser ce quartier': 'Use this neighborhood',
@@ -1032,7 +1034,7 @@ export default {
     // ---------- a member's sheet, chat ----------
     ['^Écris à (.+)…$', 'Message $1…'],
     ['^Message à (.+)$', 'Message $1'],
-    ['^En voyage : (.+), jusqu\'au (.+)$', 'Travel mode: $1, until $2'],
+    ["^En voyage : (.+), jusqu'au (.+)$", 'Travel mode: $1, until $2'],
     ['^En voyage : (.+)$', 'Visiting: $1'],
     ['^dépistage : (.+)$', 'last tested $1'],
     ['^(\\d+) cm, (circoncis|non circoncis)$', '$1 cm, $2'],
@@ -1063,8 +1065,8 @@ export default {
     // ---------- travel mode, location ----------
     ['^Tu apparais maintenant à (.+)\\.$', 'You now appear in $1.'],
     ['^(\\d+) jours$', '$1 days'],
-    ['^Ville :\\s*(.*)$', 'City: $1'],
-    ['^Quartier :\\s*(.*)$', 'Neighborhood: $1'],
+    ['^Ville : (.+)$', 'City: $1'],
+    ['^Quartier : (.+)$', 'Neighborhood: $1'],
     ['^Mise à jour : (.+)$', 'Updated: $1'],
 
     // ---------- albums ----------

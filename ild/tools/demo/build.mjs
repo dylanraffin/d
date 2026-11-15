@@ -6,7 +6,7 @@
 // enregistre les réponses de l'API et les photos de démo, puis copie le front en remplaçant les adresses
 // absolues par des adresses relatives. Dans la démo, tools/demo/mock.js répond à la place du serveur :
 // rien ne sort du navigateur et rien n'est enregistré.
-import { mkdtempSync, mkdirSync, rmSync, readFileSync, writeFileSync, cpSync, readdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, readFileSync, writeFileSync, cpSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -79,15 +79,22 @@ if (process.env.DEMO_TILES === '1') {
   const tx = (lng, z) => Math.floor(((lng + 180) / 360) * 2 ** z);
   const ty = (lat, z) => { const r = (lat * Math.PI) / 180; return Math.floor(((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * 2 ** z); };
   let count = 0;
+  const tileCache = process.env.DEMO_TILE_CACHE || join(tmpdir(), 'demo-tile-cache');
+  mkdirSync(tileCache, { recursive: true });
   for (const z of ZOOMS) {
     for (let x = tx(BOX.west, z); x <= tx(BOX.east, z); x += 1) {
       mkdirSync(join(OUT, 'tiles', String(z), String(x)), { recursive: true });
       for (let y = ty(BOX.north, z); y <= ty(BOX.south, z); y += 1) {
-        const r = await fetch(`https://tile.openstreetmap.org/${z}/${x}/${y}.png`, { headers: { 'User-Agent': 'static-demo-builder/1.0 (one-off fetch of a small area)' } });
-        if (!r.ok) throw new Error(`Tuile ${z}/${x}/${y} : ${r.status}`);
-        writeFileSync(join(OUT, 'tiles', String(z), String(x), `${y}.png`), Buffer.from(await r.arrayBuffer()));
+        // Chaque tuile n'est demandée qu'une fois : les constructions suivantes relisent la copie locale.
+        const cached = join(tileCache, `${z}-${x}-${y}.png`);
+        if (!existsSync(cached)) {
+          const r = await fetch(`https://tile.openstreetmap.org/${z}/${x}/${y}.png`, { headers: { 'User-Agent': 'static-demo-builder/1.0 (one-off fetch of a small area)' } });
+          if (!r.ok) throw new Error(`Tuile ${z}/${x}/${y} : ${r.status}`);
+          writeFileSync(cached, Buffer.from(await r.arrayBuffer()));
+          await new Promise((done) => setTimeout(done, 80));
+        }
+        cpSync(cached, join(OUT, 'tiles', String(z), String(x), `${y}.png`));
         count += 1;
-        await new Promise((done) => setTimeout(done, 80));
       }
     }
   }
