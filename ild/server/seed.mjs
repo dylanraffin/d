@@ -62,34 +62,34 @@ function add(o) {
     created, created, created, LEGAL_VERSION, created, lat, lng, coords ? 'neighborhood' : null, coords ? now - 3600e3 : null,
     coords ? created : null, created, o.status === 'member' ? created + DAY : null);
   const id = Number(info.lastInsertRowid);
-  if (o.photo) photo(id, `profile-${o.photo}.jpg`, 'profile', null, o.photoStatus || 'approved');
+  if (o.photo) photo(id, `profile-${String(o.photo).padStart(2, '0')}.jpg`, 'profile', null, o.photoStatus || 'approved');
   return id;
 }
 
 const admin = add({ email: 'admin@ild.local', password: adminPassword, role: 'admin', status: 'member', first_name: 'Équipe ILD', age: 30, code: 'ADMIN-0001' });
 const leo = add({ email: 'leo@ild.local', status: 'member', first_name: 'Léo', age: 29, hood: 'Le Marais', job: 'Directeur artistique',
   bio: 'Toujours partant pour une expo puis un verre.', prompt: 'Marché, brunch, expo et sieste.', tastes: 'Techno,Photo,Vin,Expos',
-  seeking: 'dates,relationship', position: 'vers', position_visibility: 'matches', intimate: 'Romantique,Câlins', music: 'Midnight Drive', code: 'LEO-7Q2K', photo: 'L' });
+  seeking: 'dates,relationship', position: 'vers', position_visibility: 'matches', intimate: 'Romantique,Câlins', music: 'Midnight Drive', code: 'LEO-7Q2K', photo: 1 });
 const samir = add({ email: 'samir@ild.local', status: 'member', first_name: 'Samir', age: 33, hood: 'Pigalle', job: 'Chef', tastes: 'Cuisine,Jazz,Vin,Voyages',
-  seeking: 'dates,chat', position: 'top', intimate: 'Kink friendly', intimate_visibility: 'matches', code: 'SAMI-31AB', photo: 'S', music: 'Blue in Green' });
+  seeking: 'dates,chat', position: 'top', intimate: 'Kink friendly', intimate_visibility: 'matches', code: 'SAMI-31AB', photo: 2, music: 'Blue in Green' });
 const hugo = add({ email: 'hugo@ild.local', status: 'member', first_name: 'Hugo', age: 27, hood: 'Belleville', job: 'Architecte', tastes: 'Running,Design,Brunch',
-  seeking: 'friends,network', position: 'vers_bottom', code: 'HUGO-77CD', looking_for: 'dating,friends,network', photo: 'H' });
+  seeking: 'friends,network', position: 'vers_bottom', code: 'HUGO-77CD', looking_for: 'dating,friends,network', photo: 3 });
 const mathis = add({ email: 'mathis@ild.local', status: 'member', first_name: 'Mathis', age: 31, hood: 'Oberkampf', job: 'Avocat', tastes: 'Cinéma,Théâtre,Vin',
-  seeking: 'relationship', code: 'MATH-12EF', looking_for: 'dating,network', photo: 'M' });
-add({ email: 'yanis@ild.local', status: 'member', first_name: 'Yanis', age: 25, hood: 'Bastille', job: 'Étudiant en design', tastes: 'Mode,Danse,Clubbing', seeking: 'now,chat', position: 'bottom', code: 'YANI-90GH', photo: 'Y' });
-add({ email: 'adrien@ild.local', status: 'member', first_name: 'Adrien', age: 36, hood: 'Saint-Germain', job: 'Éditeur', tastes: 'Lecture,Voyages,Expos', seeking: 'relationship', code: 'ADRI-45IJ', looking_for: 'dating', photo: 'A' });
-add({ email: 'karim@ild.local', status: 'member', first_name: 'Karim', age: 30, hood: 'Le Marais', dLat: 0.002, job: 'Développeur', tastes: 'Jeux vidéo,Salle de sport,Séries', seeking: 'dates,now', position: 'vers_top', code: 'KARI-23KL', photo: 'K' });
-add({ email: 'nathan@ild.local', status: 'member', first_name: 'Nathan', age: 28, hood: 'Le Marais', dLng: 0.002, job: 'Infirmier', tastes: 'Yoga,Plage,Pop', seeking: 'relationship,friends', position: 'side', code: 'NATH-61UV', photo: 'N' });
-add({ email: 'romain@ild.local', status: 'member', first_name: 'Romain', age: 34, hood: 'Le Marais', dLat: -0.002, job: 'Photographe', tastes: 'Photo,Drag,Clubbing', seeking: 'chat,dates', code: 'ROMA-08WX', photo: 'R' });
-add({ email: 'bilal@ild.local', status: 'member', first_name: 'Bilal', age: 26, hood: 'Pigalle', dLat: 0.002, job: 'Barman', tastes: 'House,Apéros,Clubbing', seeking: 'now,dates', position: 'vers', code: 'BILA-72YZ', photo: 'B' });
-add({ email: 'theo@ild.local', status: 'member', first_name: 'Théo', age: 23, hood: 'Montmartre', job: 'Comédien', tastes: 'Théâtre,Cinéma,Musique live', seeking: 'friends,dates', code: 'THEO-19AB', photo: 'T' });
-add({ email: 'jules@ild.local', status: 'member', first_name: 'Jules', age: 32, hood: 'Canal Saint-Martin', job: 'Chef de projet', tastes: 'Randonnée,Vin,Brunch', seeking: 'relationship', position: 'top', code: 'JULE-33CD', photo: 'J' });
-const kevin = add({ email: 'kevin@ild.local', status: 'suspended', first_name: 'Kévin', age: 29, job: 'Commercial', tastes: 'Salle de sport,Voyages,Plage', code: 'KEVI-55EF', photo: 'V' });
+  seeking: 'relationship', code: 'MATH-12EF', looking_for: 'dating,network', photo: 4 });
+add({ email: 'yanis@ild.local', status: 'member', first_name: 'Yanis', age: 25, hood: 'Bastille', job: 'Étudiant en design', tastes: 'Mode,Danse,Clubbing', seeking: 'now,chat', position: 'bottom', code: 'YANI-90GH', photo: 5 });
+add({ email: 'adrien@ild.local', status: 'member', first_name: 'Adrien', age: 36, hood: 'Saint-Germain', job: 'Éditeur', tastes: 'Lecture,Voyages,Expos', seeking: 'relationship', code: 'ADRI-45IJ', looking_for: 'dating', photo: 6 });
+add({ email: 'karim@ild.local', status: 'member', first_name: 'Karim', age: 30, hood: 'Le Marais', dLat: 0.002, job: 'Développeur', tastes: 'Jeux vidéo,Salle de sport,Séries', seeking: 'dates,now', position: 'vers_top', code: 'KARI-23KL', photo: 7 });
+add({ email: 'nathan@ild.local', status: 'member', first_name: 'Nathan', age: 28, hood: 'Le Marais', dLng: 0.002, job: 'Infirmier', tastes: 'Yoga,Plage,Pop', seeking: 'relationship,friends', position: 'side', code: 'NATH-61UV', photo: 8 });
+add({ email: 'romain@ild.local', status: 'member', first_name: 'Romain', age: 34, hood: 'Le Marais', dLat: -0.002, job: 'Photographe', tastes: 'Photo,Drag,Clubbing', seeking: 'chat,dates', code: 'ROMA-08WX', photo: 9 });
+add({ email: 'bilal@ild.local', status: 'member', first_name: 'Bilal', age: 26, hood: 'Pigalle', dLat: 0.002, job: 'Barman', tastes: 'House,Apéros,Clubbing', seeking: 'now,dates', position: 'vers', code: 'BILA-72YZ', photo: 10 });
+add({ email: 'theo@ild.local', status: 'member', first_name: 'Théo', age: 23, hood: 'Montmartre', job: 'Comédien', tastes: 'Théâtre,Cinéma,Musique live', seeking: 'friends,dates', code: 'THEO-19AB', photo: 11 });
+add({ email: 'jules@ild.local', status: 'member', first_name: 'Jules', age: 32, hood: 'Canal Saint-Martin', job: 'Chef de projet', tastes: 'Randonnée,Vin,Brunch', seeking: 'relationship', position: 'top', code: 'JULE-33CD', photo: 12 });
+const kevin = add({ email: 'kevin@ild.local', status: 'suspended', first_name: 'Kévin', age: 29, job: 'Commercial', tastes: 'Salle de sport,Voyages,Plage', code: 'KEVI-55EF', photo: 13 });
 
 // Candidats à chaque étape de la validation.
 const thomas = add({ email: 'thomas@ild.local', status: 'waitlist', first_name: 'Thomas', age: 31, job: 'Ingénieur son', tastes: 'Techno,Musique live,Running',
-  seeking: 'dates,friends', code: 'THOM-55MN', invited_by: 'LEO-7Q2K', daysAgo: 6, photo: 'O' });
-const nico = add({ email: 'nico@ild.local', status: 'waitlist', first_name: 'Nicolas', age: 28, tastes: 'Cinéma,Brunch,Natation', seeking: 'chat', code: 'NICO-66OP', daysAgo: 4, photo: 'C', photoStatus: 'pending' });
+  seeking: 'dates,friends', code: 'THOM-55MN', invited_by: 'LEO-7Q2K', daysAgo: 6, photo: 14 });
+const nico = add({ email: 'nico@ild.local', status: 'waitlist', first_name: 'Nicolas', age: 28, tastes: 'Cinéma,Brunch,Natation', seeking: 'chat', code: 'NICO-66OP', daysAgo: 4, photo: 15, photoStatus: 'pending' });
 add({ email: 'julien@ild.local', status: 'pending', first_name: 'Julien', age: 34, code: 'JULI-88QR', id_check: 'submitted', daysAgo: 1 });
 add({ email: 'max@ild.local', status: 'pending', first_name: 'Maxime', age: 22, code: 'MAXI-99ST', daysAgo: 0 });
 
@@ -155,6 +155,43 @@ fiche('romain', 188, 90, 'bear', 'gay', 'Ours,Poilu,Tatoué', 'host', 'group,dir
 fiche('bilal', 179, 72, 'athletic', 'bi', 'Discret,Sportif', 'host', 'direct,group', 'bb_prep', 0);
 fiche('theo', 170, 60, 'slim', 'curious', 'Minet', 'travel', 'talk', 'condoms', 50);
 fiche('jules', 186, 84, 'stocky', 'gay', 'Daddy', 'host,travel', 'direct', 'ask', 600);
+// Plus de monde sur la carte : une carte de cruising se lit comme un mur de photos.
+// pseudo, âge, quartier, décalage nord, décalage est, taille, poids, morphologie, identité, rôle, lieu, vu il y a (min), statut dispo
+const EXTRA = [
+  ['Noah', 27, 'Le Marais', 0.004, -0.005, 180, 72, 'athletic', 'gay', 'vers', 'host,travel', 1, 'host'],
+  ['Luca', 35, 'Le Marais', -0.005, 0.006, 184, 86, 'muscular', 'gay', 'top', 'travel', 2, null],
+  ['Mehdi', 29, 'Châtelet', 0.002, 0.003, 177, 70, 'slim', 'bi', 'vers_bottom', 'travel', 0, 'travel'],
+  ['Axel', 31, 'Châtelet', -0.004, -0.006, 182, 78, 'athletic', 'gay', 'vers_top', 'host', 25, null],
+  ['Tom', 26, 'Oberkampf', -0.003, -0.007, 175, 66, 'slim', 'gay', 'bottom', 'travel,venue', 3, 'venue'],
+  ['Raphaël', 38, 'Oberkampf', 0.006, 0.004, 186, 88, 'stocky', 'gay', 'top', 'host', 90, null],
+  ['Sacha', 24, 'Canal Saint-Martin', 0.003, 0.005, 178, 68, 'slim', 'queer', 'vers', 'travel', 4, null],
+  ['Ilyes', 28, 'Canal Saint-Martin', -0.004, -0.004, 181, 76, 'athletic', 'gay', 'vers_top', 'host,travel', 1, 'host'],
+  ['Victor', 33, 'Bastille', 0.005, -0.006, 183, 80, 'average', 'gay', 'vers', 'travel', 12, null],
+  ['Gabriel', 41, 'Bastille', -0.004, 0.007, 179, 84, 'bear', 'gay', 'top', 'host', 6, 'host'],
+  ['Baptiste', 30, 'Saint-Germain', 0.003, 0.006, 185, 79, 'athletic', 'bi', 'side', 'travel', 40, null],
+  ['Omar', 34, 'Saint-Germain', -0.005, -0.005, 180, 83, 'muscular', 'gay', 'top', 'travel', 2, 'travel'],
+  ['Kenji', 29, 'Quartier Latin', 0.004, 0.004, 173, 64, 'slim', 'gay', 'bottom', 'host,travel', 5, null],
+  ['Diego', 32, 'Quartier Latin', -0.003, -0.007, 178, 75, 'athletic', 'gay', 'vers', 'travel', 180, null],
+  ['Andrea', 37, 'Montparnasse', 0.006, 0.005, 182, 81, 'average', 'gay', 'vers_top', 'host', 3, 'host'],
+  ['Marc', 45, 'Montparnasse', -0.002, -0.006, 180, 90, 'stocky', 'gay', 'top', 'host', 300, null],
+  ['Loïc', 28, 'Pigalle', -0.004, 0.006, 176, 71, 'athletic', 'gay', 'vers_bottom', 'travel', 1, 'travel'],
+  ['Quentin', 26, 'Pigalle', 0.003, -0.007, 183, 74, 'slim', 'curious', 'side', 'travel', 15, null],
+  ['Farid', 36, 'Montmartre', -0.003, 0.006, 181, 85, 'muscular', 'bi', 'top', 'host,travel', 2, null],
+  ['Stan', 31, 'Montmartre', 0.004, -0.008, 188, 92, 'bear', 'gay', 'vers', 'host', 60, null],
+  ['Paolo', 27, 'Batignolles', 0.002, 0.005, 174, 67, 'slim', 'gay', 'bottom', 'travel', 4, 'venue'],
+  ['Jonas', 39, 'Batignolles', -0.005, -0.004, 185, 82, 'athletic', 'gay', 'vers_top', 'host', 7, null],
+  ['Elias', 25, 'Belleville', -0.004, -0.006, 179, 69, 'slim', 'queer', 'vers', 'travel', 0, 'travel'],
+  ['Rémi', 43, 'Belleville', 0.005, 0.005, 177, 80, 'average', 'gay', 'bottom', 'host', 240, null],
+  ['Tiago', 30, 'Le Marais', 0.007, 0.007, 180, 77, 'muscular', 'gay', 'vers_top', 'host,travel', 1, null]
+];
+EXTRA.forEach(([name, age, hood, dLat, dLng, height, weight, body, identity, position, can, seen, place], i) => {
+  const email = `${name.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')}@ild.local`;
+  add({ email, status: 'member', first_name: name, age, hood, dLat, dLng, position, seeking: place ? 'now' : 'now,dates', code: `DEMO-${String(i + 1).padStart(3, '0')}`, photo: 16 + i });
+  cruise.run(height, weight, body, identity, null, can, 'direct', 'ask', now - seen * 60e3, email);
+  if (place) presence.run(now + (45 + i * 9) * 60e3, null, place, email);
+  if (i % 3 === 0) db.prepare("UPDATE users SET map_precision = '500m' WHERE email = ?").run(email);
+});
+
 const testMonth = (monthsAgo) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - monthsAgo); return d.toISOString().slice(0, 7); };
 const health = db.prepare('UPDATE users SET hiv_status = ?, last_test = ?, health_visibility = ?, health_consent_at = ? WHERE email = ?');
 health.run('neg_prep', testMonth(1), 'members', now, 'samir@ild.local');
@@ -167,7 +204,7 @@ db.prepare("UPDATE users SET presence_until = ?, presence_place = 'travel', pres
 
 // Un nouveau profil (badge « Nouveau ») et un membre de Lyon en voyage à Paris.
 add({ email: 'enzo@ild.local', status: 'member', first_name: 'Enzo', age: 24, hood: 'Oberkampf', dLat: 0.004, code: 'ENZO-27JK', daysAgo: 2 });
-const malik = add({ email: 'malik@ild.local', status: 'member', first_name: 'Malik', age: 30, job: 'De passage', code: 'MALI-41GH', photo: 'O' });
+const malik = add({ email: 'malik@ild.local', status: 'member', first_name: 'Malik', age: 30, job: 'De passage', code: 'MALI-41GH', photo: 14 });
 db.prepare('UPDATE users SET trip_lat = ?, trip_lng = ?, trip_label = ?, trip_until = ?, last_seen_at = ?, height_cm = 182, weight_kg = 78, body_type = ?, can = ? WHERE id = ?')
   .run(snap(NEIGHBORHOODS.Bastille[0] + 0.003), snap(NEIGHBORHOODS.Bastille[1] + 0.004), 'Paris', now + 3 * DAY, now - 6 * 60e3, 'athletic', 'travel', malik);
 db.prepare("UPDATE users SET last_seen_at = ? WHERE email = 'enzo@ild.local'").run(now - 60e3);

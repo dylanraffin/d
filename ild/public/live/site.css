@@ -2,29 +2,30 @@
    Layout : grand titre à gauche, carte bleu nuit à droite ; sur téléphone la carte passe au-dessus du titre.
    Galerie de nuit : fond noir, surfaces graphite, accents bleus, vert « dispo » réservé à la présence. */
 :root {
-  --bg: #000000;
-  --surface: #1c1c1e;
-  --raised: #2c2c2e;
-  --line: #333336;
-  --hairline: #1c1c1f;
-  --text: #f5f5f7;
-  --text-2: #c7c7cc;
-  --muted: #86868b;
-  --blue: #0071e3;
-  --blue-hover: #0077ed;
-  --link: #2997ff;
-  --live: #30d158;
+  --bg: #060b16;
+  --surface: #0e1728;
+  --raised: #16223a;
+  --line: #22314f;
+  --hairline: #172238;
+  --text: #f3f6fc;
+  --text-2: #bcc8e0;
+  --muted: #8191b0;
+  --blue: #3d7dff;
+  --blue-hover: #5a90ff;
+  --link: #74a9ff;
+  --live: #33e08a;
   --live-bg: #0f2a17;
   --live-line: #1f5c32;
   --live-text: #c9f7d5;
   --venue: #ffd500;
   --venue-bg: #2a2312;
   --venue-text: #ffe8a3;
-  --navy: #0b1830;
-  --navy-line: #1f3159;
+  --navy: #0b1526;
+  --navy-line: #22314f;
   --danger-bg: #2a1312;
   --danger-line: #5c1f1c;
   --danger-text: #ffd6d3;
+  --display: "Bricolage Grotesque", Inter, system-ui, -apple-system, sans-serif;
   --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --radius-card: 20px;
   --radius-media: 28px;
@@ -113,6 +114,7 @@ a:hover { text-decoration: underline; }
 .header-actions .lang-link:hover { text-decoration: none; }
 @media (max-width: 860px) { .header-nav { display: none; } }
 @media (max-width: 520px) { .btn-header-cta { display: none; } }
+@media (max-width: 360px) { .header-actions .lang-link { padding: 0 4px; } }
 
 /* ---------- héros ---------- */
 .hero { position: relative; overflow: hidden; padding: 64px 0 88px; }
@@ -128,8 +130,8 @@ a:hover { text-decoration: underline; }
 }
 .hero-copy { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 h1 {
-  margin: 0; font-weight: 600; font-size: clamp(42px, 5.6vw, 78px);
-  line-height: 1.02; letter-spacing: -0.04em; text-wrap: balance;
+  margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(42px, 5.4vw, 76px);
+  line-height: 1.0; letter-spacing: -0.03em; text-wrap: balance;
 }
 .lead { margin: 0; max-width: 32em; font-size: clamp(18px, 1.6vw, 21px); line-height: 1.45; color: var(--text-2); }
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -202,7 +204,7 @@ h2 {
   line-height: 1.08; letter-spacing: -0.03em; text-wrap: balance;
 }
 .section-head p { margin: 0; font-size: 19px; color: var(--text-2); }
-h3 { margin: 0; font-size: 19px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; }
+h3 { margin: 0; font-family: var(--display); font-size: 20px; line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; }
 @media (max-width: 640px) {
   .section { padding: 64px 0; }
   .section-head { margin-bottom: 32px; }
@@ -303,3 +305,16 @@ h3 { margin: 0; font-size: 19px; line-height: 1.3; font-weight: 600; letter-spac
   .pulse { animation: none; opacity: 0.2; }
   .btn, .faq summary::after { transition: none; }
 }
+
+/* ---------- v4 : captures réelles de l'app dans l'en-tête, titres en Bricolage Grotesque ---------- */
+h2, .brand { font-family: var(--display); }
+h2 { font-weight: 700; letter-spacing: -0.02em; }
+.brand { font-weight: 800; font-size: 24px; letter-spacing: -0.02em; }
+.hero-shots { position: relative; padding-bottom: 34px; }
+.shot-desktop { border-radius: 14px; overflow: hidden; border: 1px solid var(--navy-line); background: var(--navy); box-shadow: 0 30px 90px rgba(30, 80, 200, 0.38); }
+.shot-bar { display: flex; gap: 6px; padding: 10px 12px; background: var(--surface); border-bottom: 1px solid var(--navy-line); }
+.shot-bar i { width: 9px; height: 9px; border-radius: 50%; background: #2a3a5c; }
+.shot-desktop img, .shot-phone img { display: block; width: 100%; height: auto; }
+.shot-phone { position: absolute; right: -8px; bottom: 0; width: 25%; min-width: 108px; border-radius: 22px; overflow: hidden; border: 5px solid #0a1120;
+  outline: 1px solid var(--navy-line); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65); background: var(--bg); }
+@media (max-width: 900px) { .shot-phone { right: 0; width: 29%; border-radius: 16px; border-width: 4px; } }

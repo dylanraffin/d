@@ -70,6 +70,32 @@ const data = {
 rmSync(OUT, { recursive: true, force: true });
 for (const d of ['app', 'live/icons', 'shared', 'vendor', 'photos', 'legal', 'demo']) mkdirSync(join(OUT, d), { recursive: true });
 
+// Fond de carte (DEMO_TILES=1) : de vraies tuiles OpenStreetMap, copiées une fois pour la zone de démonstration.
+// Moins de 250 tuiles, une requête à la fois, comme le demande la politique d'usage des tuiles d'OpenStreetMap.
+// Sans cette option, la démo dessine un plan stylisé (basemap.js).
+if (process.env.DEMO_TILES === '1') {
+  const BOX = { south: 48.812, north: 48.905, west: 2.245, east: 2.425 };
+  const ZOOMS = [12, 13, 14];
+  const tx = (lng, z) => Math.floor(((lng + 180) / 360) * 2 ** z);
+  const ty = (lat, z) => { const r = (lat * Math.PI) / 180; return Math.floor(((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * 2 ** z); };
+  let count = 0;
+  for (const z of ZOOMS) {
+    for (let x = tx(BOX.west, z); x <= tx(BOX.east, z); x += 1) {
+      mkdirSync(join(OUT, 'tiles', String(z), String(x)), { recursive: true });
+      for (let y = ty(BOX.north, z); y <= ty(BOX.south, z); y += 1) {
+        const r = await fetch(`https://tile.openstreetmap.org/${z}/${x}/${y}.png`, { headers: { 'User-Agent': 'static-demo-builder/1.0 (one-off fetch of a small area)' } });
+        if (!r.ok) throw new Error(`Tuile ${z}/${x}/${y} : ${r.status}`);
+        writeFileSync(join(OUT, 'tiles', String(z), String(x), `${y}.png`), Buffer.from(await r.arrayBuffer()));
+        count += 1;
+        await new Promise((done) => setTimeout(done, 80));
+      }
+    }
+  }
+  data.meta.map = { url: 'tiles/{z}/{x}/{y}.png', attribution: '© OpenStreetMap' };
+  data.tiles = { minZoom: ZOOMS[0], maxZoom: ZOOMS[ZOOMS.length - 1], bounds: [[BOX.south, BOX.west], [BOX.north, BOX.east]] };
+  console.log(`Fond de carte : ${count} tuiles OpenStreetMap.`);
+}
+
 // Photos que le membre de démo a le droit de voir.
 let photoCount = 0;
 for (const { id } of app.db.prepare('SELECT id FROM photos ORDER BY id').all()) {
@@ -90,9 +116,10 @@ for (const f of readdirSync(join(PUBLIC, 'app'))) {
   if (f.endsWith('.js') && !f.startsWith('verify') && !f.startsWith('legal')) writeFileSync(join(OUT, 'app', f), js(readFileSync(join(PUBLIC, 'app', f), 'utf8')));
 }
 writeFileSync(join(OUT, 'live', 'live.js'), js(readFileSync(join(PUBLIC, 'live', 'live.js'), 'utf8')));
-writeFileSync(join(OUT, 'shared', 'lib.js'), readFileSync(join(PUBLIC, 'shared', 'lib.js'), 'utf8'));
+cpSync(join(PUBLIC, 'shared'), join(OUT, 'shared'), { recursive: true });
 for (const f of ['app/app.css', 'live/live.css', 'live/site.css']) cpSync(join(PUBLIC, f), join(OUT, f));
 cpSync(join(PUBLIC, 'live', 'icons'), join(OUT, 'live', 'icons'), { recursive: true });
+cpSync(join(PUBLIC, 'live', 'shots'), join(OUT, 'live', 'shots'), { recursive: true });
 cpSync(join(PUBLIC, 'vendor', 'leaflet'), join(OUT, 'vendor', 'leaflet'), { recursive: true });
 for (const f of ['mock.js', 'basemap.js', 'demo.css']) cpSync(join(HERE, f), join(OUT, 'demo', f));
 writeFileSync(join(OUT, 'demo', 'data.js'), `window.DEMO = ${JSON.stringify(data)};\n`);
@@ -117,7 +144,7 @@ writeFileSync(join(OUT, 'carte.html'), `<!doctype html>
 <meta name="site-home" content="index.html">
 <title>${meta.brand.name} · démo</title>
 <link rel="icon" href="live/icons/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="app/app.css">
 <link rel="stylesheet" href="live/live.css">
@@ -141,16 +168,25 @@ const body = /<body[^>]*>([\s\S]*?)<\/body>/.exec(landing)[1];
 const pick = (re) => (re.exec(head) || [''])[0];
 const relative = (html) => html
   .replace(/href="\/carte#/g, 'href="carte.html#').replace(/href="\/legal\/([a-z]+)"/g, 'href="legal/$1.html"')
-  .replace(/href="\/live\//g, 'href="live/').replace(/src="\/live\//g, 'src="live/').replace(/href="\/"/g, 'href="index.html"');
+  .replace(/href="\/live\//g, 'href="live/').replace(/src="\/live\//g, 'src="live/')
+  .replace(/href="\/en(#[a-z-]*)?"/g, 'href="en.html$1"').replace(/href="\/\?lang=fr"/g, 'href="index.html"').replace(/href="\/"/g, 'href="index.html"');
+const demoBar = (text, cta) => `<div class="demo-bar" role="note"><span>${text}</span><a href="carte.html">${cta}</a></div>`;
 writeFileSync(join(OUT, 'index.html'), `<title>Démo ${meta.brand.name}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 ${pick(/<meta name="description"[^>]*>/)}
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap">
 <link rel="stylesheet" href="live/site.css">
 <link rel="stylesheet" href="demo/demo.css">
-<div class="demo-bar" role="note"><span><b>Démo cliquable.</b> Profils, messages et lieux fictifs. Rien n'est enregistré ni envoyé.</span><a href="carte.html">Ouvrir la carte</a></div>
+${demoBar("<b>Démo cliquable.</b> Profils, messages et lieux fictifs. Rien n'est enregistré ni envoyé.", 'Ouvrir la carte')}
 ${relative(body)}
 `);
+
+// Page d'accueil en anglais : un document complet, servi tel quel à côté de la page principale.
+const english = await (await fetch(`${base}/en`)).text();
+writeFileSync(join(OUT, 'en.html'), relative(english)
+  .replace(/<link rel="manifest"[^>]*>\s*/, '').replace(/<link rel="alternate"[^>]*>\s*/g, '')
+  .replace('</head>', '<link rel="stylesheet" href="demo/demo.css">\n</head>')
+  .replace(/<body([^>]*)>/, (m) => `${m}\n${demoBar('<b>Clickable demo.</b> Fictional profiles, messages and venues. Nothing is saved or sent.', 'Open the map')}`));
 
 app.server.close();
 rmSync(tmp, { recursive: true, force: true });

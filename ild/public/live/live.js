@@ -103,9 +103,9 @@ function personSheet(x) {
     };
     const summary = personSummary(x);
     return [
-      h('div', { class: 'person-head' },
-        h('span', { class: 'avatar xl' }, x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : x.first_name[0]),
-        h('div', { class: 'grow stack small-gap ellipsis-box' }, h('span', { class: 'person-name' }, `${x.first_name}, ${x.age}`),
+      h('div', { class: `person-cover${x.photo ? '' : ' empty'}` },
+        x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : h('span', { class: 'initial', 'aria-hidden': 'true' }, x.first_name[0]),
+        h('div', { class: 'cover-text' }, h('span', { class: 'person-name' }, `${x.first_name}, ${x.age}`),
           summary ? h('span', { class: 'small text2' }, summary) : null),
         fav),
       statusLine(x),
@@ -406,12 +406,17 @@ async function screenMap() {
   if (state.meta.map.url) L.tileLayer(state.meta.map.url, { maxZoom: 17, minZoom: 9, attribution: state.meta.map.attribution }).addTo(map);
   const layer = L.layerGroup().addTo(map);
   const divIcon = (el, size) => L.divIcon({ html: el, className: 'zone-icon', iconSize: [size, size] });
+  // Les photos grandissent quand on se rapproche : la carte se lit comme un mur de visages, pas comme des points.
+  const pinSize = () => { const z = map.getZoom(); const big = isWide() ? 8 : 0; return (z >= 15 ? 76 : z >= 14 ? 64 : z >= 13 ? 52 : 40) + big; };
+  const ROLE = { top: '↑', vers_top: '↑', vers: '↕', vers_bottom: '↓', bottom: '↓', side: '↔' };
 
-  const markerEl = (x) => h('button', { class: `pin${x.presence ? ' on' : ''}`, 'aria-label': `${x.first_name}, ${x.age}${x.presence ? ', dispo' : ''}${x.online === 'now' ? ', en ligne' : ''}` },
+  const markerEl = (x, size) => h('button', { class: `pin${x.presence ? ' on' : ''}${size < 50 ? ' small' : ''}`, style: { width: `${size}px`, height: `${size}px` },
+    'aria-label': `${x.first_name}, ${x.age}${x.presence ? ', dispo' : ''}${x.online === 'now' ? ', en ligne' : ''}` },
     h('span', { class: 'face' }, x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : h('span', null, x.first_name[0])),
     x.online === 'now' && !x.presence ? h('span', { class: 'now' }) : null,
-    x.presence && PLACE_ICON[x.presence.place] ? h('span', { class: 'tag' }, icon(PLACE_ICON[x.presence.place], 12)) : null,
-    x.trip ? h('span', { class: 'tag trip' }, icon('plane', 12)) : null);
+    x.position && ROLE[x.position] ? h('span', { class: 'tag role', 'aria-hidden': 'true' }, ROLE[x.position]) : null,
+    x.presence && PLACE_ICON[x.presence.place] ? h('span', { class: `tag${x.presence.place === 'host' ? ' host' : ''}` }, icon(PLACE_ICON[x.presence.place], 13)) : null,
+    x.trip ? h('span', { class: 'tag trip' }, icon('plane', 13)) : null);
   const spotEl = (s) => h('button', { class: 'spot-pin', 'aria-label': `${s.name}, ${label('spot_categories', s.category)}` }, label('spot_categories', s.category)[0], s.here ? h('b', null, String(s.here)) : null);
   const planEl = (p) => h('button', { class: `plan-pin${p.in_progress ? ' on' : ''}`, 'aria-label': `Plan à plusieurs : ${p.title}` }, icon('group', 20), h('b', null, String(p.going + 1)));
   const rowSub = (x) => (x.presence ? presenceText(x.presence) : [x.online === 'now' ? 'En ligne' : null, personSummary(x), x.distance].filter(Boolean).join(' · '));
@@ -441,10 +446,11 @@ async function screenMap() {
       }
       for (const s of d.spots) L.marker([s.lat, s.lng], { icon: divIcon(spotEl(s), 40) }).addTo(layer).on('click', () => spotSheet(s, load));
       for (const p of d.plans) L.marker([p.lat, p.lng], { icon: divIcon(planEl(p), 44), zIndexOffset: 500 }).addTo(layer).on('click', () => planSheet(p.id, load));
+      const size = pinSize();
       for (const x of d.pins) {
-        const el = markerEl(x);
+        const el = markerEl(x, size);
         els.set(x.id, el);
-        L.marker([x.lat, x.lng], { icon: divIcon(el, 46), zIndexOffset: x.presence ? 1000 : 0 }).addTo(layer).on('click', () => personSheet(x));
+        L.marker([x.lat, x.lng], { icon: divIcon(el, size), zIndexOffset: x.presence ? 1000 : x.online === 'now' ? 300 : 0 }).addTo(layer).on('click', () => personSheet(x));
       }
       const avail = d.pins.filter((x) => x.presence).length;
       const inZones = d.zones.reduce((n, z) => n + z.count, 0);

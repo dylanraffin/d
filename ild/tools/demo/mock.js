@@ -273,15 +273,21 @@
     return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
   }
 
-  // Fond de carte dessiné (pas de tuiles) et étiquette « démo ».
+  // Fond de carte : les tuiles copiées dans la démo si elles existent, sinon le plan dessiné. Puis l'étiquette « démo ».
   const L = window.L;
-  if (L && window.demoBasemap) {
+  if (L) {
     const createMap = L.map;
     L.map = function demoMap(...args) {
       const map = createMap.apply(this, args);
-      map.options.minZoom = 11;
-      map.options.maxZoom = 16;
-      window.demoBasemap(map);
+      if (D.tiles) {
+        map.setMinZoom(D.tiles.minZoom);
+        map.setMaxZoom(D.tiles.maxZoom);
+        if (!me.trip) map.setMaxBounds(L.latLngBounds(D.tiles.bounds).pad(0.05));
+      } else if (window.demoBasemap) {
+        map.options.minZoom = 11;
+        map.options.maxZoom = 16;
+        window.demoBasemap(map);
+      }
       return map;
     };
   }
