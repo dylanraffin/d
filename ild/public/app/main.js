@@ -1,7 +1,7 @@
 // Écrans principaux : Découvrir, profil, Autour (grille et carte), Ce soir, messages, albums reçus.
 import { api, h, icon, toast, fmtDate, ago, fileToJpeg, raw } from '/shared/lib.js';
 import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, chips, select, sheet, nav, reportSheet, label, isLive, isWide, brand,
-  personSummary, presenceText, statusLine, cruiseRows } from './ui.js';
+  personSummary, presenceText, statusLine, cruiseRows, veil } from './ui.js';
 
 const DURATION_LABEL = { '1h': '1 heure', '24h': '24 heures', '7d': '7 jours', forever: "Jusqu'à ce que je retire" };
 const DISTANCES = { '': 'Toutes', 1: 'Moins de 1 km', 2: 'Moins de 2 km', 5: 'Moins de 5 km', 10: 'Moins de 10 km', 25: 'Moins de 25 km' };
@@ -121,8 +121,12 @@ export async function screenProfile(id) {
   const photos = p.photos.length ? p.photos : [null];
   let idx = 0;
   const imgBox = h('div', { class: 'media profile-media' });
+  const shown = new Set(); // photos explicites que le membre a choisi de voir malgré le mode vanille
   const drawPhoto = () => {
+    const veiled = photos[idx] && !shown.has(photos[idx]) && veil((p.explicit_photos || []).includes(photos[idx]));
+    imgBox.classList.toggle('veiled', !!veiled);
     imgBox.replaceChildren(...[
+      veiled ? h('button', { class: 'veil-hint', onclick: () => { shown.add(photos[idx]); drawPhoto(); } }, icon('eyeoff', 22), 'Photo explicite : toucher pour voir') : null,
       photos[idx] ? h('img', { src: `/photos/${photos[idx]}`, alt: `Photo de ${p.first_name}`, oncontextmenu: (e) => e.preventDefault() }) : h('div', { class: 'initial' }, p.first_name[0]),
       h('div', { class: 'bars' }, photos.map((_, i) => h('span', { class: i === idx ? 'on' : '' }))),
       photos.length > 1 ? h('button', { class: 'tap-zone left', 'aria-label': 'Photo précédente', onclick: () => { idx = Math.max(0, idx - 1); drawPhoto(); } }) : null,

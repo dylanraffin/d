@@ -8,7 +8,7 @@ import { LEGAL_VERSION, MODES, SEEKING, POSITIONS, VISIBILITY, TASTES, INTIMATE,
   SPOT_CATEGORIES, PRESENCE_PLACES, MAP_PRECISION, MESSAGES_FROM, BODY_TYPES, IDENTITIES, TRIBES, CAN, VIBES, CUT, SAFER,
   HIV_STATUS, TRIP_DAYS, CITIES, PLAN_KINDS, PLAN_STARTS, PLAN_DURATIONS } from './options.mjs';
 import { DAY, str, bool, isoDay, ageOf, parseBirthDate, hiddenBetween, matchBetween, visibleMember, profilePhotoIds,
-  vouchCount, waitlistPosition, saveJpeg, scanImage, deleteFiles, deletePhotoFiles, isBlocklisted, activeShare, canSeePhoto } from './core.mjs';
+  vouchCount, waitlistPosition, saveJpeg, scanImage, deleteFiles, deletePhotoFiles, isBlocklisted, activeShare, canSeePhoto, explicitProfilesAllowed, explicitPhotoIds } from './core.mjs';
 import { hasFeature, requireFeature, entitlements, likesToday, dailyLikeLimit, paymentsEnabled } from './billing.mjs';
 import { distanceBetween } from './geo.mjs';
 import { readFilters, passesFilters } from './nearby.mjs';
@@ -77,6 +77,7 @@ export function publicProfile(db, viewer, u) {
     music_title: u.music_title,
     looking_for: list(u.looking_for),
     photos: profilePhotoIds(db, u.id, isSelf),
+    explicit_photos: explicitPhotoIds(db, u.id),
     vouched_by: vouchers,
     travel: travelActive(db, u) ? { city: u.travel_city, from: u.travel_from, to: u.travel_to } : null,
     distance: d ? (u.show_distance ? d.label : 'Distance masquée') : null,
@@ -116,7 +117,9 @@ function meView(db, u) {
     map_precision: u.map_precision, messages_from: u.messages_from,
     presence: u.presence_until > Date.now() ? { until: u.presence_until, note: u.presence_note, place: u.presence_place } : null,
     location: { enabled: u.lat != null, source: u.location_source, consent: !!u.geo_consent_at, updated_at: u.location_updated_at },
-    photos: db.prepare("SELECT id, status FROM photos WHERE user_id = ? AND kind = 'profile' ORDER BY position, id").all(u.id),
+    photos: db.prepare("SELECT id, status, explicit FROM photos WHERE user_id = ? AND kind = 'profile' ORDER BY position, id").all(u.id)
+      .map((p) => ({ ...p, explicit: !!p.explicit })),
+    vanilla: !!u.vanilla,
     legal: { accepted: u.legal_version, current: LEGAL_VERSION, needs_consent: u.role !== 'admin' && u.legal_version !== LEGAL_VERSION },
     notices_unread: db.prepare('SELECT COUNT(*) AS n FROM notices WHERE user_id = ? AND read_at IS NULL').get(u.id).n,
     payments_enabled: paymentsEnabled(db),
@@ -177,7 +180,8 @@ export function registerMemberRoutes(r) {
     messages_from: ctx.config.edition === 'cruise' ? { ...MESSAGES_FROM, nobody: 'Personne (seulement mes conversations en cours)' } : MESSAGES_FROM,
     body_types: BODY_TYPES, identities: IDENTITIES, tribes: TRIBES, can: CAN, vibes: VIBES, cut: CUT, safer: SAFER, hiv_status: HIV_STATUS,
     trip_days: TRIP_DAYS, cities: Object.keys(CITIES), plan_kinds: PLAN_KINDS, plan_starts: PLAN_STARTS, plan_durations: PLAN_DURATIONS,
-    plan_max_guests: Number(getSetting(ctx.db, 'plan_max_guests'))
+    plan_max_guests: Number(getSetting(ctx.db, 'plan_max_guests')),
+    explicit_profiles: explicitProfilesAllowed(ctx.db, ctx.config)
   }));
 
   // --- comptes ---
@@ -244,7 +248,7 @@ export function registerMemberRoutes(r) {
       if (b.neighborhood && !NEIGHBORHOODS[b.neighborhood]) fail(400, 'Quartier inconnu.');
       set.neighborhood = b.neighborhood || null;
     }
-    for (const k of ['hide_from_map', 'show_distance', 'album_matches_only', 'blur_explicit', 'discreet_icon']) {
+    for (const k of ['hide_from_map', 'show_distance', 'album_matches_only', 'blur_explicit', 'discreet_icon', 'vanilla']) {
       if (k in b) set[k] = bool(b[k]);
     }
     if ('map_precision' in b) {
@@ -332,12 +336,25 @@ export function registerMemberRoutes(r) {
     const u = requireUser(ctx);
     const n = ctx.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE user_id = ? AND kind = 'profile'").get(u.id).n;
     if (n >= MAX_PROFILE_PHOTOS) fail(400, `${MAX_PROFILE_PHOTOS} photos maximum.`);
+    const explicit = bool(ctx.body.explicit);
+    if (explicit && !explicitProfilesAllowed(ctx.db, ctx.config)) fail(400, 'Les photos explicites se partagent en privé : dans le chat ou dans un album.');
     const { file, buf } = saveJpeg(ctx, ctx.body.data);
     const scan = await scanImage(buf);
     if (!scan.ok) { deleteFiles(ctx, [file]); fail(400, 'Image refusée.'); }
-    const info = ctx.db.prepare("INSERT INTO photos (user_id, kind, file, status, position, created_at) VALUES (?, 'profile', ?, 'pending', ?, ?)")
-      .run(u.id, file, n, Date.now());
-    return { id: Number(info.lastInsertRowid), status: 'pending' };
+    const info = ctx.db.prepare("INSERT INTO photos (user_id, kind, file, status, position, explicit, created_at) VALUES (?, 'profile', ?, 'pending', ?, ?, ?)")
+      .run(u.id, file, n, explicit ? 1 : 0, Date.now());
+    return { id: Number(info.lastInsertRowid), status: 'pending', explicit: !!explicit };
+  });
+
+  // Marquer ou démarquer une de ses photos de profil comme explicite (floutée pour ceux qui ont choisi le mode vanille).
+  r.patch('/api/me/photos/:id', (ctx) => {
+    const u = requireUser(ctx);
+    const p = ctx.db.prepare("SELECT * FROM photos WHERE id = ? AND user_id = ? AND kind = 'profile'").get(Number(ctx.params.id), u.id);
+    if (!p) fail(404, 'Photo introuvable.');
+    const explicit = bool(ctx.body.explicit);
+    if (explicit && !explicitProfilesAllowed(ctx.db, ctx.config)) fail(400, 'Les photos explicites se partagent en privé : dans le chat ou dans un album.');
+    ctx.db.prepare('UPDATE photos SET explicit = ? WHERE id = ?').run(explicit ? 1 : 0, p.id);
+    return { id: p.id, explicit: !!explicit };
   });
 
   r.delete('/api/me/photos/:id', (ctx) => {

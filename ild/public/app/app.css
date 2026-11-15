@@ -335,3 +335,12 @@ ol.steps.plain { margin: 0; padding: 0; list-style: none; }
   .composer { background: transparent; }
   .field-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* ---------- mode vanille : photos de profil explicites floutées ---------- */
+.veiled img { filter: blur(18px); transform: scale(1.3); }
+.avatar.veiled, .thumb.veiled, .face.veiled { overflow: hidden; }
+.media.veiled .veil-hint { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  border: none; background: rgba(6, 11, 22, 0.35); color: var(--text); font-size: 14px; cursor: pointer; }
+.explicit-toggle { position: absolute; left: 6px; top: 6px; min-height: 26px; padding: 0 9px; border-radius: 13px; border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(6, 11, 22, 0.75); color: var(--text-2); font-size: 11px; cursor: pointer; }
+.explicit-toggle.on { background: var(--plan); border-color: var(--plan); color: #fff; font-weight: 600; }

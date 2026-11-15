@@ -192,6 +192,11 @@ EXTRA.forEach(([name, age, hood, dLat, dLng, height, weight, body, identity, pos
   if (i % 3 === 0) db.prepare("UPDATE users SET map_precision = '500m' WHERE email = ?").run(email);
 });
 
+// Quelques photos de profil signalées comme explicites : elles sont floutées pour qui active le mode vanille.
+// (Les images de démonstration sont des silhouettes : rien d'explicite n'est réellement montré.)
+db.prepare(`UPDATE photos SET explicit = 1 WHERE kind = 'profile' AND user_id IN (SELECT id FROM users WHERE email IN
+  ('karim@ild.local', 'romain@ild.local', 'bilal@ild.local', 'luca@ild.local', 'omar@ild.local', 'gabriel@ild.local', 'farid@ild.local', 'tiago@ild.local'))`).run();
+
 const testMonth = (monthsAgo) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - monthsAgo); return d.toISOString().slice(0, 7); };
 const health = db.prepare('UPDATE users SET hiv_status = ?, last_test = ?, health_visibility = ?, health_consent_at = ? WHERE email = ?');
 health.run('neg_prep', testMonth(1), 'members', now, 'samir@ild.local');

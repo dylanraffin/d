@@ -110,7 +110,7 @@
   // ---------- routes ----------
   const CRUISE_KEYS = ['height_cm', 'weight_kg', 'body_type', 'identity', 'tribes', 'can', 'vibes', 'endowment_cm', 'cut', 'safer', 'health_visibility',
     'bio', 'job', 'neighborhood', 'position', 'position_visibility', 'intimate_visibility', 'map_precision', 'messages_from', 'hide_from_map', 'show_distance',
-    'album_matches_only', 'blur_explicit', 'discreet_icon'];
+    'album_matches_only', 'blur_explicit', 'discreet_icon', 'vanilla'];
   const listOf = (v) => (Array.isArray(v) ? v : String(v || '').split(',').filter(Boolean));
   const routes = [
     ['GET', /^\/api\/meta$/, () => D.meta],
@@ -121,6 +121,11 @@
       if (b.health_consent === false) Object.assign(me, { hiv_status: null, last_test: null, health_consent: false });
       else if (b.health_consent === true) Object.assign(me, { health_consent: true, hiv_status: b.hiv_status ?? me.hiv_status, last_test: b.last_test ?? me.last_test });
       return me;
+    }],
+    ['PATCH', /^\/api\/me\/photos\/(\d+)$/, (m, b) => {
+      const photo = me.photos.find((p) => String(p.id) === m[1]) || fail(404, 'Photo introuvable.');
+      photo.explicit = !!b.explicit;
+      return { id: photo.id, explicit: photo.explicit };
     }],
     ['POST', /^\/api\/auth\/(login|register)$/, () => { logged = true; return { role: 'member' }; }],
     ['POST', /^\/api\/auth\/logout$/, () => { logged = false; return { ok: true }; }],

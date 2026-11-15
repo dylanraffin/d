@@ -19,7 +19,7 @@ Il faut Node.js 22.13 ou plus récent. Aucune dépendance à installer (la carte
 cd ild
 npm run seed     # base de démo + identifiants affichés
 npm start        # http://localhost:3000 (site), /carte (app), /admin (back office)
-npm test         # 34 tests de bout en bout de l'API
+npm test         # 35 tests de bout en bout de l'API
 npm run demo     # démo statique dans demo-dist/ : la vraie interface sur des données fictives, sans serveur
 ```
 
@@ -67,6 +67,7 @@ L'interface est écrite en français. Les autres langues sont des dictionnaires 
 
 - **Un point n'est jamais la vraie position.** Position arrondie à l'enregistrement ; point placé dans une case d'environ 1 km (ou 500 m au choix) avec un décalage fixe pour la journée ; option « seulement dans une zone » d'au moins 3 membres. L'app ne reçoit jamais la position du membre lui-même. Distances par tranches, une mise à jour par minute au plus, positions effacées après 7 jours sans activité.
 - **Pas de photo non sollicitée.** Celui qui lance une conversation ne peut envoyer une photo qu'après une réponse. 40 nouvelles conversations par jour au plus, 3 messages sans réponse au plus, préférence « qui peut m'écrire ».
+- **Photos de profil explicites, au choix du service.** Permises par défaut sur Nuit parce que chaque membre est un adulte vérifié (réglage « photos de profil explicites » au back office). Le membre les signale, la modération peut corriger le marquage, et le **mode vanille** les floute pour qui le préfère. La page d'accueil publique n'en montre jamais. Avant un lancement : vraie vérification d'âge et détection des contenus pédocriminels branchées (la page Conformité le contrôle), hébergeur et prestataire de paiement qui acceptent les contenus pour adultes.
 - **Santé : accord séparé.** Statut VIH et date de dépistage ne sont enregistrés qu'avec un accord explicite, montrés aux personnes choisies, jamais transmis ; retirer l'accord les efface. Pratiques et taille suivent la visibilité « intime ».
 - **Plans à plusieurs : adresse réservée.** Le plan est placé au centre d'une case d'environ 1 km. L'adresse et la liste des participants ne sont visibles que de l'hôte et des personnes acceptées. Aucune contrepartie d'argent (Code pénal, art. 225-5 et suivants), aucune drogue : engagement de l'hôte, filtre sur les annonces, signalement, retrait motivé avec recours.
 - **Lieux = établissements et événements seulement.** Pas de parcs, aires ou plages : les relations sexuelles dans un lieu exposé au public sont un délit (Code pénal, art. 222-32) et ces lieux servent aussi aux guet-apens.

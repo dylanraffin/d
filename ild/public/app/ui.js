@@ -61,10 +61,13 @@ export function photoEl(id, initial) {
       : h('span', { class: 'thumb-initial' }, (initial || '?')[0]));
 }
 
-export function avatar(id, name, size) {
-  return h('span', { class: 'avatar', style: size ? { width: `${size}px`, height: `${size}px`, borderRadius: `${size / 2}px` } : null },
+export function avatar(id, name, size, explicit) {
+  return h('span', { class: `avatar${veil(explicit)}`, style: size ? { width: `${size}px`, height: `${size}px`, borderRadius: `${size / 2}px` } : null },
     id ? h('img', { src: `/photos/${id}`, alt: '' }) : (name || '?')[0]);
 }
+
+// Mode vanille : les photos signalées comme explicites sont floutées pour le membre qui l'a choisi.
+export const veil = (explicit) => (explicit && state.me?.vanilla ? ' veiled' : '');
 
 // Groupe de puces sélectionnables. options : objet {code: libellé} ou tableau de libellés.
 export function chips(options, selected, { single = false, max = 50, ariaLabel, onChange } = {}) {

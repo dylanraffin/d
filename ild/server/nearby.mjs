@@ -8,7 +8,7 @@ import { getSetting } from './db.mjs';
 import { NEIGHBORHOODS, CITIES, POSITIONS, SEEKING, pickList } from './options.mjs';
 import { hasFeature } from './billing.mjs';
 import { snap, MIN_UPDATE_MS, distanceBetween, dailyShuffleKey, clusters, BUCKETS } from './geo.mjs';
-import { DAY, ageOf, hiddenBetween, profilePhotoIds } from './core.mjs';
+import { DAY, ageOf, hiddenBetween, profilePhotoIds, profilePhoto } from './core.mjs';
 import { cruiseCard, effectiveLocation } from './cruise.mjs';
 
 function freshSince(db) {
@@ -31,8 +31,9 @@ export function locatedMembers(db, viewer) {
 
 export function card(db, viewer, x) {
   const d = distanceBetween(viewer, x);
+  const photo = profilePhoto(db, x.id);
   return {
-    id: x.id, first_name: x.first_name, age: ageOf(x), photo: profilePhotoIds(db, x.id, false)[0] || null,
+    id: x.id, first_name: x.first_name, age: ageOf(x), photo: photo ? photo.id : null, photo_explicit: !!photo?.explicit,
     distance: x.show_distance ? (d ? d.label : null) : 'Distance masquée',
     position: x.position && x.position_visibility === 'members' ? x.position : null,
     online_recently: x.location_updated_at > Date.now() - 3600e3,

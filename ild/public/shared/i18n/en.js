@@ -308,6 +308,9 @@ export default {
     'Relation sérieuse': 'Relationship',
     'Amis': 'Friends',
     'Réseau pro': 'Networking',
+    // Codes the live map has no French label for: the app shows them as they are.
+    'relationship': 'Relationship',
+    'network': 'Networking',
     'Rencontre': 'Dating',
     'Pro': 'Networking',
     'Tous les membres': 'All members',
@@ -403,6 +406,7 @@ export default {
     'Soumis': 'Submissive',
 
     // ---------- profile page ----------
+    'Photo explicite : toucher pour voir': 'Explicit photo: tap to view',
     'Photo précédente': 'Previous photo',
     'Photo suivante': 'Next photo',
     "Plus d'options : masquer, bloquer, signaler": 'More options: hide, block, report',
@@ -509,6 +513,8 @@ export default {
     'Demandes d’album : seulement mes conversations': 'Album requests: from my conversations only',
     'Demandes d’album : mes matchs seulement': 'Album requests: my matches only',
     'Flouter les photos explicites reçues': 'Blur explicit photos I receive',
+    'Mode vanille': 'Vanilla mode',
+    'Floute les photos de profil explicites sur la carte et les fiches': 'Blurs explicit profile photos on the map and on profiles',
     'Mode discret': 'Discreet mode',
     'Titre neutre dans le navigateur': 'Neutral title in the browser tab',
     'Carte en direct': 'Live map',
@@ -558,6 +564,12 @@ export default {
       'Profile photos: no nudity (your face isn’t required), approved by the moderators. Explicit photos are shared in private: in chat or in an album. GPS location is stripped from every photo before upload.',
     "Photos sans nudité, où l'on te reconnaît, validées par la modération. La position GPS est retirée de chaque photo avant l'envoi.":
       'Photos with no nudity, where you’re recognizable, approved by the moderators. GPS location is stripped from every photo before upload.',
+    "Le visage n'est pas obligatoire et les photos explicites sont permises : ici, tout le monde est un adulte vérifié. Marque-les « Explicite » pour qu'elles soient floutées chez ceux qui ont choisi le mode vanille. Chaque photo est validée par la modération ; la position GPS en est retirée avant l'envoi.":
+      'Your face isn’t required and explicit photos are allowed: everyone here is a verified adult. Mark them “Explicit” so they’re blurred for anyone who has chosen vanilla mode. Every photo is approved by the moderators; GPS location is stripped from it before upload.',
+    'Explicite': 'Explicit',
+    'Non explicite': 'Not explicit',
+    'Photo marquée comme explicite.': 'Photo marked as explicit.',
+    'Photo marquée comme non explicite.': 'Photo marked as not explicit.',
     'Photo envoyée : visible après validation.': 'Photo uploaded: it’ll be visible once approved.',
     'En validation': 'In review',
     'Visible': 'Visible',
@@ -591,7 +603,7 @@ export default {
     'Qui voit ces informations': 'Who sees this info',
     'Qui voit mes infos de santé': 'Who sees my health info',
     'I = I : une personne séropositive sous traitement, avec une charge virale indétectable, ne transmet pas le VIH. Dépistage gratuit en CeGIDD ; infos PrEP sur sida-info-service.org.':
-      'U = U: a person living with HIV who is on treatment, with an undetectable viral load, doesn’t pass on HIV. Free testing at CeGIDD clinics in France; PrEP info at sida-info-service.org (in French).',
+      'U = U: a person living with HIV who is on treatment, with an undetectable viral load, can’t pass on HIV. Free testing at CeGIDD clinics in France; PrEP info at sida-info-service.org (in French).',
     'Ce que tu aimes en dehors (facultatif)': 'What you like outside the bedroom (optional)',
     'Goûts': 'Interests',
     'Coche l’accord sur les données de santé pour enregistrer ton statut, ou vide ces champs.': 'Check the health data consent box to save your status, or clear those fields.',
@@ -744,6 +756,8 @@ export default {
     'Autre manquement à la charte': 'Other breach of the guidelines',
     'Ta photo de profil contient de la nudité. Les photos explicites sont permises uniquement dans tes albums privés.':
       'Your profile photo contains nudity. Explicit photos are only allowed in your private albums.',
+    'Ta photo de profil contient de la nudité, ce qui n’est pas permis ici. Les photos explicites se partagent en privé : dans le chat ou dans un album.':
+      'Your profile photo contains nudity, which isn’t allowed here. Explicit photos are shared in private: in chat or in an album.',
     'Ta photo ne semble pas te représenter. Les photos de profil doivent montrer la personne qui a créé le compte.':
       'Your photo doesn’t seem to be of you. Profile photos must show the person who created the account.',
     'Ta photo semble montrer une personne mineure, ce qui est interdit sur ILD.': 'Your photo seems to show a minor, which is not allowed on ILD.',
@@ -900,6 +914,7 @@ export default {
     'Le Cap': 'Cape Town',
 
     // ---------- messages returned by the server ----------
+    'Service not available in your country.': 'Service not available in your country.',
     'Erreur interne.': 'Internal error.',
     'Route inconnue.': 'Unknown route.',
     'Page introuvable.': 'Page not found.',
@@ -953,6 +968,7 @@ export default {
     'Impossible de te parrainer toi-même.': 'You can’t vouch for yourself.',
     'Impossible de te signaler toi-même.': 'You can’t report yourself.',
     'Un administrateur ne peut pas supprimer son compte ici.': 'An admin can’t delete their account here.',
+    'Les photos explicites se partagent en privé : dans le chat ou dans un album.': 'Explicit photos are shared in private: in chat or in an album.',
     'Image refusée.': 'Image rejected.',
     'Image JPEG attendue.': 'JPEG image expected.',
     'Image trop lourde (3 Mo maximum).': 'Image too large (3 MB max).',

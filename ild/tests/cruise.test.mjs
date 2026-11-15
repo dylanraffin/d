@@ -160,6 +160,42 @@ test('fiche cruising : champs facultatifs, valeurs contrôlées, visibilité int
   assert.ok(pin.can.includes('host'));
 });
 
+test('photos de profil explicites : permises sur Nuit, signalées, corrigées par la modération, réglage au back office', async () => {
+  const a = await member();
+  const b = await member();
+  assert.equal((await new Client().get('/api/meta')).data.explicit_profiles, true);
+  const up = await a.c.post('/api/me/photos', { data: JPEG, explicit: true });
+  assert.equal(up.status, 200, JSON.stringify(up.data));
+  assert.equal(up.data.explicit, true);
+  // La modération valide, et peut corriger le marquage.
+  assert.ok((await admin.get('/api/admin/photos')).data.explicit_allowed);
+  assert.equal((await admin.post(`/api/admin/photos/${up.data.id}/review`, { decision: 'approve', explicit: true })).status, 200);
+  let pin = (await b.c.get('/api/live/map')).data.pins.find((p) => p.id === a.me.id);
+  assert.equal(pin.photo, up.data.id);
+  assert.equal(pin.photo_explicit, true);
+  assert.deepEqual((await b.c.get(`/api/users/${a.me.id}`)).data.explicit_photos, [up.data.id]);
+  // Le membre peut démarquer sa photo ; un autre membre ne peut pas la modifier.
+  assert.equal((await b.c.patch(`/api/me/photos/${up.data.id}`, { explicit: false })).status, 404);
+  assert.equal((await a.c.patch(`/api/me/photos/${up.data.id}`, { explicit: false })).data.explicit, false);
+  pin = (await b.c.get('/api/live/map')).data.pins.find((p) => p.id === a.me.id);
+  assert.equal(pin.photo_explicit, false);
+  // Mode vanille : une préférence du membre.
+  assert.equal((await b.c.patch('/api/me', { vanilla: true })).data.vanilla, true);
+  // Réglage coupé : plus de photo de profil explicite, ni à l'envoi ni à la validation.
+  await admin.put('/api/admin/settings', { explicit_profiles: false });
+  try {
+    assert.equal((await a.c.post('/api/me/photos', { data: JPEG, explicit: true })).status, 400);
+    assert.equal((await a.c.patch(`/api/me/photos/${up.data.id}`, { explicit: true })).status, 400);
+    const plain = (await a.c.post('/api/me/photos', { data: JPEG })).data;
+    assert.equal((await admin.post(`/api/admin/photos/${plain.id}/review`, { decision: 'approve', explicit: true })).status, 400);
+    assert.match((await new Client().get('/legal/charte')).data, /Nudité uniquement en privé/);
+  } finally { await admin.put('/api/admin/settings', { explicit_profiles: true }); }
+  assert.match((await new Client().get('/legal/charte')).data, /photos explicites sont permises/);
+  // La vérification de conformité le rappelle tant que l'âge est simulé.
+  const check = (await admin.get('/api/admin/compliance')).data.checks.find((c) => c.label.startsWith('Photos de profil explicites'));
+  assert.equal(check.ok, false);
+});
+
 test('santé : accord explicite obligatoire, visibilité au choix, retrait = effacement', async () => {
   const a = await member();
   const b = await member();

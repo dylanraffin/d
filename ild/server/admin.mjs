@@ -5,13 +5,13 @@ import { requireAdmin } from './auth.mjs';
 import { audit, getSetting, setSetting, SETTINGS_SPEC, tx } from './db.mjs';
 import { GROUNDS, LEGAL_VERSION, POSITIONS } from './options.mjs';
 import { DAY, ageOf, str, vouchCount, waitlistPosition, deletePhotoFiles, deleteFiles, isBlocklisted, blockEmail,
-  unblockEmail, notify } from './core.mjs';
+  unblockEmail, notify, explicitProfilesAllowed } from './core.mjs';
 import { publicProfile, applicationChecks } from './api.mjs';
 import { FEATURES, paymentsEnabled, settleSubscriptions, provider as paymentProvider } from './billing.mjs';
 import { provider as verificationProvider } from './verification.mjs';
 
 const PHOTO_TEMPLATES = {
-  explicit_public: 'Ta photo de profil contient de la nudité. Les photos explicites sont permises uniquement dans tes albums privés.',
+  explicit_public: 'Ta photo de profil contient de la nudité, ce qui n’est pas permis ici. Les photos explicites se partagent en privé : dans le chat ou dans un album.',
   fake_profile: 'Ta photo ne semble pas te représenter. Les photos de profil doivent montrer la personne qui a créé le compte.',
   minor: 'Ta photo semble montrer une personne mineure, ce qui est interdit sur ILD.',
   charter: "Ta photo montre d'autres personnes reconnaissables ou ne respecte pas la charte. Ajoute une photo où l'on voit seulement toi."
@@ -236,7 +236,8 @@ export function registerAdminRoutes(r) {
     requireAdmin(ctx);
     return {
       templates: Object.fromEntries(Object.keys(PHOTO_TEMPLATES).map((k) => [k, GROUNDS[k]])),
-      photos: ctx.db.prepare(`SELECT p.id, p.user_id, p.created_at, x.first_name, x.status AS user_status FROM photos p JOIN users x ON x.id = p.user_id
+      explicit_allowed: explicitProfilesAllowed(ctx.db, ctx.config),
+      photos: ctx.db.prepare(`SELECT p.id, p.user_id, p.created_at, p.explicit, x.first_name, x.status AS user_status FROM photos p JOIN users x ON x.id = p.user_id
         WHERE p.status = 'pending' AND p.kind = 'profile' ORDER BY p.created_at LIMIT 100`).all()
     };
   });
@@ -253,8 +254,13 @@ export function registerAdminRoutes(r) {
         notify(db, p.user_id, 'photo_rejected', ground, ctx.body.explanation || PHOTO_TEMPLATES[ground], `photo:${p.id}`);
       }
       db.prepare('UPDATE photos SET status = ? WHERE id = ?').run(ok ? 'approved' : 'rejected', p.id);
+      // La modération peut corriger le marquage : une photo explicite non signalée est validée « comme explicite ».
+      if (ok && 'explicit' in ctx.body) {
+        if (ctx.body.explicit && !explicitProfilesAllowed(db, ctx.config)) fail(400, "Les photos de profil explicites ne sont pas autorisées : refuse la photo avec le motif « nudité ».");
+        db.prepare('UPDATE photos SET explicit = ? WHERE id = ?').run(ctx.body.explicit ? 1 : 0, p.id);
+      }
     });
-    audit(db, admin.id, ok ? 'photo_approved' : 'photo_rejected', `photo:${p.id}`, { user_id: p.user_id });
+    audit(db, admin.id, ok ? 'photo_approved' : 'photo_rejected', `photo:${p.id}`, { user_id: p.user_id, explicit: 'explicit' in ctx.body ? !!ctx.body.explicit : undefined });
     return { ok: true };
   });
 
@@ -406,6 +412,8 @@ export function registerAdminRoutes(r) {
       ["Données hébergées dans l'Union européenne", s('legal_hosting_eu') === '1', 'RGPD, chapitre V'],
       ["Vérification d'âge par un prestataire réel", verificationProvider() !== 'mock', 'CGU art. 3, Code pénal art. 227-24 pour les albums'],
       ['Détection de contenus pédocriminels connus branchée', !!process.env.ILD_CSAM_SCANNER, 'Code pénal art. 227-23, signalement PHAROS'],
+      ["Photos de profil explicites : seulement avec une vraie vérification d'âge et la détection branchée",
+        !explicitProfilesAllowed(db, ctx.config) || (verificationProvider() !== 'mock' && !!process.env.ILD_CSAM_SCANNER), 'Code pénal art. 227-24 ; loi SREN (référentiel Arcom)'],
       ['Cookies sécurisés (HTTPS)', ctx.config.secureCookies, 'RGPD art. 32'],
       ['Clé de hachage de la liste des bannis personnalisée', !!process.env.ILD_BLOCKLIST_PEPPER, 'RGPD art. 32'],
       ['Purge des données expirées faite il y a moins de 7 jours', lastPurge > Date.now() - 7 * DAY, 'RGPD art. 5 (limitation de conservation)'],

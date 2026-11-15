@@ -70,6 +70,19 @@ export function visibleMember(db, viewer, id) {
   return u;
 }
 
+// Photos de profil explicites : seulement sur Nuit, et seulement si le réglage du back office le permet.
+export function explicitProfilesAllowed(db, config) {
+  return config?.edition === 'cruise' && getSetting(db, 'explicit_profiles') === '1';
+}
+
+// Première photo de profil validée, avec son marquage « explicite ».
+export function profilePhoto(db, userId) {
+  return db.prepare("SELECT id, explicit FROM photos WHERE user_id = ? AND kind = 'profile' AND status = 'approved' ORDER BY position, id LIMIT 1").get(userId) || null;
+}
+export function explicitPhotoIds(db, userId) {
+  return db.prepare("SELECT id FROM photos WHERE user_id = ? AND kind = 'profile' AND explicit = 1").all(userId).map((r) => r.id);
+}
+
 export function profilePhotoIds(db, userId, includePending) {
   return db.prepare(`SELECT id FROM photos WHERE user_id = ? AND kind = 'profile'
     ${includePending ? "AND status != 'rejected'" : "AND status = 'approved'"} ORDER BY position, id`).all(userId).map((r) => r.id);

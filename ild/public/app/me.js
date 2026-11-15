@@ -42,6 +42,7 @@ export async function screenMe() {
       isLive() ? null : toggle('incognito', 'Mode incognito', "Visible seulement par les personnes que tu as likées"),
       toggle('album_matches_only', isLive() ? 'Demandes d’album : seulement mes conversations' : 'Demandes d’album : mes matchs seulement'),
       toggle('blur_explicit', 'Flouter les photos explicites reçues'),
+      isLive() && state.meta.explicit_profiles ? toggle('vanilla', 'Mode vanille', 'Floute les photos de profil explicites sur la carte et les fiches') : null,
       toggle('discreet_icon', 'Mode discret', 'Titre neutre dans le navigateur')),
     isLive() ? [h('span', { class: 'section-label' }, 'Carte en direct'),
       h('div', { class: 'list' },
@@ -97,7 +98,12 @@ export async function screenEditProfile() {
     screenEditProfile();
   } });
   const STATUS = { pending: 'En validation', approved: 'Visible', rejected: 'Refusée' };
+  const explicitOk = isLive() && meta.explicit_profiles;
   photosGrid.append(...me.photos.map((p) => h('div', { class: 'photo-edit' }, photoEl(p.id, me.first_name), h('span', { class: 'status' }, STATUS[p.status]),
+    explicitOk ? h('button', { class: `explicit-toggle${p.explicit ? ' on' : ''}`, 'aria-pressed': String(p.explicit), onclick: async () => {
+      await run(() => api('PATCH', `/api/me/photos/${p.id}`, { explicit: !p.explicit }), p.explicit ? 'Photo marquée comme non explicite.' : 'Photo marquée comme explicite.');
+      screenEditProfile();
+    } }, p.explicit ? 'Explicite' : 'Non explicite') : null,
     h('button', { class: 'remove', 'aria-label': 'Supprimer la photo', onclick: async () => { await run(() => api('DELETE', `/api/me/photos/${p.id}`)); screenEditProfile(); } }, '×'))));
   if (me.photos.length < 6) photosGrid.append(h('label', { class: 'add-tile', 'aria-label': 'Ajouter une photo' }, icon('plus', 22), fileInput));
   const f = {
@@ -187,7 +193,9 @@ export async function screenEditProfile() {
     mount(h('main', { class: 'screen' },
       h('div', { class: 'row between' }, h('a', { href: back }, 'Annuler'), h('span', { class: 'strong' }, 'Ma fiche'), h('button', { class: 'btn ghost', onclick: save }, 'OK')),
       photosGrid,
-      h('p', { class: 'small' }, "Photos de profil sans nudité (le visage n'est pas obligatoire), validées par la modération. Les photos explicites se partagent en privé : dans le chat ou dans un album. La position GPS est retirée de chaque photo avant l'envoi."),
+      h('p', { class: 'small' }, explicitOk
+        ? "Le visage n'est pas obligatoire et les photos explicites sont permises : ici, tout le monde est un adulte vérifié. Marque-les « Explicite » pour qu'elles soient floutées chez ceux qui ont choisi le mode vanille. Chaque photo est validée par la modération ; la position GPS en est retirée avant l'envoi."
+        : "Photos de profil sans nudité (le visage n'est pas obligatoire), validées par la modération. Les photos explicites se partagent en privé : dans le chat ou dans un album. La position GPS est retirée de chaque photo avant l'envoi."),
       cruiseForm(),
       h('button', { class: 'btn primary block', onclick: save }, 'Enregistrer')));
     return;

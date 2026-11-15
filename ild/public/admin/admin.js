@@ -262,14 +262,17 @@ async function pagePhotos() {
   const d = await api('GET', '/api/admin/photos');
   layout('photos',
     h('h1', null, 'Photos de profil à valider'),
-    h('div', { class: 'note' }, "Règle : la personne reconnaissable, pas de nudité, pas de mineur, pas d'autre personne identifiable. Les photos d'albums privés ne passent pas ici : détection automatique et signalements. Un refus envoie le motif à la personne."),
+    d.explicit_allowed ? h('div', { class: 'note warn' }, "Photos explicites autorisées sur ce service (réglage « photos de profil explicites »). La nudité d'un adulte n'est pas un motif de refus : valide « comme explicite » toute photo explicite, signalée ou non. Refuse toujours : une personne mineure ou qui en a l'apparence, une personne qui n'est pas le titulaire du compte, une image sans accord apparent, la violence, tout contenu illégal.") : null,
+    h('div', { class: 'note' }, d.explicit_allowed ? "Les photos d'albums privés et du chat ne passent pas ici : détection automatique et signalements. Un refus envoie le motif à la personne." : "Règle : la personne reconnaissable, pas de nudité, pas de mineur, pas d'autre personne identifiable. Les photos d'albums privés ne passent pas ici : détection automatique et signalements. Un refus envoie le motif à la personne."),
     d.photos.length ? h('div', { class: 'photos' }, d.photos.map((p) => {
       const reason = h('select', { class: 'input', 'aria-label': 'Motif du refus' }, Object.entries(d.templates).map(([k, v]) => h('option', { value: k }, v)));
       return h('div', { class: 'photo' },
         h('img', { src: `/photos/${p.id}`, alt: `Photo de ${p.first_name}` }),
         h('div', { class: 'row' }, h('a', { href: `#/${p.user_status === 'member' ? 'member' : 'application'}/${p.user_id}` }, p.first_name), h('span', { class: 'small' }, ago(p.created_at))),
         h('div', { class: 'stack', style: { padding: '0 10px 10px' } },
-          h('button', { class: 'btn ok', onclick: () => act(() => api('POST', `/api/admin/photos/${p.id}/review`, { decision: 'approve' }), 'Photo validée.', pagePhotos) }, 'Valider'),
+          d.explicit_allowed && p.explicit ? h('span', { class: 'small' }, 'Signalée explicite par le membre') : null,
+          h('button', { class: 'btn ok', onclick: () => act(() => api('POST', `/api/admin/photos/${p.id}/review`, d.explicit_allowed ? { decision: 'approve', explicit: false } : { decision: 'approve' }), 'Photo validée.', pagePhotos) }, d.explicit_allowed ? 'Valider (non explicite)' : 'Valider'),
+          d.explicit_allowed ? h('button', { class: 'btn', onclick: () => act(() => api('POST', `/api/admin/photos/${p.id}/review`, { decision: 'approve', explicit: true }), 'Photo validée comme explicite.', pagePhotos) }, 'Valider comme explicite') : null,
           reason,
           h('button', { class: 'btn danger', onclick: () => act(() => api('POST', `/api/admin/photos/${p.id}/review`, { decision: 'reject', ground: reason.value }), 'Photo refusée, motif envoyé.', pagePhotos) }, 'Refuser')));
     })) : h('p', { class: 'empty' }, 'Aucune photo en attente.'));

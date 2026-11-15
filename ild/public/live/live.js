@@ -3,7 +3,7 @@
 import { api, h, icon, toast, fmtDate, raw } from '/shared/lib.js';
 import { tr } from '/shared/i18n.js';
 import { state, mount, go, run, refreshMe, runCleanup, onLeave, sheet, chips, select, nav, reportSheet, setNav, label, brand, avatar, backBtn, clean,
-  isWide, hhmm, personSummary, presenceText, statusLine, cruiseRows, placeSelect } from '/app/ui.js';
+  isWide, hhmm, personSummary, presenceText, statusLine, cruiseRows, placeSelect, veil } from '/app/ui.js';
 import { screenLogin, screenSignup, screenVerify, screenNotices, screenConsentUpdate } from '/app/onboarding.js';
 import { screenProfile, screenSharedAlbum, screenMessages, screenChat, filterQuery, filterButton } from '/app/main.js';
 import { screenMe, screenEditProfile, screenMyAlbums, screenAlbumDetail, screenPlus, screenLocation, adminHint } from '/app/me.js';
@@ -103,7 +103,7 @@ function personSheet(x) {
     };
     const summary = personSummary(x);
     return [
-      h('div', { class: `person-cover${x.photo ? '' : ' empty'}` },
+      h('div', { class: `person-cover${x.photo ? '' : ' empty'}${veil(x.photo_explicit)}`, onclick: (e) => e.currentTarget.classList.remove('veiled') },
         x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : h('span', { class: 'initial', 'aria-hidden': 'true' }, x.first_name[0]),
         h('div', { class: 'cover-text' }, h('span', { class: 'person-name' }, `${x.first_name}, ${x.age}`),
           summary ? h('span', { class: 'small text2' }, summary) : null),
@@ -377,6 +377,7 @@ async function screenMap() {
   const first = await api('GET', `/api/live/map?${filterQuery()}${live.onlyAvailable ? '&available=1' : ''}`);
   const home = first.me ? { lat: first.me.lat, lng: first.me.lng } : { lat: 48.8566, lng: 2.3522 };
   let map = null;
+  let alive = true; // faux dès qu'on quitte l'écran : plus rien ne doit toucher à la carte
   const box = h('div', { class: 'live-map', role: 'region', 'aria-label': 'Carte des membres, des lieux et des plans' });
   const info = h('p', { class: 'live-info', role: 'status' });
   const sideList = h('div', { class: 'side-scroll' });
@@ -402,7 +403,7 @@ async function screenMap() {
   const start = live.view || null;
   map = L.map(box, { zoomControl: false, attributionControl: true });
   if (isWide()) L.control.zoom({ position: 'topright' }).addTo(map);
-  onLeave(() => { live.view = { center: map.getCenter(), zoom: map.getZoom() }; map.remove(); });
+  onLeave(() => { alive = false; live.view = { center: map.getCenter(), zoom: map.getZoom() }; map.remove(); });
   if (state.meta.map.url) L.tileLayer(state.meta.map.url, { maxZoom: 17, minZoom: 9, attribution: state.meta.map.attribution }).addTo(map);
   const layer = L.layerGroup().addTo(map);
   const divIcon = (el, size) => L.divIcon({ html: el, className: 'zone-icon', iconSize: [size, size] });
@@ -412,7 +413,7 @@ async function screenMap() {
 
   const markerEl = (x, size) => h('button', { class: `pin${x.presence ? ' on' : ''}${size < 50 ? ' small' : ''}`, style: { width: `${size}px`, height: `${size}px` },
     'aria-label': `${x.first_name}, ${x.age}${x.presence ? ', dispo' : ''}${x.online === 'now' ? ', en ligne' : ''}` },
-    h('span', { class: 'face' }, x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : h('span', null, x.first_name[0])),
+    h('span', { class: `face${veil(x.photo_explicit)}` }, x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : h('span', null, x.first_name[0])),
     x.online === 'now' && !x.presence ? h('span', { class: 'now' }) : null,
     x.position && ROLE[x.position] ? h('span', { class: 'tag role', 'aria-hidden': 'true' }, ROLE[x.position]) : null,
     x.presence && PLACE_ICON[x.presence.place] ? h('span', { class: `tag${x.presence.place === 'host' ? ' host' : ''}` }, icon(PLACE_ICON[x.presence.place], 13)) : null,
@@ -424,7 +425,7 @@ async function screenMap() {
   let timer;
   let loading = false;
   async function load() {
-    if (loading || !map) return;
+    if (loading || !map || !alive) return;
     loading = true;
     const c = map.getCenter();
     try {
@@ -432,12 +433,13 @@ async function screenMap() {
       q.set('lat', c.lat.toFixed(4)); q.set('lng', c.lng.toFixed(4));
       if (live.onlyAvailable) q.set('available', '1');
       const d = await api('GET', `/api/live/map?${q}`);
+      if (!alive) return;
       const els = new Map();
       layer.clearLayers();
       if (d.me) L.circleMarker([d.me.lat, d.me.lng], { radius: 8, color: '#f5f5f7', weight: 3, fillColor: '#0071e3', fillOpacity: 1 }).addTo(layer).bindTooltip(me.trip ? 'Toi, en voyage' : 'Toi (point approximatif)');
       const zoneSheet = (z) => sheet((close) => [h('h2', null, `${z.count} membres dans cette zone`),
         h('p', { class: 'small' }, 'Ils ont choisi de ne pas avoir de point à eux.'),
-        h('div', { class: 'people' }, z.people.map((x) => h('button', { onclick: () => { close(); personSheet(x); } }, avatar(x.photo, x.first_name),
+        h('div', { class: 'people' }, z.people.map((x) => h('button', { onclick: () => { close(); personSheet(x); } }, avatar(x.photo, x.first_name, null, x.photo_explicit),
           h('span', { class: 'who' }, h('b', null, `${x.first_name}, ${x.age}`), h('span', null, rowSub(x))), x.presence ? h('span', { class: 'live-dot', 'aria-label': 'Dispo' }) : null))),
         h('button', { class: 'btn ghost', onclick: close }, 'Fermer')]);
       for (const z of d.zones) {
@@ -468,7 +470,7 @@ async function screenMap() {
           p.my_status === 'host' && p.pending ? h('span', { class: 'chip blue' }, String(p.pending)) : null)))] : null,
         h('div', { class: 'side-label' }, `Membres (${people.length})`),
         people.length ? h('div', { class: 'people' }, people.map((x) => h('button', { onclick: () => personSheet(x), onmouseenter: () => hot(x.id, true), onmouseleave: () => hot(x.id, false), onfocus: () => hot(x.id, true), onblur: () => hot(x.id, false) },
-          avatar(x.photo, x.first_name),
+          avatar(x.photo, x.first_name, null, x.photo_explicit),
           h('span', { class: 'who' }, h('b', null, `${x.first_name}, ${x.age}`), h('span', null, rowSub(x))),
           x.presence ? h('span', { class: 'live-dot', 'aria-label': 'Dispo' }) : x.new_profile ? h('span', { class: 'badge-new' }, 'Nouveau') : null)))
           : h('p', { class: 'empty' }, live.onlyAvailable ? "Personne n'est dispo ici pour le moment." : 'Personne dans cette partie de la carte.'),
@@ -477,6 +479,7 @@ async function screenMap() {
           h('span', { class: 'who' }, h('b', null, raw(s.name)), h('span', null, `${label('spot_categories', s.category)}${s.here ? ` · ${s.here} ici` : ''}`)))))] : null
       ]));
     } catch (e) {
+      if (!alive) return;
       if (e.status === 402) { info.textContent = ''; toast(`${e.message} Voir ${brand().plus} dans Moi.`, true); map.setView([home.lat, home.lng], 13); }
       else toast(e.message, true);
     } finally { loading = false; }
@@ -485,7 +488,7 @@ async function screenMap() {
   if (start) map.setView(start.center, start.zoom); else map.setView([home.lat, home.lng], 14);
   const poll = setInterval(load, 30000);
   onLeave(() => { clearInterval(poll); clearTimeout(timer); });
-  setTimeout(() => map.invalidateSize(), 50);
+  setTimeout(() => { if (alive) map.invalidateSize(); }, 50);
 }
 
 // ---------- liste ----------
@@ -497,7 +500,7 @@ async function screenList() {
   const d = await api('GET', `/api/live/people?${q}`);
   const people = live.onlyAvailable ? d.people.filter((x) => x.presence) : d.people;
   const cell = (x) => h('button', { class: 'cell cell-btn', onclick: () => personSheet(x) },
-    h('div', { class: 'thumb' }, x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : h('span', { class: 'thumb-initial' }, x.first_name[0])),
+    h('div', { class: `thumb${veil(x.photo_explicit)}` }, x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : h('span', { class: 'thumb-initial' }, x.first_name[0])),
     x.presence || x.online === 'now' ? h('span', { class: 'online', 'aria-label': x.presence ? 'Dispo' : 'En ligne' }) : null,
     h('span', { class: 'cell-name' }, `${x.first_name}, ${x.age}`),
     h('span', { class: 'cell-meta' }, x.presence ? `Dispo · ${hhmm(x.presence.until)}` : x.distance || ''));

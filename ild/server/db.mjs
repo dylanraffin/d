@@ -356,12 +356,12 @@ const ADDED_COLUMNS = {
     endowment_cm: 'INTEGER', cut: 'TEXT', safer: 'TEXT',
     // Santé : seulement avec un accord explicite (health_consent_at)
     hiv_status: 'TEXT', last_test: 'TEXT', health_visibility: "TEXT NOT NULL DEFAULT 'matches'", health_consent_at: 'INTEGER',
-    last_seen_at: 'INTEGER',
+    last_seen_at: 'INTEGER', vanilla: 'INTEGER NOT NULL DEFAULT 0',
     // Mode voyage : point choisi par le membre, pas sa position
     trip_lat: 'REAL', trip_lng: 'REAL', trip_label: 'TEXT', trip_until: 'INTEGER'
   },
   matches: { origin: "TEXT NOT NULL DEFAULT 'like'", opened_by: 'INTEGER', replied_at: 'INTEGER', a_read_at: 'INTEGER', b_read_at: 'INTEGER' },
-  photos: { album_id: 'INTEGER REFERENCES albums(id) ON DELETE CASCADE', match_id: 'INTEGER REFERENCES matches(id) ON DELETE CASCADE' },
+  photos: { album_id: 'INTEGER REFERENCES albums(id) ON DELETE CASCADE', match_id: 'INTEGER REFERENCES matches(id) ON DELETE CASCADE', explicit: 'INTEGER NOT NULL DEFAULT 0' },
   messages: { kind: "TEXT NOT NULL DEFAULT 'text'", share_id: 'INTEGER', photo_id: 'INTEGER' },
   reports: { reporter_contact: 'TEXT' }
 };
@@ -385,6 +385,9 @@ export const SETTINGS_SPEC = {
   plus_features: { type: 'list', def: 'who_liked_me,travel_mode,advanced_filters,incognito,unlimited_likes,extended_map,read_receipts', label: 'Fonctions réservées à la version payante' },
   plan_max_guests: { type: 'int', min: 2, max: 50, def: '12', label: 'Plans à plusieurs : nombre maximal de participants' },
   chat_photos_per_day: { type: 'int', min: 1, max: 500, def: '60', label: 'Photos envoyées dans le chat par jour et par membre' },
+  // Nuit : photos de profil explicites. Possible parce que chaque membre est un adulte dont l'âge a été vérifié ;
+  // à désactiver si l'hébergeur ou le prestataire de paiement l'interdit.
+  explicit_profiles: { type: 'bool', def: '1', label: 'Nuit : photos de profil explicites autorisées (signalées par le membre, floutées en mode vanille)' },
   // International : pays où le service est fermé (codes ISO à deux lettres), lus dans l'en-tête de pays posé par le proxy ou le CDN.
   blocked_countries: { type: 'text', max: 800, def: '', label: 'Pays où le service est fermé (codes ISO séparés par des virgules, ex. « AE, SA, IR »)' },
   free_map_radius_km: { type: 'int', min: 1, max: 500, def: '15', label: 'Carte en direct : rayon gratuit autour de soi (km, si payant activé)' },
