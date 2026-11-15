@@ -2,8 +2,8 @@
 import { createApp } from './index.mjs';
 
 const port = Number(process.env.PORT || 3000);
-const { server } = createApp();
+const { server, config } = createApp();
 server.listen(port, () => {
-  console.log(`ILD tourne sur http://localhost:${port}`);
+  console.log(`${config.brand.name} tourne sur http://localhost:${port}${config.edition === 'cruise' ? ' (site public, puis la carte sur /carte)' : ''}`);
   console.log(`Back office : http://localhost:${port}/admin`);
 });

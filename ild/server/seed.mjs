@@ -134,6 +134,79 @@ spot.run('Sauna (exemple)', 'sauna', 'Établissement réservé aux majeurs.', 48
 spot.run('Café Belleville (exemple)', 'cafe', null, 48.8718, 2.3770, 'pending', hugo, now);
 db.prepare('INSERT INTO spot_checkins (spot_id, user_id, until) VALUES (1, ?, ?)').run(samir, now + 2 * 3600e3);
 
+// Direction cruising : fiches détaillées, santé (avec accord), en ligne, favoris, voyage, plans à plusieurs, photo dans le chat.
+const karim = db.prepare("SELECT id FROM users WHERE email = 'karim@ild.local'").get().id;
+const yanis = db.prepare("SELECT id FROM users WHERE email = 'yanis@ild.local'").get().id;
+const bilal = db.prepare("SELECT id FROM users WHERE email = 'bilal@ild.local'").get().id;
+const romain = db.prepare("SELECT id FROM users WHERE email = 'romain@ild.local'").get().id;
+const cruise = db.prepare(`UPDATE users SET height_cm = ?, weight_kg = ?, body_type = ?, identity = ?, tribes = ?, can = ?, vibes = ?, safer = ?, last_seen_at = ?
+  WHERE email = ?`);
+const fiche = (name, height, weight, body, identity, tribes, can, vibes, safer, seenMinutesAgo) =>
+  cruise.run(height, weight, body, identity, tribes, can, vibes, safer, now - seenMinutesAgo * 60e3, `${name}@ild.local`);
+fiche('leo', 181, 74, 'athletic', 'gay', 'Sportif,Tatoué', 'host,travel', 'talk', 'condoms', 0);
+fiche('samir', 185, 82, 'muscular', 'gay', 'Daddy,Poilu', 'travel', 'direct,dirty_talk', 'bb_prep', 1);
+fiche('hugo', 176, 68, 'slim', 'gay', 'Minet,Geek', 'travel', 'talk', 'condoms', 30);
+fiche('mathis', 183, 79, 'average', 'bi', 'Discret', 'host', 'talk', 'ask', 200);
+fiche('yanis', 172, 63, 'slim', 'queer', 'Minet,Lisse', 'travel,venue', 'direct,group', 'bb_prep', 2);
+fiche('adrien', 180, 77, 'average', 'gay', 'Mûr,Discret', 'host', 'talk', 'condoms', 400);
+fiche('karim', 178, 80, 'muscular', 'gay', 'Sportif,Muscle', 'host,travel', 'direct', 'ask', 3);
+fiche('nathan', 174, 70, 'athletic', 'gay', 'Lisse', 'travel', 'talk,watch', 'condoms', 12);
+fiche('romain', 188, 90, 'bear', 'gay', 'Ours,Poilu,Tatoué', 'host', 'group,dirty_talk', 'ask', 4);
+fiche('bilal', 179, 72, 'athletic', 'bi', 'Discret,Sportif', 'host', 'direct,group', 'bb_prep', 0);
+fiche('theo', 170, 60, 'slim', 'curious', 'Minet', 'travel', 'talk', 'condoms', 50);
+fiche('jules', 186, 84, 'stocky', 'gay', 'Daddy', 'host,travel', 'direct', 'ask', 600);
+const testMonth = (monthsAgo) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - monthsAgo); return d.toISOString().slice(0, 7); };
+const health = db.prepare('UPDATE users SET hiv_status = ?, last_test = ?, health_visibility = ?, health_consent_at = ? WHERE email = ?');
+health.run('neg_prep', testMonth(1), 'members', now, 'samir@ild.local');
+health.run('neg', testMonth(2), 'matches', now, 'leo@ild.local');
+health.run('undetectable', testMonth(3), 'members', now, 'romain@ild.local');
+health.run('neg_prep', testMonth(1), 'members', now, 'bilal@ild.local');
+db.prepare("UPDATE users SET endowment_cm = 18, cut = 'uncut', intimate_visibility = 'members' WHERE email = 'samir@ild.local'").run();
+db.prepare("UPDATE users SET bio = 'Direct, respectueux. Plutôt le soir.' WHERE email = 'samir@ild.local'").run();
+db.prepare("UPDATE users SET presence_until = ?, presence_place = 'travel', presence_note = 'Dispo vers Bastille' WHERE email = 'yanis@ild.local'").run(now + 90 * 60e3);
+
+// Un nouveau profil (badge « Nouveau ») et un membre de Lyon en voyage à Paris.
+add({ email: 'enzo@ild.local', status: 'member', first_name: 'Enzo', age: 24, hood: 'Oberkampf', dLat: 0.004, code: 'ENZO-27JK', daysAgo: 2 });
+const malik = add({ email: 'malik@ild.local', status: 'member', first_name: 'Malik', age: 30, job: 'De passage', code: 'MALI-41GH', photo: 'O' });
+db.prepare('UPDATE users SET trip_lat = ?, trip_lng = ?, trip_label = ?, trip_until = ?, last_seen_at = ?, height_cm = 182, weight_kg = 78, body_type = ?, can = ? WHERE id = ?')
+  .run(snap(NEIGHBORHOODS.Bastille[0] + 0.003), snap(NEIGHBORHOODS.Bastille[1] + 0.004), 'Paris', now + 3 * DAY, now - 6 * 60e3, 'athletic', 'travel', malik);
+db.prepare("UPDATE users SET last_seen_at = ? WHERE email = 'enzo@ild.local'").run(now - 60e3);
+
+const favorite = db.prepare('INSERT INTO favorites (user_id, target_id, created_at) VALUES (?, ?, ?)');
+favorite.run(leo, samir, now - DAY);
+favorite.run(leo, karim, now - 3600e3);
+
+// Samir a envoyé une photo à Léo dans le chat ; Karim vient d'écrire à Léo (non lu).
+const chatFile = `${randomBytes(16).toString('hex')}.jpg`;
+copyFileSync(join(ASSETS, 'album-2.jpg'), join(uploads, chatFile));
+const chatPhoto = Number(db.prepare("INSERT INTO photos (user_id, kind, match_id, file, status, created_at) VALUES (?, 'chat', ?, ?, 'approved', ?)")
+  .run(samir, match, chatFile, now - 2.5 * 3600e3).lastInsertRowid);
+db.prepare("INSERT INTO messages (match_id, sender_id, kind, body, photo_id, created_at) VALUES (?, ?, 'photo', 'Photo', ?, ?)").run(match, samir, chatPhoto, now - 2.5 * 3600e3);
+msg.run(match, leo, 'text', 'Top. Je te dis quand je pars.', null, now - 2.4 * 3600e3);
+db.prepare('UPDATE matches SET a_read_at = ?, b_read_at = ? WHERE id = ?').run(now - 2 * 3600e3, now - 2 * 3600e3, match);
+const fromKarim = Number(db.prepare("INSERT INTO matches (a_id, b_id, origin, opened_by, created_at) VALUES (?, ?, 'chat', ?, ?)")
+  .run(Math.min(leo, karim), Math.max(leo, karim), karim, now - 12 * 60e3).lastInsertRowid);
+msg.run(fromKarim, karim, 'text', 'Salut, dispo ce soir ? Je reçois.', null, now - 12 * 60e3);
+
+// Plans à plusieurs : un en cours à Pigalle (Bilal), un ce soir dans un établissement (Romain, Léo accepté).
+const cell = (v) => Math.floor(v / 0.01) * 0.01 + 0.005;
+const plan = db.prepare(`INSERT INTO plans (host_id, title, description, place_kind, lat, lng, address, starts_at, ends_at, max_guests, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+const member = db.prepare('INSERT INTO plan_members (plan_id, user_id, status, message, created_at, decided_at) VALUES (?, ?, ?, ?, ?, ?)');
+const planMsg = db.prepare('INSERT INTO plan_messages (plan_id, sender_id, body, created_at) VALUES (?, ?, ?, ?)');
+const p1 = Number(plan.run(bilal, 'Plan à 3 ou 4, Pigalle', 'Chez moi, ambiance détendue. On discute cinq minutes, puis on voit.', 'home',
+  cell(NEIGHBORHOODS.Pigalle[0]), cell(NEIGHBORHOODS.Pigalle[1]), 'Exemple : 3e étage, interphone B', now - 20 * 60e3, now + 3 * 3600e3, 4, now - 40 * 60e3).lastInsertRowid);
+member.run(p1, karim, 'accepted', 'Dispo dans 20 min', now - 30 * 60e3, now - 25 * 60e3);
+member.run(p1, yanis, 'requested', 'Je peux venir vers 23 h', now - 8 * 60e3, null);
+planMsg.run(p1, bilal, 'Bienvenue. Sonnez à l’interphone B.', now - 24 * 60e3);
+planMsg.run(p1, karim, 'J’arrive dans 15 min.', now - 20 * 60e3);
+const p2 = Number(plan.run(romain, 'Soirée cuir, on s’y retrouve', 'Rendez-vous au bar du fond vers 23 h. Dress code cuir ou sportswear.', 'venue',
+  cell(NEIGHBORHOODS['Le Marais'][0]), cell(NEIGHBORHOODS['Le Marais'][1]), 'Exemple : club du Marais, bar du fond', now + 2 * 3600e3, now + 6 * 3600e3, 8, now - 3 * 3600e3).lastInsertRowid);
+member.run(p2, leo, 'accepted', null, now - 2 * 3600e3, now - 1.9 * 3600e3);
+member.run(p2, samir, 'accepted', null, now - 2 * 3600e3, now - 1.8 * 3600e3);
+planMsg.run(p2, romain, 'On se retrouve au bar du fond. Dites-moi si vous êtes en retard.', now - 1.7 * 3600e3);
+planMsg.run(p2, samir, 'J’y serai vers 23 h 15.', now - 1.5 * 3600e3);
+
 const tonight = new Date(); tonight.setHours(19, 0, 0, 0);
 db.prepare(`INSERT INTO posts (user_id, kind, title, body, place, starts_at, visibility, city, created_at)
   VALUES (NULL, 'event', ?, ?, ?, ?, 'members', 'Paris', ?)`)
@@ -160,4 +233,5 @@ console.log('  Autres membres : samir@, hugo@, mathis@, yanis@, adrien@, karim@,
 console.log('  Suspendu    : kevin@ild.local (recours en attente)');
 console.log('  Candidats   : thomas@ (dossier complet), nico@ (photo à valider), julien@ (âge en cours), max@ (nouveau)');
 console.log(`  Mot de passe des comptes de démo : ${demoPassword}`);
-console.log('  Carte en direct : ILD_EDITION=cruise npm start (même base de démo)');
+console.log('  Nuit (carte du cruising, par défaut) : npm start, puis http://localhost:3000');
+console.log('  ILD (club sur invitation, même base de démo) : ILD_EDITION=club npm start');

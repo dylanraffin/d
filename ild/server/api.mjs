@@ -5,13 +5,15 @@ import { hashPassword, verifyPassword, createSession, sessionCookie, clearCookie
   requireAccount, requireUser, requireMember, rateLimiter } from './auth.mjs';
 import { getSetting, tx } from './db.mjs';
 import { LEGAL_VERSION, MODES, SEEKING, POSITIONS, VISIBILITY, TASTES, INTIMATE, REPORT_REASONS, NEIGHBORHOODS, pickList,
-  SPOT_CATEGORIES, PRESENCE_PLACES, MAP_PRECISION, MESSAGES_FROM } from './options.mjs';
+  SPOT_CATEGORIES, PRESENCE_PLACES, MAP_PRECISION, MESSAGES_FROM, BODY_TYPES, IDENTITIES, TRIBES, CAN, VIBES, CUT, SAFER,
+  HIV_STATUS, TRIP_DAYS, CITIES, PLAN_KINDS, PLAN_STARTS, PLAN_DURATIONS } from './options.mjs';
 import { DAY, str, bool, isoDay, ageOf, parseBirthDate, hiddenBetween, matchBetween, visibleMember, profilePhotoIds,
-  vouchCount, waitlistPosition, saveJpeg, scanImage, deleteFiles, deletePhotoFiles, isBlocklisted, activeShare } from './core.mjs';
+  vouchCount, waitlistPosition, saveJpeg, scanImage, deleteFiles, deletePhotoFiles, isBlocklisted, activeShare, canSeePhoto } from './core.mjs';
 import { hasFeature, requireFeature, entitlements, likesToday, dailyLikeLimit, paymentsEnabled } from './billing.mjs';
 import { distanceBetween } from './geo.mjs';
 import { readFilters, passesFilters } from './nearby.mjs';
 import { shareState, DURATIONS } from './albums.mjs';
+import { cruiseFields, cruiseProfile, cruiseOwn, markRead } from './cruise.mjs';
 
 const MAX_PROFILE_PHOTOS = 6;
 const loginLimit = rateLimiter(10, 15 * 60e3);
@@ -80,7 +82,9 @@ export function publicProfile(db, viewer, u) {
     distance: d ? (u.show_distance ? d.label : 'Distance masquée') : null,
     presence: u.presence_until > Date.now() ? { until: u.presence_until, note: u.presence_note, place: u.presence_place } : null,
     albums: { count: albumCount, shared, requested },
-    matched
+    matched,
+    favorite: viewer?.id && !isSelf ? !!db.prepare('SELECT 1 FROM favorites WHERE user_id = ? AND target_id = ?').get(viewer.id, u.id) : false,
+    ...cruiseProfile(u, canSee)
   };
 }
 
@@ -116,7 +120,8 @@ function meView(db, u) {
     legal: { accepted: u.legal_version, current: LEGAL_VERSION, needs_consent: u.role !== 'admin' && u.legal_version !== LEGAL_VERSION },
     notices_unread: db.prepare('SELECT COUNT(*) AS n FROM notices WHERE user_id = ? AND read_at IS NULL').get(u.id).n,
     payments_enabled: paymentsEnabled(db),
-    entitlements: entitlements(db, u)
+    entitlements: entitlements(db, u),
+    ...cruiseOwn(u)
   };
   if (['pending', 'waitlist'].includes(u.status)) view.checks = applicationChecks(db, u);
   if (u.status === 'waitlist') view.waitlist_position = waitlistPosition(db, u);
@@ -160,10 +165,19 @@ function profileFields(b, { partial }) {
 export function registerMemberRoutes(r) {
   r.get('/api/meta', (ctx) => ({
     brand: ctx.config.brand, edition: ctx.config.edition,
-    modes: MODES, seeking: SEEKING, positions: POSITIONS, visibility: VISIBILITY, tastes: TASTES, intimate: INTIMATE,
+    modes: MODES, positions: POSITIONS, tastes: TASTES, intimate: INTIMATE,
+    // Carte en direct : pas de « match », on parle de conversations ; on cherche plutôt pour maintenant.
+    ...(ctx.config.edition === 'cruise' ? {
+      seeking: { now: 'Maintenant', dates: 'Plan régulier', chat: 'Discuter', friends: 'Potes' },
+      visibility: { ...VISIBILITY, matches: 'Ceux avec qui j’ai échangé' }
+    } : { seeking: SEEKING, visibility: VISIBILITY }),
     neighborhoods: Object.keys(NEIGHBORHOODS), report_reasons: REPORT_REASONS, legal_version: LEGAL_VERSION,
     album_durations: Object.keys(DURATIONS), map: mapTiles(),
-    spot_categories: SPOT_CATEGORIES, presence_places: PRESENCE_PLACES, map_precision: MAP_PRECISION, messages_from: MESSAGES_FROM
+    spot_categories: SPOT_CATEGORIES, presence_places: PRESENCE_PLACES, map_precision: MAP_PRECISION,
+    messages_from: ctx.config.edition === 'cruise' ? { ...MESSAGES_FROM, nobody: 'Personne (seulement mes conversations en cours)' } : MESSAGES_FROM,
+    body_types: BODY_TYPES, identities: IDENTITIES, tribes: TRIBES, can: CAN, vibes: VIBES, cut: CUT, safer: SAFER, hiv_status: HIV_STATUS,
+    trip_days: TRIP_DAYS, cities: Object.keys(CITIES), plan_kinds: PLAN_KINDS, plan_starts: PLAN_STARTS, plan_durations: PLAN_DURATIONS,
+    plan_max_guests: Number(getSetting(ctx.db, 'plan_max_guests'))
   }));
 
   // --- comptes ---
@@ -220,7 +234,7 @@ export function registerMemberRoutes(r) {
     const u = requireUser(ctx);
     const b = ctx.body;
     const db = ctx.db;
-    const set = profileFields(b, { partial: true });
+    const set = { ...profileFields(b, { partial: true }), ...cruiseFields(b, u) };
     if ('job' in b) set.job = str(b.job, 60, { label: 'Métier' });
     if ('bio' in b) set.bio = str(b.bio, 300, { label: 'Bio' });
     if ('prompt_answer' in b) set.prompt_answer = str(b.prompt_answer, 200, { label: 'Réponse' });
@@ -282,7 +296,11 @@ export function registerMemberRoutes(r) {
     return {
       exported_at: new Date().toISOString(),
       profile,
-      photos: db.prepare('SELECT id, kind, album_id, status, created_at FROM photos WHERE user_id = ?').all(u.id),
+      photos: db.prepare('SELECT id, kind, album_id, match_id, status, created_at FROM photos WHERE user_id = ?').all(u.id),
+      favorites: db.prepare('SELECT target_id, created_at FROM favorites WHERE user_id = ?').all(u.id),
+      plans_hosted: db.prepare('SELECT id, title, description, place_kind, address, starts_at, ends_at, max_guests, status, created_at FROM plans WHERE host_id = ?').all(u.id),
+      plans_joined: db.prepare('SELECT plan_id, status, message, created_at FROM plan_members WHERE user_id = ?').all(u.id),
+      plan_messages_sent: db.prepare('SELECT plan_id, body, created_at FROM plan_messages WHERE sender_id = ?').all(u.id),
       albums: db.prepare('SELECT id, name, created_at FROM albums WHERE user_id = ?').all(u.id),
       album_shares: db.prepare('SELECT album_id, grantee_id, expires_at, revoked_at, created_at FROM album_shares WHERE owner_id = ?').all(u.id),
       likes_given: db.prepare('SELECT to_id, value, created_at FROM likes WHERE from_id = ?').all(u.id),
@@ -401,12 +419,14 @@ export function registerMemberRoutes(r) {
       const otherId = m.a_id === u.id ? m.b_id : m.a_id;
       const other = db.prepare("SELECT * FROM users WHERE id = ? AND status = 'member'").get(otherId);
       if (!other || hiddenBetween(db, u.id, otherId)) continue;
-      const last = db.prepare('SELECT kind, body, sender_id, created_at, removed FROM messages WHERE match_id = ? ORDER BY id DESC LIMIT 1').get(m.id);
+      const last = db.prepare('SELECT id, kind, body, sender_id, created_at, removed FROM messages WHERE match_id = ? ORDER BY id DESC LIMIT 1').get(m.id);
+      const readAt = (m.a_id === u.id ? m.a_read_at : m.b_read_at) || 0;
       const preview = !last ? null : last.removed ? 'Message retiré par la modération' : last.kind === 'album' ? `Album « ${last.body} »` : last.body;
       out.push({
         id: m.id, created_at: m.created_at, waiting_reply: m.origin === 'chat' && !m.replied_at, opened_by_me: m.opened_by === u.id,
         user: { id: other.id, first_name: other.first_name, photo: profilePhotoIds(db, other.id, false)[0] || null },
-        last: last ? { body: preview, mine: last.sender_id === u.id, created_at: last.created_at } : null
+        last: last ? { body: preview, mine: last.sender_id === u.id, created_at: last.created_at } : null,
+        unread: !!last && last.sender_id !== u.id && last.created_at > readAt
       });
     }
     out.sort((a, b) => (b.last?.created_at || b.created_at) - (a.last?.created_at || a.created_at));
@@ -435,9 +455,12 @@ export function registerMemberRoutes(r) {
         const s = db.prepare('SELECT * FROM album_shares WHERE id = ?').get(x.share_id);
         return { ...base, body: x.body, album: shareState(db, s) || { state: 'deleted', name: x.body, count: 0 } };
       }
+      if (x.kind === 'photo') return { ...base, body: x.body, photo_id: x.photo_id };
       return { ...base, body: x.body };
     });
-    return { match_id: m.id, user: publicProfile(db, u, other), messages };
+    // Photos : pas avant une réponse pour celui qui a lancé la conversation.
+    const canSendPhoto = !(m.origin === 'chat' && !m.replied_at && m.opened_by === u.id);
+    return { match_id: m.id, user: publicProfile(db, u, other), messages, can_send_photo: canSendPhoto, other_read_at: markRead(db, m, u) };
   });
 
   r.post('/api/matches/:id/messages', (ctx) => {
@@ -535,8 +558,19 @@ export function registerMemberRoutes(r) {
       const p = db.prepare('SELECT * FROM photos WHERE id = ?').get(id);
       if (!p) fail(404, 'Photo introuvable.');
       if (p.kind === 'album' && !activeShare(db, p.album_id, u.id) && p.user_id !== u.id) fail(404, 'Photo introuvable.');
+      if (p.kind === 'chat' && !canSeePhoto(db, u, p)) fail(404, 'Photo introuvable.');
       targetUserId = p.user_id;
       evidence = { photo_id: p.id, kind: p.kind, album_id: p.album_id, owner_id: p.user_id };
+    } else if (type === 'plan') {
+      const p = db.prepare('SELECT * FROM plans WHERE id = ?').get(id);
+      if (!p) fail(404, 'Plan introuvable.');
+      targetUserId = p.host_id;
+      // Copie de l'annonce et de la discussion : pas besoin de captures d'écran.
+      evidence = {
+        plan: { id: p.id, title: p.title, description: p.description, place_kind: p.place_kind, address: p.address, starts_at: p.starts_at, ends_at: p.ends_at },
+        conversation: db.prepare(`SELECT ms.id, ms.sender_id, x.first_name AS sender, ms.body, ms.created_at FROM plan_messages ms
+          JOIN users x ON x.id = ms.sender_id WHERE ms.plan_id = ? ORDER BY ms.id DESC LIMIT 50`).all(p.id).reverse()
+      };
     } else if (type === 'post') {
       const p = db.prepare('SELECT * FROM posts WHERE id = ?').get(id);
       if (!p) fail(404, 'Publication introuvable.');

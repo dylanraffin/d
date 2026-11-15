@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS albums (
 CREATE TABLE IF NOT EXISTS photos (
   id INTEGER PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  kind TEXT NOT NULL,                             -- profile | album
+  kind TEXT NOT NULL,                             -- profile | album | chat
   album_id INTEGER REFERENCES albums(id) ON DELETE CASCADE,
   file TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',         -- pending | approved | rejected
@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS messages (
   id INTEGER PRIMARY KEY,
   match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
   sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  kind TEXT NOT NULL DEFAULT 'text',              -- text | album
+  kind TEXT NOT NULL DEFAULT 'text',              -- text | album | photo
   body TEXT NOT NULL,
   share_id INTEGER,
   removed INTEGER NOT NULL DEFAULT 0,
@@ -266,6 +266,51 @@ CREATE TABLE IF NOT EXISTS spot_checkins (
   PRIMARY KEY (spot_id, user_id)
 );
 
+-- Plans à plusieurs : organisés par un membre. La zone est approximative ; l'adresse n'est visible
+-- que de l'hôte et des participants acceptés.
+CREATE TABLE IF NOT EXISTS plans (
+  id INTEGER PRIMARY KEY,
+  host_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  place_kind TEXT NOT NULL,                       -- home | hotel | venue | other
+  lat REAL NOT NULL,
+  lng REAL NOT NULL,
+  address TEXT,
+  starts_at INTEGER NOT NULL,
+  ends_at INTEGER NOT NULL,
+  max_guests INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',            -- open | cancelled | removed
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS plan_members (
+  plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL,                           -- requested | accepted | declined | left
+  message TEXT,
+  created_at INTEGER NOT NULL,
+  decided_at INTEGER,
+  PRIMARY KEY (plan_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS plan_messages (
+  id INTEGER PRIMARY KEY,
+  plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  removed INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+
+-- Favoris : profils épinglés pour plus tard. Privé : la personne n'est pas prévenue.
+CREATE TABLE IF NOT EXISTS favorites (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, target_id)
+);
+
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY,
   admin_id INTEGER,
@@ -292,6 +337,8 @@ CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
 CREATE INDEX IF NOT EXISTS idx_notices_user ON notices(user_id);
 CREATE INDEX IF NOT EXISTS idx_subs_user ON subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_spots_status ON spots(status);
+CREATE INDEX IF NOT EXISTS idx_plans_time ON plans(status, ends_at);
+CREATE INDEX IF NOT EXISTS idx_plan_messages ON plan_messages(plan_id, id);
 `;
 
 // Colonnes ajoutées après la première version : ajoutées automatiquement aux bases existantes.
@@ -303,11 +350,19 @@ const ADDED_COLUMNS = {
     legal_version: 'TEXT', legal_accepted_at: 'INTEGER', show_distance: 'INTEGER NOT NULL DEFAULT 1',
     incognito: 'INTEGER NOT NULL DEFAULT 0', lat: 'REAL', lng: 'REAL', location_source: 'TEXT',
     location_updated_at: 'INTEGER', geo_consent_at: 'INTEGER', map_precision: "TEXT NOT NULL DEFAULT '1km'",
-    presence_until: 'INTEGER', presence_note: 'TEXT', presence_place: 'TEXT', messages_from: "TEXT NOT NULL DEFAULT 'everyone'"
+    presence_until: 'INTEGER', presence_note: 'TEXT', presence_place: 'TEXT', messages_from: "TEXT NOT NULL DEFAULT 'everyone'",
+    // Profil cruising
+    height_cm: 'INTEGER', weight_kg: 'INTEGER', body_type: 'TEXT', identity: 'TEXT', tribes: 'TEXT', can: 'TEXT', vibes: 'TEXT',
+    endowment_cm: 'INTEGER', cut: 'TEXT', safer: 'TEXT',
+    // Santé : seulement avec un accord explicite (health_consent_at)
+    hiv_status: 'TEXT', last_test: 'TEXT', health_visibility: "TEXT NOT NULL DEFAULT 'matches'", health_consent_at: 'INTEGER',
+    last_seen_at: 'INTEGER',
+    // Mode voyage : point choisi par le membre, pas sa position
+    trip_lat: 'REAL', trip_lng: 'REAL', trip_label: 'TEXT', trip_until: 'INTEGER'
   },
-  matches: { origin: "TEXT NOT NULL DEFAULT 'like'", opened_by: 'INTEGER', replied_at: 'INTEGER' },
-  photos: { album_id: 'INTEGER REFERENCES albums(id) ON DELETE CASCADE' },
-  messages: { kind: "TEXT NOT NULL DEFAULT 'text'", share_id: 'INTEGER' },
+  matches: { origin: "TEXT NOT NULL DEFAULT 'like'", opened_by: 'INTEGER', replied_at: 'INTEGER', a_read_at: 'INTEGER', b_read_at: 'INTEGER' },
+  photos: { album_id: 'INTEGER REFERENCES albums(id) ON DELETE CASCADE', match_id: 'INTEGER REFERENCES matches(id) ON DELETE CASCADE' },
+  messages: { kind: "TEXT NOT NULL DEFAULT 'text'", share_id: 'INTEGER', photo_id: 'INTEGER' },
   reports: { reporter_contact: 'TEXT' }
 };
 
@@ -327,7 +382,11 @@ export const SETTINGS_SPEC = {
   // Abonnement (désactivé : l'app est gratuite)
   payments_enabled: { type: 'bool', def: '0', label: 'Abonnement ILD+ payant activé' },
   plus_price_cents: { type: 'int', min: 0, max: 100000, def: '1499', label: 'Prix mensuel ILD+ (centimes, TTC)' },
-  plus_features: { type: 'list', def: 'who_liked_me,travel_mode,advanced_filters,incognito,unlimited_likes,extended_map', label: 'Fonctions réservées à la version payante' },
+  plus_features: { type: 'list', def: 'who_liked_me,travel_mode,advanced_filters,incognito,unlimited_likes,extended_map,read_receipts', label: 'Fonctions réservées à la version payante' },
+  plan_max_guests: { type: 'int', min: 2, max: 50, def: '12', label: 'Plans à plusieurs : nombre maximal de participants' },
+  chat_photos_per_day: { type: 'int', min: 1, max: 500, def: '60', label: 'Photos envoyées dans le chat par jour et par membre' },
+  // International : pays où le service est fermé (codes ISO à deux lettres), lus dans l'en-tête de pays posé par le proxy ou le CDN.
+  blocked_countries: { type: 'text', max: 800, def: '', label: 'Pays où le service est fermé (codes ISO séparés par des virgules, ex. « AE, SA, IR »)' },
   free_map_radius_km: { type: 'int', min: 1, max: 500, def: '15', label: 'Carte en direct : rayon gratuit autour de soi (km, si payant activé)' },
   daily_new_chats: { type: 'int', min: 1, max: 1000, def: '40', label: 'Carte en direct : nouvelles conversations par jour et par membre' },
   free_daily_likes: { type: 'int', min: 1, max: 1000, def: '50', label: 'Likes par jour en gratuit (quand le payant est activé)' },

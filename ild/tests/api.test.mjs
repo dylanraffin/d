@@ -77,7 +77,7 @@ async function matchPair(a, b) {
 
 before(async () => {
   dir = mkdtempSync(join(tmpdir(), 'ild-test-'));
-  app = createApp({ dataDir: dir, rateLimit: false });
+  app = createApp({ dataDir: dir, rateLimit: false, edition: 'club' });
   await new Promise((r) => app.server.listen(0, r));
   base = `http://127.0.0.1:${app.server.address().port}`;
   const now = Date.now();

@@ -130,6 +130,11 @@ export function canSeePhoto(db, viewer, photo) {
   const owner = db.prepare('SELECT status FROM users WHERE id = ?').get(photo.user_id);
   if (!owner || owner.status !== 'member' || hiddenBetween(db, viewer.id, photo.user_id)) return false;
   if (photo.kind === 'profile') return true;
+  if (photo.kind === 'chat') {
+    // Photo envoyée dans une conversation : seulement ses deux participants.
+    const m = db.prepare('SELECT a_id, b_id FROM matches WHERE id = ?').get(photo.match_id);
+    return !!m && (m.a_id === viewer.id || m.b_id === viewer.id);
+  }
   return !!photo.album_id && !!activeShare(db, photo.album_id, viewer.id);
 }
 

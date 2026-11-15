@@ -15,6 +15,8 @@ import { DAY, str, visibleMember, conversationBetween, profilePhotoIds } from '.
 import { hasFeature } from './billing.mjs';
 import { haversineKm, clusters } from './geo.mjs';
 import { locatedMembers, card, readFilters, passesFilters } from './nearby.mjs';
+import { effectiveLocation } from './cruise.mjs';
+import { plansAround } from './plans.mjs';
 
 const VIEW_RADIUS_KM = 12;
 const PRECISION_DEG = { '500m': 0.005, '1km': 0.01 };
@@ -89,11 +91,11 @@ export function registerLiveRoutes(r) {
 
   // --- carte en direct ---
   r.get('/api/live/map', (ctx) => {
-    const u = requireMember(ctx);
+    const u = effectiveLocation(requireMember(ctx));
     if (ctx.config.edition !== 'cruise') fail(404, 'Route inconnue.');
     const db = ctx.db;
     const center = viewCenter(ctx, u);
-    if (!center) return { located: false, pins: [], zones: [], spots: [] };
+    if (!center) return { located: false, pins: [], zones: [], spots: [], plans: [] };
     const f = readFilters(ctx, u);
     const around = locatedMembers(db, u).filter((x) => haversineKm(center.lat, center.lng, x.lat, x.lng) <= VIEW_RADIUS_KM && passesFilters(u, x, f));
     const onlyFree = ctx.query.get('available') === '1';
@@ -107,19 +109,23 @@ export function registerLiveRoutes(r) {
       center, radius_km: VIEW_RADIUS_KM, min_cluster: k, hidden,
       pins,
       zones: zones.map((z) => ({ lat: z.lat, lng: z.lng, size_km: z.size_km, count: z.members.length, people: z.members.slice(0, 30).map((x) => ({ ...card(db, u, x), presence: presenceOf(x) })) })),
-      spots: spotsAround(db, u, center)
+      spots: spotsAround(db, u, center),
+      plans: plansAround(db, u, center)
     };
   });
 
   // Liste : disponibles d'abord, puis par tranche de distance.
   r.get('/api/live/people', (ctx) => {
-    const u = requireMember(ctx);
+    const u = effectiveLocation(requireMember(ctx));
     if (ctx.config.edition !== 'cruise') fail(404, 'Route inconnue.');
     if (u.lat == null) return { located: false, people: [] };
     const db = ctx.db;
     const f = readFilters(ctx, u);
-    const people = locatedMembers(db, u).filter((x) => passesFilters(u, x, f)).map((x) => ({ ...card(db, u, x), presence: presenceOf(x) }));
-    const order = (p) => (p.presence ? 0 : 1);
+    const favorites = new Set(db.prepare('SELECT target_id FROM favorites WHERE user_id = ?').all(u.id).map((x) => x.target_id));
+    let people = locatedMembers(db, u).filter((x) => passesFilters(u, x, f)).map((x) => ({ ...card(db, u, x), presence: presenceOf(x), favorite: favorites.has(x.id) }));
+    if (ctx.query.get('favorites') === '1') people = people.filter((x) => x.favorite);
+    // Dispos d'abord, puis en ligne, puis les autres.
+    const order = (p) => (p.presence ? 0 : p.online === 'now' ? 1 : 2);
     return { located: true, people: people.sort((a, b) => order(a) - order(b)).slice(0, 90) };
   });
 

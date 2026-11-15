@@ -5,10 +5,11 @@
 import { fail } from './http.mjs';
 import { requireMember } from './auth.mjs';
 import { getSetting } from './db.mjs';
-import { NEIGHBORHOODS, POSITIONS, SEEKING, pickList } from './options.mjs';
+import { NEIGHBORHOODS, CITIES, POSITIONS, SEEKING, pickList } from './options.mjs';
 import { hasFeature } from './billing.mjs';
 import { snap, MIN_UPDATE_MS, distanceBetween, dailyShuffleKey, clusters, BUCKETS } from './geo.mjs';
 import { DAY, ageOf, hiddenBetween, profilePhotoIds } from './core.mjs';
+import { cruiseCard, effectiveLocation } from './cruise.mjs';
 
 function freshSince(db) {
   return Date.now() - Number(getSetting(db, 'location_ttl_days')) * DAY;
@@ -16,8 +17,10 @@ function freshSince(db) {
 
 // Membres localisés que `viewer` a le droit de voir dans Autour / Carte.
 export function locatedMembers(db, viewer) {
-  const rows = db.prepare(`SELECT * FROM users WHERE status = 'member' AND id != ? AND lat IS NOT NULL
-    AND location_updated_at > ? AND hide_from_map = 0`).all(viewer.id, freshSince(db));
+  // Un membre en voyage apparaît à son point de voyage, même si sa position habituelle n'est plus à jour.
+  const rows = db.prepare(`SELECT * FROM users WHERE status = 'member' AND id != ? AND hide_from_map = 0
+    AND ((lat IS NOT NULL AND location_updated_at > ?) OR (trip_until > ? AND trip_lat IS NOT NULL))`).all(viewer.id, freshSince(db), Date.now())
+    .map(effectiveLocation);
   return rows.filter((x) => {
     if (hiddenBetween(db, viewer.id, x.id)) return false;
     // Incognito : visible seulement des personnes que l'on a likées.
@@ -32,7 +35,8 @@ export function card(db, viewer, x) {
     id: x.id, first_name: x.first_name, age: ageOf(x), photo: profilePhotoIds(db, x.id, false)[0] || null,
     distance: x.show_distance ? (d ? d.label : null) : 'Distance masquée',
     position: x.position && x.position_visibility === 'members' ? x.position : null,
-    online_recently: x.location_updated_at > Date.now() - 3600e3
+    online_recently: x.location_updated_at > Date.now() - 3600e3,
+    ...cruiseCard(x)
   };
 }
 
@@ -47,7 +51,7 @@ export function readFilters(ctx, user) {
     seeking: pickList(q.get('seeking'), SEEKING)
   };
   const used = f.age_min || f.age_max || f.max_km || f.position.length || f.seeking.length;
-  if (used && !hasFeature(ctx.db, user, 'advanced_filters')) fail(402, "Les filtres avancés font partie d'ILD+.");
+  if (used && !hasFeature(ctx.db, user, 'advanced_filters')) fail(402, `Les filtres avancés font partie de ${ctx.config.brand.plus}.`);
   return f;
 }
 
@@ -73,11 +77,21 @@ export function registerNearbyRoutes(r) {
     let lat;
     let lng;
     let source;
+    let city = null;
     if (b.neighborhood) {
       const c = NEIGHBORHOODS[b.neighborhood];
       if (!c) fail(400, 'Quartier inconnu.');
       [lat, lng] = c;
       source = 'neighborhood';
+      city = 'Paris';
+    } else if (b.city) {
+      // Sans GPS, partout dans le monde : un point tiré au hasard à quelques kilomètres du centre de la ville choisie.
+      const c = CITIES[b.city];
+      if (!c) fail(400, 'Ville inconnue.');
+      lat = c[0] + (Math.random() - 0.5) * 0.05;
+      lng = c[1] + (Math.random() - 0.5) * 0.07;
+      source = 'city';
+      city = b.city;
     } else {
       lat = Number(b.lat);
       lng = Number(b.lng);
@@ -89,8 +103,9 @@ export function registerNearbyRoutes(r) {
       }
     }
     ctx.db.prepare(`UPDATE users SET lat = ?, lng = ?, location_source = ?, location_updated_at = ?,
-      geo_consent_at = COALESCE(geo_consent_at, ?), neighborhood = COALESCE(?, neighborhood) WHERE id = ?`)
-      .run(snap(lat), snap(lng), source, now, now, source === 'neighborhood' ? b.neighborhood : null, u.id);
+      geo_consent_at = COALESCE(geo_consent_at, ?), neighborhood = CASE WHEN ? = 'city' THEN NULL ELSE COALESCE(?, neighborhood) END,
+      city = COALESCE(?, city) WHERE id = ?`)
+      .run(snap(lat), snap(lng), source, now, now, source, source === 'neighborhood' ? b.neighborhood : null, city, u.id);
     return { ok: true, updated: true };
   });
 

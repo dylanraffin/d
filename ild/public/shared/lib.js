@@ -1,4 +1,9 @@
 // Outils partagés par l'app et le back office. Tout le texte passe par textContent : pas d'injection HTML.
+import { tr, locale } from './i18n.js';
+
+// Texte écrit par un membre (message, présentation, titre) : affiché tel quel, jamais traduit.
+export const raw = (text) => document.createTextNode(String(text ?? ''));
+const TRANSLATED_ATTRS = new Set(['placeholder', 'aria-label', 'title', 'alt', 'label']);
 
 export async function api(method, path, body) {
   const opts = { method, headers: {}, credentials: 'same-origin' };
@@ -29,7 +34,7 @@ export function h(tag, attrs, ...children) {
       else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
       else if (k === 'html') throw new Error('html interdit');
       else if (v === true) el.setAttribute(k, '');
-      else el.setAttribute(k, String(v));
+      else el.setAttribute(k, TRANSLATED_ATTRS.has(k) ? tr(String(v)) : String(v));
     }
   }
   append(el, children);
@@ -41,7 +46,7 @@ function append(el, children) {
     if (c == null || c === false) continue;
     if (Array.isArray(c)) append(el, c);
     else if (c instanceof Node) el.appendChild(c);
-    else el.appendChild(document.createTextNode(String(c)));
+    else el.appendChild(document.createTextNode(tr(String(c))));
   }
 }
 
@@ -69,7 +74,16 @@ const ICONS = {
   calendar: 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4',
   filter: 'M4 7h10M18 7h2M4 17h4M12 17h8',
   clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
-  flag: 'M5 21V4h11l-1.5 4L16 12H5'
+  flag: 'M5 21V4h11l-1.5 4L16 12H5',
+  home: 'M4 11l8-7 8 7M6 10v10h12V10',
+  pin: 'M12 21s-6-5.5-6-10.5a6 6 0 0 1 12 0C18 15.5 12 21 12 21zM12 12.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  group: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 19c.8-3 3-4.5 6-4.5s5.2 1.5 6 4.5M16 5.2a3 3 0 0 1 0 5.6M18 14.8c1.6.6 2.6 2 3 4.2',
+  star: 'M12 4l2.5 5.2 5.5.8-4 4 1 5.6-5-2.7-5 2.7 1-5.6-4-4 5.5-.8z',
+  camera: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
+  arrow: 'M5 12h14M13 6l6 6-6 6',
+  target: 'M12 3v3M12 18v3M3 12h3M18 12h3M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z',
+  install: 'M12 4v11M7 11l5 5 5-5M5 20h14',
+  list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01'
 };
 
 export function icon(name, size = 20, color) {
@@ -101,7 +115,7 @@ export function toast(message, isError = false) {
 export function fmtDate(t, withTime = true) {
   if (!t) return '';
   const d = new Date(t);
-  return d.toLocaleString('fr-FR', withTime
+  return d.toLocaleString(locale(), withTime
     ? { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
     : { day: 'numeric', month: 'short', year: 'numeric' });
 }

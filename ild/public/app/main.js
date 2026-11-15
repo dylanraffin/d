@@ -1,6 +1,7 @@
 // Écrans principaux : Découvrir, profil, Autour (grille et carte), Ce soir, messages, albums reçus.
-import { api, h, icon, toast, fmtDate, ago } from '/shared/lib.js';
-import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, chips, select, sheet, nav, reportSheet, label, isLive } from './ui.js';
+import { api, h, icon, toast, fmtDate, ago, fileToJpeg, raw } from '/shared/lib.js';
+import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, chips, select, sheet, nav, reportSheet, label, isLive, isWide, brand,
+  personSummary, presenceText, statusLine, cruiseRows } from './ui.js';
 
 const DURATION_LABEL = { '1h': '1 heure', '24h': '24 heures', '7d': '7 jours', forever: "Jusqu'à ce que je retire" };
 const DISTANCES = { '': 'Toutes', 1: 'Moins de 1 km', 2: 'Moins de 2 km', 5: 'Moins de 5 km', 10: 'Moins de 10 km', 25: 'Moins de 25 km' };
@@ -28,7 +29,7 @@ function filtersSheet(onApply) {
     const locked = !state.me.entitlements.advanced_filters;
     return [
       h('h2', null, 'Filtres'),
-      locked ? h('a', { class: 'notice', href: '#/plus' }, "Les filtres avancés font partie d'ILD+.") : null,
+      locked ? h('a', { class: 'notice', href: '#/plus' }, `Les filtres avancés font partie de ${brand().plus}.`) : null,
       h('span', { class: 'section-label' }, 'Âge'), h('div', { class: 'grid2' }, ageMin, ageMax),
       h('span', { class: 'section-label' }, 'Distance (si les deux personnes ont activé leur position)'), dist,
       h('span', { class: 'section-label' }, 'Position (seulement les profils qui l’affichent à tous)'), pos.el,
@@ -106,7 +107,7 @@ export async function screenLikes() {
   const body = data.premium_required
     ? h('div', { class: 'card pad stack center' }, h('span', { class: 'big' }, String(data.count)),
       h('p', { class: 'lead' }, data.count === 1 ? "personne t'a liké." : "personnes t'ont liké."),
-      h('a', { class: 'btn primary block', href: '#/plus' }, 'Voir qui avec ILD+'))
+      h('a', { class: 'btn primary block', href: '#/plus' }, `Voir qui avec ${brand().plus}`))
     : data.profiles.length
       ? h('div', { class: 'grid2' }, data.profiles.map((p) => h('a', { href: `#/u/${p.id}`, class: 'stack text small-gap' },
         photoEl(p.photos[0], p.first_name), h('span', { class: 'strong' }, `${p.first_name}, ${p.age}`))))
@@ -139,6 +140,18 @@ export async function screenProfile(id) {
     h('button', { class: 'btn block', onclick: async () => { await run(() => api('POST', '/api/blocks', { user_id: p.id, kind: 'block' }), `${p.first_name} est bloqué.`); close(); go('#/discover'); } }, 'Bloquer'),
     h('button', { class: 'btn danger block', onclick: () => { close(); reportSheet('user', p.id, 'ce profil'); } }, 'Signaler'),
     h('button', { class: 'btn ghost', onclick: close }, 'Annuler')]);
+  let favorite = p.favorite;
+  const fav = h('button', { class: 'icon-btn', onclick: async () => {
+    await run(() => api(favorite ? 'DELETE' : 'PUT', `/api/favorites/${p.id}`), favorite ? 'Retiré des favoris.' : 'Ajouté aux favoris. Il ne le sait pas.');
+    favorite = !favorite; drawFav();
+  } }, icon('star', 18));
+  const drawFav = () => {
+    fav.classList.toggle('on', favorite);
+    fav.setAttribute('aria-pressed', String(favorite));
+    fav.setAttribute('aria-label', favorite ? 'Retirer des favoris' : 'Ajouter aux favoris');
+  };
+  drawFav();
+  const summary = personSummary(p);
   let albums = null;
   if (p.albums.shared.length) {
     albums = h('div', { class: 'list' }, p.albums.shared.map((s) => h('a', { href: `#/shared/${s.share_id}`, class: 'text' },
@@ -151,15 +164,19 @@ export async function screenProfile(id) {
       p.albums.requested ? null : h('button', { class: 'btn ghost small', onclick: async () => { await run(() => api('POST', `/api/albums/${p.id}/request`, {}), 'Demande envoyée.'); screenProfile(id); } }, 'Demander'));
   }
   const section = (title, items, group) => items.length ? [h('span', { class: 'section-label' }, title), h('div', { class: 'row wrap' }, items.map((t) => h('span', { class: 'chip' }, group ? label(group, t) : t)))] : null;
-  mount(h('main', { class: 'screen' },
-    h('div', { class: 'row between' }, backBtn(isLive() ? '#/map' : '#/discover'), h('button', { class: 'icon-btn', 'aria-label': "Plus d'options : masquer, bloquer, signaler", onclick: more }, icon('more'))),
-    p.presence ? h('div', { class: 'notice live-presence' }, h('span', { class: 'live-dot', 'aria-hidden': 'true' }), h('span', { class: 'grow' }, `Dispo jusqu'à ${fmtDate(p.presence.until)}${p.presence.place ? ` · ${label('presence_places', p.presence.place)}` : ''}${p.presence.note ? ` · « ${p.presence.note} »` : ''}`)) : null,
+  mount(h('main', { class: 'screen profile-screen' },
+    h('div', { class: 'row between' }, backBtn(isLive() ? '#/map' : '#/discover'),
+      h('div', { class: 'row' }, isLive() ? fav : null, h('button', { class: 'icon-btn', 'aria-label': "Plus d'options : masquer, bloquer, signaler", onclick: more }, icon('more')))),
     imgBox,
+    isLive() ? statusLine(p) : null,
+    p.presence ? h('div', { class: 'notice live-presence' }, h('span', { class: 'live-dot', 'aria-hidden': 'true' }), h('span', { class: 'grow' }, presenceText(p.presence))) : null,
+    summary ? h('p', { class: 'lead text' }, summary) : null,
     p.vouched_by.length ? h('p', { class: 'small text2' }, h('span', { class: 'tag-blue' }, 'Parrainé'), ` par ${p.vouched_by.join(', ')}`) : null,
     p.travel ? h('p', { class: 'small tag-yellow' }, `De passage à ${p.travel.city} du ${fmtDate(Date.parse(p.travel.from), false)} au ${fmtDate(Date.parse(p.travel.to), false)}`) : null,
-    p.bio ? h('p', { class: 'lead' }, p.bio) : null,
-    p.prompt_answer ? h('div', { class: 'card pad stack small-gap' }, h('span', { class: 'small' }, 'Un dimanche parfait…'), h('span', null, p.prompt_answer)) : null,
-    p.position ? [h('span', { class: 'section-label' }, 'Position'), h('div', { class: 'row' }, h('span', { class: 'chip' }, label('positions', p.position)))] : null,
+    p.bio ? h('p', { class: 'lead' }, raw(p.bio)) : null,
+    p.prompt_answer ? h('div', { class: 'card pad stack small-gap' }, h('span', { class: 'small' }, 'Un dimanche parfait…'), h('span', null, raw(p.prompt_answer))) : null,
+    isLive() ? cruiseRows(p) : null,
+    p.position && !isLive() ? [h('span', { class: 'section-label' }, 'Position'), h('div', { class: 'row' }, h('span', { class: 'chip' }, label('positions', p.position)))] : null,
     section('Cherche', p.seeking, 'seeking'),
     section('Aime', [...p.tastes, ...p.interests]),
     section('Côté intime', p.intimate),
@@ -200,7 +217,7 @@ export async function screenSharedAlbum(shareId) {
     a.photos.length ? grid : h('p', { class: 'empty' }, 'Cet album est vide pour le moment.'),
     h('div', { class: 'list' }, h('label', null, h('span', { class: 'grow' }, 'Flouter les photos explicites'),
       h('input', { type: 'checkbox', checked: blurOn, onchange: (e) => { blurOn = e.target.checked; draw(); } }))),
-    h('p', { class: 'small' }, "Appui long sur une photo pour la signaler. Partager une photo d'album hors d'ILD entraîne un bannissement."),
+    h('p', { class: 'small' }, "Appui long sur une photo pour la signaler. Partager une photo d'album en dehors du service entraîne un bannissement."),
     h('p', { class: 'small' }, "Sur le web, les captures d'écran ne peuvent pas être bloquées techniquement : elles le seront dans l'app mobile.")));
 }
 
@@ -332,19 +349,34 @@ export async function screenTonight() {
 }
 
 // ---------- messages ----------
-export async function screenMessages() {
-  const [d, received] = await Promise.all([api('GET', '/api/matches'), api('GET', '/api/albums/received')]);
-  mount(h('main', { class: 'screen with-nav' },
+// Liste des conversations : seule sur téléphone, colonne de gauche sur grand écran.
+async function conversationAside(activeId) {
+  const [d, received, plans] = await Promise.all([api('GET', '/api/matches'), api('GET', '/api/albums/received'),
+    isLive() ? api('GET', '/api/plans/mine') : { plans: [] }]);
+  return h('div', { class: 'msg-aside' },
     h('h1', { class: 'title' }, 'Messages'),
+    plans.plans.length ? [h('span', { class: 'section-label' }, 'Plans à plusieurs'),
+      h('div', { class: 'list' }, plans.plans.map((p) => h('a', { href: p.my_status === 'requested' ? '#/map' : `#/plan/${p.id}`, class: 'text tall' }, icon('group', 20, '#ff9f0a'),
+        h('div', { class: 'grow stack small-gap ellipsis-box' }, h('span', { class: 'strong ellipsis' }, raw(p.title)),
+          h('span', { class: 'small ellipsis' }, p.my_status === 'host' ? (p.pending ? `${p.pending} demande${p.pending > 1 ? 's' : ''} en attente` : 'Tu es l’hôte') : p.my_status === 'requested' ? 'Demande envoyée' : `Hôte : ${p.host.first_name}`)),
+        p.my_status === 'host' && p.pending ? h('span', { class: 'unread-dot', 'aria-label': 'Demandes en attente' }) : null)))] : null,
     received.shares.length ? [h('span', { class: 'section-label' }, 'Albums reçus'),
       h('div', { class: 'list' }, received.shares.map((s) => h('a', { href: `#/shared/${s.share_id}`, class: 'text' }, icon('lock', 18, '#2997ff'),
         h('span', { class: 'grow' }, `${s.name} · ${s.owner.first_name}`), h('span', { class: 'small' }, s.expires_at ? `jusqu'au ${fmtDate(s.expires_at)}` : ''))))] : null,
-    d.matches.length ? h('div', { class: 'list' }, d.matches.map((m) => h('a', { href: `#/chat/${m.id}`, class: 'text tall' },
+    d.matches.length ? h('div', { class: 'list' }, d.matches.map((m) => h('a', { href: `#/chat/${m.id}`, class: 'text tall', 'aria-current': String(m.id) === String(activeId) ? 'page' : null,
+      style: String(m.id) === String(activeId) ? { background: '#2c2c2e' } : null },
       avatar(m.user.photo, m.user.first_name),
       h('div', { class: 'grow stack small-gap ellipsis-box' }, h('span', { class: 'strong' }, m.user.first_name),
-        h('span', { class: 'small ellipsis' }, m.last ? `${m.last.mine ? 'Toi : ' : ''}${m.last.body}` : 'Nouveau match : dis bonjour')),
-      h('span', { class: 'small' }, ago(m.last?.created_at || m.created_at)))))
-      : h('p', { class: 'empty' }, 'Pas encore de match. Va dans Découvrir.')),
+        m.last ? h('span', { class: 'small ellipsis' }, m.last.mine ? 'Toi : ' : null, ['Photo', 'Photo retirée', 'Message retiré par la modération'].includes(m.last.body) ? m.last.body : raw(m.last.body))
+          : h('span', { class: 'small ellipsis' }, isLive() ? 'Nouvelle conversation' : 'Nouveau match : dis bonjour')),
+      m.unread ? h('span', { class: 'unread-dot', 'aria-label': 'Non lu' }) : h('span', { class: 'small' }, ago(m.last?.created_at || m.created_at)))))
+      : h('p', { class: 'empty' }, isLive() ? 'Pas encore de conversation. Écris à quelqu’un depuis la carte.' : 'Pas encore de match. Va dans Découvrir.'));
+}
+
+export async function screenMessages() {
+  const aside = await conversationAside(null);
+  mount(h('main', { class: 'screen with-nav msg-layout' }, aside,
+    h('div', { class: 'msg-pane-empty empty-card muted' }, icon('chat', 28), h('span', null, 'Choisis une conversation.'))),
   nav('messages'));
 }
 
@@ -358,6 +390,23 @@ function albumBubble(m, matchId) {
     a.state === 'active' ? (m.mine
       ? h('button', { class: 'btn small on-blue', onclick: async () => { await run(() => api('DELETE', `/api/me/albums/shares/${a.share_id}`), 'Accès retiré.'); screenChat(matchId); } }, "Retirer l'accès")
       : h('a', { class: 'btn small light', href: `#/shared/${a.share_id}` }, 'Ouvrir')) : null);
+}
+
+// Photo envoyée dans le chat. Reçue : floutée si le membre le souhaite, un geste pour la voir, appui long pour signaler.
+function photoBubble(m, matchId) {
+  if (!m.photo_id) return h('div', { class: `bubble removed${m.mine ? ' mine' : ''}` }, 'Photo retirée');
+  const blurred = !m.mine && state.me.blur_explicit;
+  const el = h('button', { type: 'button', class: `photo-bubble${m.mine ? ' mine' : ''}${blurred ? ' blur' : ''}`, 'aria-label': blurred ? 'Photo floutée, toucher pour voir' : 'Photo' },
+    h('img', { src: `/photos/${m.photo_id}`, alt: '', loading: 'lazy', oncontextmenu: (e) => e.preventDefault() }),
+    blurred ? h('span', { class: 'hint' }, icon('eyeoff', 20), 'Toucher pour voir') : null,
+    m.mine ? h('span', { class: 'remove', role: 'button', tabindex: 0, onclick: async (e) => {
+      e.stopPropagation();
+      await run(() => api('DELETE', `/api/matches/${matchId}/photos/${m.photo_id}`), 'Photo retirée.');
+      screenChat(matchId);
+    } }, 'Retirer') : null);
+  el.addEventListener('click', () => { el.classList.remove('blur'); el.querySelector('.hint')?.remove(); });
+  if (!m.mine) el.addEventListener('contextmenu', (e) => { e.preventDefault(); reportSheet('photo', m.photo_id, 'cette photo'); });
+  return el;
 }
 
 function sendAlbumSheet(other, matchId) {
@@ -382,19 +431,30 @@ function sendAlbumSheet(other, matchId) {
   });
 }
 
+const QUICK = ['Salut', 'Dispo ?', 'Tu reçois ?', 'Je peux me déplacer', 'Photo ?', 'Tu es vers où ?'];
+
 export async function screenChat(matchId) {
-  const first = await api('GET', `/api/matches/${matchId}/messages`);
+  const [first, aside] = await Promise.all([api('GET', `/api/matches/${matchId}/messages`), isWide() ? conversationAside(matchId) : null]);
   const other = first.user;
   let lastId = 0;
+  let lastMine = null;
+  let canSendPhoto = first.can_send_photo;
   const box = h('div', { class: 'bubbles', 'aria-live': 'polite' });
+  const seen = h('span', { class: 'seen' }, 'Vu');
+  const showSeen = (readAt) => {
+    seen.remove();
+    if (lastMine && lastMine.id === lastId && readAt && readAt >= lastMine.created_at) box.appendChild(seen);
+  };
   const add = (list) => {
     for (const m of list) {
       lastId = Math.max(lastId, m.id);
+      if (m.mine) lastMine = m;
       let el;
       if (m.removed) el = h('div', { class: 'bubble removed' }, 'Message retiré par la modération');
       else if (m.kind === 'album') el = albumBubble(m, matchId);
+      else if (m.kind === 'photo') el = photoBubble(m, matchId);
       else {
-        el = h('div', { class: `bubble${m.mine ? ' mine' : ''}`, title: fmtDate(m.created_at) }, m.body);
+        el = h('div', { class: `bubble${m.mine ? ' mine' : ''}`, title: fmtDate(m.created_at) }, raw(m.body));
         if (!m.mine) el.addEventListener('contextmenu', (e) => { e.preventDefault(); reportSheet('message', m.id, 'ce message'); });
       }
       box.appendChild(el);
@@ -402,6 +462,14 @@ export async function screenChat(matchId) {
     if (list.length) box.scrollTop = box.scrollHeight;
   };
   add(first.messages);
+  showSeen(first.other_read_at);
+  const refresh = async () => {
+    const d = await api('GET', `/api/matches/${matchId}/messages?after=${lastId}`);
+    canSendPhoto = d.can_send_photo;
+    seen.remove();
+    add(d.messages);
+    showSeen(d.other_read_at);
+  };
   const input = h('input', { placeholder: `Message à ${other.first_name}`, maxlength: 2000, 'aria-label': 'Message' });
   const send = async (e) => {
     e.preventDefault();
@@ -409,27 +477,41 @@ export async function screenChat(matchId) {
     if (!body) return;
     input.value = '';
     await run(() => api('POST', `/api/matches/${matchId}/messages`, { body }));
-    add((await api('GET', `/api/matches/${matchId}/messages?after=${lastId}`)).messages);
+    await refresh();
+  };
+  const fileInput = h('input', { type: 'file', accept: 'image/*', class: 'visually-hidden', 'aria-label': 'Choisir une photo', onchange: async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    await run(async () => api('POST', `/api/matches/${matchId}/photos`, { data: await fileToJpeg(file) }));
+    await refresh();
+  } });
+  const pickPhoto = () => {
+    if (!canSendPhoto) { toast(`Tu pourras envoyer des photos dès la première réponse de ${other.first_name}.`, true); return; }
+    fileInput.click();
   };
   const reportConv = () => {
     const theirs = [...first.messages].reverse().find((m) => !m.mine && m.kind === 'text');
     if (theirs) reportSheet('message', theirs.id, 'cette conversation');
     else reportSheet('user', other.id, 'ce profil');
   };
-  mount(h('main', { class: 'screen chat-screen' },
-    h('div', { class: 'row chat-head' },
-      backBtn('#/messages'), avatar(other.photos[0], other.first_name),
-      h('a', { class: 'grow stack text', style: { gap: '0' }, href: `#/u/${other.id}` }, h('span', { class: 'strong' }, other.first_name),
-        h('span', { class: 'small' }, [other.distance, other.vouched_by.length ? 'Parrainé' : other.neighborhood].filter(Boolean).join(' · '))),
-      h('button', { class: 'btn small', onclick: reportConv }, 'Signaler')),
-    box,
-    h('p', { class: 'small center' }, 'Appui long sur un message pour le signaler. Le signalement garde une copie sécurisée : pas besoin de captures.'),
-    h('form', { class: 'composer', onsubmit: send },
-      h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Envoyer un album privé', onclick: () => sendAlbumSheet(other, matchId) }, icon('image')),
-      input, h('button', { class: 'icon-btn send', 'aria-label': 'Envoyer', type: 'submit' }, icon('send')))));
+  mount(h('main', { class: 'screen chat-screen msg-layout' },
+    aside,
+    h('div', { class: 'chat-pane' },
+      h('div', { class: 'row chat-head' },
+        h('span', { class: 'only-narrow' }, backBtn('#/messages')), avatar(other.photos[0], other.first_name),
+        h('a', { class: 'grow stack text', style: { gap: '0' }, href: `#/u/${other.id}` }, h('span', { class: 'strong' }, other.first_name),
+          h('span', { class: 'small' }, [other.online === 'now' ? 'En ligne' : null, other.distance, other.vouched_by.length ? 'Parrainé' : other.neighborhood].filter(Boolean).join(' · '))),
+        h('button', { class: 'btn small', onclick: reportConv }, 'Signaler')),
+      box,
+      h('p', { class: 'small center' }, 'Appui long ou clic droit sur un message ou une photo pour le signaler. Le signalement garde une copie sécurisée : pas besoin de captures.'),
+      isLive() ? h('div', { class: 'quick', role: 'group', 'aria-label': 'Réponses rapides' }, QUICK.map((t) => h('button', { type: 'button', onclick: () => { input.value = t; input.focus(); } }, t))) : null,
+      h('form', { class: 'composer', onsubmit: send },
+        fileInput,
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Envoyer une photo', title: 'Envoyer une photo', onclick: pickPhoto }, icon('camera')),
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Envoyer un album privé', title: 'Envoyer un album privé', onclick: () => sendAlbumSheet(other, matchId) }, icon('lock')),
+        input, h('button', { class: 'icon-btn send', 'aria-label': 'Envoyer', type: 'submit' }, icon('send'))))));
   input.focus();
-  const timer = setInterval(async () => {
-    try { add((await api('GET', `/api/matches/${matchId}/messages?after=${lastId}`)).messages); } catch { /* réseau */ }
-  }, 4000);
+  const timer = setInterval(async () => { try { await refresh(); } catch { /* réseau */ } }, 4000);
   onLeave(() => clearInterval(timer));
 }

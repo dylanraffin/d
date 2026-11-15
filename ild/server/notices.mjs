@@ -89,5 +89,6 @@ function undo(db, n) {
     if (type === 'message') db.prepare('UPDATE messages SET removed = 0 WHERE id = ?').run(Number(id));
     if (type === 'post') db.prepare('UPDATE posts SET removed = 0 WHERE id = ?').run(Number(id));
     if (type === 'photo') db.prepare("UPDATE photos SET status = 'approved' WHERE id = ?").run(Number(id));
+    if (type === 'plan') db.prepare("UPDATE plans SET status = 'open' WHERE id = ? AND status = 'removed'").run(Number(id));
   }
 }

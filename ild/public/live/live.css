@@ -1,38 +1,98 @@
-/* Édition « carte en direct » : carte plein écran, points des membres, lieux. */
-:root { --live: #30d158; }
+/* Nuit : la carte du cruising. Téléphone : carte plein écran. Grand écran : liste à gauche, carte à droite. */
+:root { --live: #30d158; --navy: #0b1526; --navy-2: #13233f; --plan: #ff9f0a; }
 
 .live-screen { position: relative; height: calc(100vh - 72px); height: calc(100dvh - 72px); overflow: hidden; }
-.live-map { position: absolute; inset: 0; background: #0e0e10; }
-.live-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6); }
+.live-side { display: none; }
+.live-stage { position: absolute; inset: 0; }
+.live-map { position: absolute; inset: 0; background: var(--navy); }
+.live-map.leaflet-container { background: var(--navy); }
+/* Fond de carte bleu nuit obtenu à partir de tuiles claires standard. */
+.live-map .leaflet-tile-pane { filter: invert(1) grayscale(1) brightness(0.6) contrast(1.2) sepia(1) hue-rotate(178deg) saturate(2.6); }
 .live-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 500; display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 12px 12px 24px; background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0)); pointer-events: none; }
 .live-bar > * { pointer-events: auto; }
 .live-brand { font-weight: 600; font-size: 22px; letter-spacing: -0.02em; }
-.live-actions { position: absolute; left: 12px; right: 12px; bottom: 34px; z-index: 500; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
-.live-info { position: absolute; left: 12px; right: 12px; bottom: 6px; z-index: 500; margin: 0; font-size: 11px; color: var(--text-2); text-shadow: 0 1px 3px #000; text-align: center; }
-.live-consent-wrap { position: absolute; inset: 70px 12px auto; z-index: 500; }
+.live-actions { position: absolute; left: 12px; right: 72px; bottom: 34px; z-index: 500; display: flex; gap: 10px; align-items: center; pointer-events: none; }
+.live-actions > * { pointer-events: auto; }
+.live-info { position: absolute; left: 12px; right: 150px; bottom: 5px; z-index: 500; margin: 0; font-size: 11px; line-height: 1.25; color: var(--text-2); text-shadow: 0 1px 3px #000; text-align: left; pointer-events: none; }
+.live-consent-wrap { position: absolute; inset: 70px 12px auto; z-index: 500; max-width: 460px; margin: 0 auto; }
+/* Commandes de la carte : colonne à droite */
+.live-tools { position: absolute; right: 12px; bottom: 34px; z-index: 500; display: flex; flex-direction: column; gap: 10px; }
+.live-tools .icon-btn { width: 48px; height: 48px; border-radius: 24px; background: rgba(28, 28, 30, 0.95); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); }
+.live-tools .icon-btn.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+.trip-banner { position: absolute; top: 64px; left: 12px; right: 12px; z-index: 500; display: flex; align-items: center; gap: 10px; max-width: 520px; margin: 0 auto;
+  padding: 10px 12px 10px 14px; border-radius: 16px; background: rgba(10, 26, 46, 0.96); border: 1px solid #12355e; color: #d6e8ff; font-size: 13px; }
+.trip-banner .btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
 
-.small-chip { min-height: 36px; font-size: 13px; }
+.small-chip { min-height: 36px; font-size: 13px; background: rgba(28, 28, 30, 0.9); }
 .presence-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px; border-radius: 24px; border: 1px solid var(--line);
-  background: rgba(28, 28, 30, 0.95); color: var(--text); font-weight: 600; font-size: 15px; cursor: pointer; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); }
+  background: rgba(28, 28, 30, 0.95); color: var(--text); font-weight: 600; font-size: 15px; cursor: pointer; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); white-space: nowrap; }
 .presence-btn.on { background: #0f2a17; border-color: var(--live); color: #c9f7d5; }
+.presence-btn.flat { box-shadow: none; width: 100%; justify-content: center; }
 .live-dot { width: 10px; height: 10px; border-radius: 5px; background: #6e6e73; flex-shrink: 0; display: inline-block; }
-.presence-btn.on .live-dot, .live-presence .live-dot, .list .live-dot { background: var(--live); box-shadow: 0 0 0 4px rgba(48, 209, 88, 0.2); }
+.presence-btn.on .live-dot, .live-presence .live-dot, .list .live-dot, .people .live-dot { background: var(--live); box-shadow: 0 0 0 4px rgba(48, 209, 88, 0.2); }
 .notice.live-presence { background: #0f2a17; border-color: #1f5c32; color: #c9f7d5; }
 
-.pin { width: 46px; height: 46px; border-radius: 23px; border: 2px solid #f5f5f7; background: #2c2c2e; color: #fff; padding: 0; overflow: hidden;
+/* Points de la carte */
+.pin { position: relative; width: 46px; height: 46px; border-radius: 23px; border: 2px solid #f5f5f7; background: #2c2c2e; color: #fff; padding: 0;
   display: flex; align-items: center; justify-content: center; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6); }
+.pin .face { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .pin img { width: 100%; height: 100%; object-fit: cover; }
 .pin.on { border: 3px solid var(--live); box-shadow: 0 0 0 4px rgba(48, 209, 88, 0.3), 0 4px 12px rgba(0, 0, 0, 0.6); }
+.pin.hot { transform: scale(1.18); z-index: 5; border-color: var(--link); }
+.pin .tag { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 11px; background: #000; border: 1.5px solid #f5f5f7; color: #fff;
+  display: flex; align-items: center; justify-content: center; }
+.pin.on .tag { border-color: var(--live); color: var(--live); }
+.pin .tag.trip { right: auto; left: -6px; border-color: var(--link); color: var(--link); }
+.pin .now { position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; border-radius: 6px; background: var(--live); border: 2px solid #000; }
 .spot-pin { position: relative; width: 40px; height: 40px; border-radius: 12px; border: 2px solid #ffd500; background: #2a2312; color: #ffe8a3;
   font-weight: 700; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.spot-pin b { position: absolute; top: -8px; right: -8px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--live); color: #000; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+.spot-pin b, .plan-pin b { position: absolute; top: -8px; right: -8px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--live); color: #000; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+.plan-pin { position: relative; width: 44px; height: 44px; border-radius: 14px; border: 2px solid var(--plan); background: #2b1c05; color: #ffd9a0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6); }
+.plan-pin.on { box-shadow: 0 0 0 4px rgba(255, 159, 10, 0.3), 0 4px 12px rgba(0, 0, 0, 0.6); }
+.plan-pin b { background: var(--plan); }
+.chip.plan { background: #2b1c05; color: #ffd9a0; border: 1px solid #6b4a12; }
+.chip.live-chip { background: #0f2a17; color: #c9f7d5; border: 1px solid #1f5c32; }
 
 .cell-btn { border: none; background: none; padding: 0; text-align: left; cursor: pointer; font: inherit; }
 .tips { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; line-height: 1.45; color: var(--text-2); }
 .inline-select { min-height: 40px; max-width: 55%; padding: 0 10px; font-size: 14px; }
 
-.live-welcome { position: relative; }
-.live-hero { position: relative; height: 38vh; min-height: 220px; border-radius: var(--radius-media); background: #0e0e10; border: 1px solid var(--line); overflow: hidden; }
-.hero-dot { position: absolute; width: 38px; height: 38px; border-radius: 19px; border: 2px solid #f5f5f7; background: #2c2c2e; transform: translate(-50%, -50%); }
-.hero-dot.on { border: 3px solid var(--live); box-shadow: 0 0 0 6px rgba(48, 209, 88, 0.2); }
+/* Liste de personnes (volet de gauche et zones) */
+.people { display: flex; flex-direction: column; }
+.people > button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border: none; border-bottom: 1px solid var(--raised); background: none; color: var(--text); text-align: left; cursor: pointer; }
+.people > button:hover, .people > button:focus-visible { background: #0e0e10; }
+.people .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.people .who b { font-weight: 600; font-size: 15px; }
+.people .who span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.people .avatar { position: relative; overflow: visible; }
+.people .avatar img, .people .avatar .face { border-radius: 50%; }
+.side-head { display: flex; flex-direction: column; gap: 12px; padding: 16px 14px 12px; border-bottom: 1px solid var(--line); }
+.side-scroll { flex: 1; overflow-y: auto; }
+.side-label { padding: 14px 14px 6px; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.side-foot { padding: 10px 14px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+/* Fiche d'une personne */
+.person-head { display: flex; gap: 14px; align-items: center; }
+.person-head .avatar.xl { width: 72px; height: 72px; border-radius: 36px; font-size: 26px; }
+.person-name { font-weight: 600; font-size: 22px; letter-spacing: -0.01em; }
+.say { display: flex; gap: 8px; align-items: center; }
+.say input { flex: 1; min-width: 0; min-height: 48px; border-radius: 24px; border: 1px solid var(--line); background: #000; padding: 0 18px; font-size: 16px; outline: none; }
+.say input:focus-visible { border-color: var(--link); }
+
+.live-profile { height: 46vh; }
+
+@media (min-width: 900px) {
+  .live-screen { height: calc(100vh - 64px); height: calc(100dvh - 64px); display: grid; grid-template-columns: 380px minmax(0, 1fr); }
+  .live-side { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: #000; }
+  .live-stage { position: relative; inset: auto; min-width: 0; }
+  .live-bar { justify-content: flex-end; background: none; padding: 14px 16px; }
+  .live-bar .live-brand, .live-bar .only-narrow { display: none; }
+  .live-actions { left: 16px; bottom: 30px; }
+  .live-tools { right: 16px; bottom: 30px; }
+  .live-info { left: 16px; right: 220px; bottom: 8px; }
+  .trip-banner { top: 14px; left: 16px; right: auto; margin: 0; }
+  .live-consent-wrap { inset: 24px auto auto 24px; }
+  .pin { width: 50px; height: 50px; border-radius: 25px; }
+}

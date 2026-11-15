@@ -1,7 +1,7 @@
 // Entrée dans ILD : accueil, connexion, inscription en 5 étapes, vérification d'âge, liste d'attente,
 // décisions de modération et recours, nouvelles conditions.
 import { api, h, icon, toast, fmtDate } from '/shared/lib.js';
-import { state, mount, go, run, refreshMe, backBtn, chips, select, logout, deleteAccount, legalLinks, isLive } from './ui.js';
+import { state, mount, go, run, refreshMe, backBtn, chips, select, logout, deleteAccount, legalLinks, langSwitch, isLive, brand } from './ui.js';
 
 export function screenWelcome() {
   mount(h('main', { class: 'screen' },
@@ -31,7 +31,8 @@ export function screenLogin() {
     h('div', { class: 'list' },
       h('label', { class: 'field' }, h('span', null, 'E-mail'), email),
       h('label', { class: 'field' }, h('span', null, 'Mot de passe'), pass)),
-    h('button', { class: 'btn primary block', type: 'submit' }, 'Se connecter'))));
+    h('button', { class: 'btn primary block', type: 'submit' }, 'Se connecter')),
+    langSwitch()));
 }
 
 // ---------- inscription en 5 étapes ----------
@@ -48,12 +49,18 @@ export function screenSignup() {
   const meta = state.meta;
   const w = wizard;
   const d = w.data;
-  const progress = h('div', { class: 'progress', role: 'progressbar', 'aria-valuemin': 1, 'aria-valuemax': 5, 'aria-valuenow': w.step + 1 },
-    STEP_TITLES.map((_, i) => h('span', { class: i <= w.step ? 'on' : '' })));
+  // Carte en direct : inscription en 3 étapes, la fiche se complète ensuite. Club : 5 étapes.
+  const steps = isLive() ? [0, 1, 4] : [0, 1, 2, 3, 4];
+  if (w.step >= steps.length) w.step = 0;
+  const step = steps[w.step];
+  const last = w.step === steps.length - 1;
+  const name = brand().name;
+  const progress = h('div', { class: 'progress', role: 'progressbar', 'aria-valuemin': 1, 'aria-valuemax': steps.length, 'aria-valuenow': w.step + 1 },
+    steps.map((_, i) => h('span', { class: i <= w.step ? 'on' : '' })));
   let body;
   let validate = () => true;
 
-  if (w.step === 0) {
+  if (step === 0) {
     const email = h('input', { type: 'email', autocomplete: 'email', value: d.email || '', required: true });
     const password = h('input', { type: 'password', autocomplete: 'new-password', minlength: 10, value: d.password || '' });
     body = [h('div', { class: 'list' },
@@ -66,25 +73,25 @@ export function screenSignup() {
       Object.assign(d, { email: email.value, password: password.value });
       return true;
     };
-  } else if (w.step === 1) {
+  } else if (step === 1) {
     const first = h('input', { autocomplete: 'given-name', maxlength: 40, value: d.first_name || '' });
     const birth = h('input', { type: 'date', max: maxBirthDate(), value: d.birth_date || '' });
     const city = h('input', { maxlength: 60, value: d.city || 'Paris' });
     const code = h('input', { maxlength: 20, placeholder: 'Facultatif', value: d.invite_code || '', autocapitalize: 'characters' });
     body = [h('div', { class: 'list' },
-      h('label', { class: 'field' }, h('span', null, 'Prénom'), first),
+      h('label', { class: 'field' }, h('span', null, isLive() ? 'Pseudo' : 'Prénom'), first),
       h('label', { class: 'field' }, h('span', null, 'Naissance'), birth),
       h('label', { class: 'field' }, h('span', null, 'Ville'), city),
       isLive() ? null : h('label', { class: 'field' }, h('span', null, 'Code'), code)),
-    h('p', { class: 'small' }, isLive() ? 'Ton âge est affiché, jamais ta date de naissance.' : "Ton âge est affiché, jamais ta date de naissance. Le code est celui d'un membre qui peut te parrainer.")];
+    h('p', { class: 'small' }, isLive() ? 'Un pseudo suffit : pas besoin de ton vrai prénom. Ton âge est affiché, jamais ta date de naissance.' : "Ton âge est affiché, jamais ta date de naissance. Le code est celui d'un membre qui peut te parrainer.")];
     validate = () => {
-      if (!first.value.trim()) return 'Indique ton prénom.';
+      if (!first.value.trim()) return isLive() ? 'Choisis un pseudo.' : 'Indique ton prénom.';
       if (!birth.value) return 'Indique ta date de naissance.';
-      if (birth.value > maxBirthDate()) return 'ILD est réservé aux personnes majeures.';
+      if (birth.value > maxBirthDate()) return `${name} est réservé aux personnes majeures.`;
       Object.assign(d, { first_name: first.value.trim(), birth_date: birth.value, city: city.value.trim() || 'Paris', invite_code: code.value.trim() });
       return true;
     };
-  } else if (w.step === 2) {
+  } else if (step === 2) {
     const modes = chips(meta.modes, d.looking_for, { ariaLabel: 'Modes' });
     const seeking = chips(meta.seeking, d.seeking, { ariaLabel: 'Je cherche' });
     body = [h('h2', null, 'Dans Découvrir'), h('p', { class: 'small' }, 'Tu peux en choisir plusieurs.'), modes.el,
@@ -94,7 +101,7 @@ export function screenSignup() {
       Object.assign(d, { looking_for: modes.values(), seeking: seeking.values() });
       return true;
     };
-  } else if (w.step === 3) {
+  } else if (step === 3) {
     const tastes = chips(meta.tastes, d.tastes, { max: 12, ariaLabel: 'Goûts' });
     const position = chips(meta.positions, d.position ? [d.position] : [], { single: true, ariaLabel: 'Position' });
     const posVis = select(meta.visibility, d.position_visibility, { 'aria-label': 'Qui voit ma position' });
@@ -117,12 +124,12 @@ export function screenSignup() {
     const c = { age: h('input', { type: 'checkbox' }), orientation: h('input', { type: 'checkbox' }), charter: h('input', { type: 'checkbox' }) };
     const link = (doc, text) => h('a', { href: `/legal/${doc}`, target: '_blank', rel: 'noopener' }, text);
     body = [h('div', { class: 'card pad stack', style: { gap: '16px' } },
-      h('label', { class: 'check' }, c.age, h('span', null, "J'ai 18 ans ou plus et j'accepte de vérifier mon âge (pièce d'identité + selfie, contrôlés par un prestataire ; ILD ne garde que le résultat).")),
-      h('label', { class: 'check' }, c.orientation, h('span', null, "J'accepte explicitement qu'ILD traite des données sur mon orientation sexuelle et, si je les indique, sur ma vie sexuelle (position, goûts intimes). Voir la ", link('confidentialite', 'politique de confidentialité'), '.')),
-      h('label', { class: 'check' }, c.charter, h('span', null, "J'accepte les ", link('cgu', "conditions d'utilisation"), ' et la ', link('charte', 'charte'), " : respect, consentement, rien ne sort d'ILD."))),
+      h('label', { class: 'check' }, c.age, h('span', null, `J'ai 18 ans ou plus et j'accepte de vérifier mon âge (pièce d'identité + selfie, contrôlés par un prestataire ; ${name} ne garde que le résultat).`)),
+      h('label', { class: 'check' }, c.orientation, h('span', null, `J'accepte explicitement que ${name} traite des données sur mon orientation sexuelle et, si je les indique, sur ma vie sexuelle (rôle, pratiques, goûts intimes). Voir la `, link('confidentialite', 'politique de confidentialité'), '.')),
+      h('label', { class: 'check' }, c.charter, h('span', null, "J'accepte les ", link('cgu', "conditions d'utilisation"), ' et la ', link('charte', 'charte'), ` : respect, consentement, rien ne sort de ${name}.`))),
     h('p', { class: 'small' }, "Tu peux retirer ton accord à tout moment en effaçant ces informations ou en supprimant ton compte.")];
     validate = async () => {
-      if (!c.age.checked || !c.orientation.checked || !c.charter.checked) return 'Les trois accords sont nécessaires pour candidater.';
+      if (!c.age.checked || !c.orientation.checked || !c.charter.checked) return isLive() ? 'Les trois accords sont nécessaires pour créer ton compte.' : 'Les trois accords sont nécessaires pour candidater.';
       await run(() => api('POST', '/api/auth/register', {
         ...d, looking_for: d.looking_for.join(','), seeking: d.seeking.join(','), tastes: d.tastes.join(','), intimate: d.intimate.join(','),
         consent_age: true, consent_orientation: true, charter: true
@@ -146,12 +153,13 @@ export function screenSignup() {
   mount(h('main', { class: 'screen' },
     h('div', { class: 'row between' },
       w.step ? h('button', { class: 'icon-btn', 'aria-label': 'Étape précédente', onclick: () => { w.step -= 1; screenSignup(); } }, icon('back')) : backBtn('#/'),
-      h('span', { class: 'small' }, `Étape ${w.step + 1} sur 5`)),
+      h('span', { class: 'small' }, `Étape ${w.step + 1} sur ${steps.length}`)),
     progress,
-    h('h1', null, STEP_TITLES[w.step]),
+    h('h1', null, STEP_TITLES[step]),
     h('form', { class: 'stack', onsubmit: (e) => { e.preventDefault(); next(); } }, ...body,
       h('div', { class: 'grow' }),
-      h('button', { class: 'btn primary block', type: 'submit' }, w.step === 4 ? 'Envoyer ma candidature' : 'Continuer'))));
+      h('button', { class: 'btn primary block', type: 'submit' }, !last ? 'Continuer' : isLive() ? 'Créer mon compte' : 'Envoyer ma candidature')),
+    w.step === 0 ? langSwitch() : null));
 }
 
 // ---------- vérification d'âge ----------
@@ -174,7 +182,7 @@ export function screenVerify() {
       h('li', null, h('span', { class: 'step-dot todo' }, '2'), h('span', { class: 'grow' }, 'Selfie vidéo de quelques secondes')),
       h('li', null, h('span', { class: 'step-dot todo' }, '3'), h('span', { class: 'grow' }, 'Résultat immédiat'))),
     h('div', { class: 'row top' }, icon('shield', 18, '#86868b'),
-      h('p', { class: 'small' }, "Le contrôle est fait par un prestataire certifié. Ta pièce n'est jamais montrée aux membres ni conservée par ILD : seul le résultat (vérifié, majeur) est gardé.")),
+      h('p', { class: 'small' }, `Le contrôle est fait par un prestataire certifié. Ta pièce n'est jamais montrée aux membres ni conservée par ${brand().name} : seul le résultat (vérifié, majeur) est gardé.`)),
     status === 'failed' ? h('div', { class: 'notice warn' }, "La vérification n'a pas abouti. Vérifie la lumière et que ta pièce est lisible, puis réessaie.") : null,
     status === 'submitted' ? h('div', { class: 'notice' }, icon('clock', 18, '#2997ff'), 'Vérification commencée. Si tu as quitté le parcours, relance-la.') : null,
     h('div', { class: 'grow' }),

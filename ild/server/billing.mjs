@@ -12,7 +12,9 @@ export const FEATURES = {
   advanced_filters: 'Filtres avancés (âge, distance, position, recherche)',
   incognito: 'Mode incognito',
   unlimited_likes: 'Likes illimités',
-  extended_map: 'Carte en direct sans limite de distance'
+  extended_map: 'Carte en direct sans limite de distance',
+  read_receipts: 'Accusés de lecture',
+  host_plans: 'Organiser des plans à plusieurs'
 };
 
 export const provider = () => process.env.ILD_PAYMENT_PROVIDER || 'mock';
@@ -33,7 +35,7 @@ export function hasFeature(db, user, feature) {
 }
 
 export function requireFeature(db, user, feature) {
-  if (!hasFeature(db, user, feature)) fail(402, `${FEATURES[feature]} fait partie d'ILD+.`);
+  if (!hasFeature(db, user, feature)) fail(402, `${FEATURES[feature]} fait partie de la version payante.`);
 }
 
 export function entitlements(db, user) {
@@ -61,15 +63,22 @@ export function settleSubscriptions(db) {
   return { renewed, expired };
 }
 
-function billingView(db, user) {
+// Fonctions présentées selon l'édition : la carte en direct n'a ni likes ni « qui m'a liké ».
+const EDITION_FEATURES = {
+  cruise: ['travel_mode', 'advanced_filters', 'extended_map', 'read_receipts', 'host_plans'],
+  club: ['who_liked_me', 'travel_mode', 'advanced_filters', 'incognito', 'unlimited_likes']
+};
+
+function billingView(db, user, edition = 'club') {
   settleSubscriptions(db);
   const sub = activeSubscription(db, user.id);
+  const shown = EDITION_FEATURES[edition] || Object.keys(FEATURES);
   return {
     payments_enabled: paymentsEnabled(db),
     price_cents: Number(getSetting(db, 'plus_price_cents')),
     currency: 'EUR',
-    features: FEATURES,
-    plus_features: plusFeatures(db),
+    features: Object.fromEntries(shown.map((k) => [k, FEATURES[k]])),
+    plus_features: plusFeatures(db).filter((k) => shown.includes(k)),
     offered: !!user.premium,
     subscription: sub ? {
       plan: sub.plan, provider: sub.provider, current_period_end: sub.current_period_end,
@@ -107,7 +116,7 @@ export function registerBillingRoutes(r) {
     if (!sub) fail(404, "Aucun abonnement en cours.");
     ctx.db.prepare('UPDATE subscriptions SET cancel_at_period_end = 1, canceled_at = ? WHERE id = ?').run(Date.now(), sub.id);
     audit(ctx.db, null, 'subscription_canceled', `user:${u.id}`, { until: sub.current_period_end });
-    return billingView(ctx.db, u);
+    return billingView(ctx.db, u, ctx.config.edition);
   });
 
   r.post('/api/billing/resume', (ctx) => {
@@ -115,7 +124,7 @@ export function registerBillingRoutes(r) {
     const sub = activeSubscription(ctx.db, u.id);
     if (!sub) fail(404, 'Aucun abonnement en cours.');
     ctx.db.prepare('UPDATE subscriptions SET cancel_at_period_end = 0, canceled_at = NULL WHERE id = ?').run(sub.id);
-    return billingView(ctx.db, u);
+    return billingView(ctx.db, u, ctx.config.edition);
   });
 
   // Webhook du prestataire de paiement, signé en HMAC-SHA256 (en-tête X-ILD-Signature).

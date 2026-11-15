@@ -8,7 +8,7 @@ for (const btn of document.querySelectorAll('[data-result]')) {
     try {
       await api('POST', `/api/dev/verification/${encodeURIComponent(session)}`, { result: btn.dataset.result });
       status.textContent = 'Résultat envoyé à ILD. Retour à l’app…';
-      setTimeout(() => { location.href = '/#/'; }, 600);
+      setTimeout(() => { location.href = '/'; }, 600);
     } catch (e) {
       status.textContent = e.message;
     }

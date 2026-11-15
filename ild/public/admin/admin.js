@@ -1,5 +1,8 @@
 // Back office ILD : candidatures, membres, modération, recours, événements, abonnements, conformité, journal, réglages.
 import { api, h, fmtDate, ago } from '/shared/lib.js';
+import { setLang } from '/shared/i18n.js';
+
+setLang('fr', { save: false }); // le back office reste en français, quelle que soit la langue du navigateur
 
 const root = document.getElementById('admin');
 let me = null;
@@ -60,6 +63,7 @@ function layout(active, ...content) {
       link('appeals', 'Recours', stats?.appeals_pending),
       link('events', 'Événements'),
       link('spots', 'Lieux (carte)', stats?.spots_pending),
+      link('plans', 'Plans à plusieurs', stats?.plans_live),
       link('subscriptions', 'Abonnements'),
       link('compliance', 'Conformité légale'),
       link('audit', 'Journal'),
@@ -107,8 +111,10 @@ function pageDashboard() {
       kpi('Âge à vérifier', s.pending_id, '#/applications?status=pending'),
       kpi('Position activée', s.located),
       kpi('Dispos maintenant', s.available_now),
+      kpi('En ligne maintenant', s.online_now),
       kpi('Lieux à valider', s.spots_pending, '#/spots'),
-      kpi(s.payments_enabled ? 'Abonnés ILD+' : 'Abonnés (payant désactivé)', s.subscribers, '#/subscriptions'),
+      kpi('Plans à plusieurs en cours', s.plans_live, '#/plans'),
+      kpi(s.payments_enabled ? 'Abonnés' : 'Abonnés (payant désactivé)', s.subscribers, '#/subscriptions'),
       kpi('Suspendus ou bannis', s.suspended, '#/members?status=banned')),
     h('h2', null, '7 derniers jours'),
     h('div', { class: 'kpis' }, kpi('Candidatures', s.signups_7d), kpi('Matchs', s.matches_7d), kpi('Messages', s.messages_7d)));
@@ -271,6 +277,11 @@ async function pagePhotos() {
 
 function evidenceView(r) {
   const e = r.evidence || {};
+  if (e.plan) {
+    return h('div', { class: 'evidence' },
+      h('div', { class: 'msg flag' }, h('b', null, `Plan « ${e.plan.title} » `), e.plan.description || '', e.plan.address ? ` · Adresse : ${e.plan.address}` : ''),
+      (e.conversation || []).map((m) => h('div', { class: 'msg' }, h('b', null, `${m.sender} `), h('span', { class: 'small' }, `${fmtDate(m.created_at)} `), m.body)));
+  }
   if (e.conversation) {
     return h('div', { class: 'evidence' }, e.conversation.map((m) => h('div', { class: `msg${m.id === e.reported_message_id ? ' flag' : ''}` },
       h('b', null, `${m.sender} `), h('span', { class: 'small' }, `${fmtDate(m.created_at)} `), m.kind === 'album' ? `[album « ${m.body} »]` : m.body)));
@@ -293,7 +304,7 @@ async function pageReports(params) {
       act(() => api('POST', `/api/admin/reports/${r.id}/resolve`, { action, ground: dec.ground.value, explanation: dec.explanation.value, note: note.value }), label, () => pageReports(params));
     };
     const resolution = r.resolution ? JSON.parse(r.resolution) : null;
-    const typeLabel = { message: 'Conversation', photo: 'Photo', post: 'Publication', user: 'Profil', external: 'Signalement public (sans compte)' }[r.target_type];
+    const typeLabel = { message: 'Conversation', photo: 'Photo', post: 'Publication', plan: 'Plan à plusieurs', user: 'Profil', external: 'Signalement public (sans compte)' }[r.target_type];
     return h('div', { class: 'card' },
       h('div', { class: 'row between' },
         h('div', { class: 'row' }, badge([REASON_LABEL[r.reason] || r.reason, URGENT.includes(r.reason) ? 'bad' : 'warn']), h('span', { class: 'muted' }, typeLabel)),
@@ -398,6 +409,29 @@ async function pageSpots(params) {
           s.status !== 'rejected' ? h('button', { class: 'btn danger', onclick: () => review(s, 'reject') }, s.status === 'approved' ? 'Retirer' : 'Refuser') : null)))))) : h('p', { class: 'empty' }, 'Aucun lieu.'));
 }
 
+// Plans à plusieurs publiés par les membres : suivi et retrait motivé.
+async function pagePlans() {
+  const d = await api('GET', '/api/admin/plans');
+  const STATUS = { open: ['Publié', 'ok'], cancelled: ["Annulé par l'hôte", ''], removed: ['Retiré', 'bad'] };
+  const row = (p) => {
+    const dec = decisionFields(d.grounds, 'prostitution');
+    const remove = () => {
+      if (!dec.ground.value) return toastMsg('Choisis un motif.', true);
+      act(() => api('POST', `/api/admin/plans/${p.id}/remove`, { ground: dec.ground.value, explanation: dec.explanation.value }), "Plan retiré, motif envoyé à l'hôte.", pagePlans);
+    };
+    return h('div', { class: 'card' },
+      h('div', { class: 'row between' }, h('div', { class: 'row' }, badge(p.live ? ['En ligne', 'ok'] : STATUS[p.status] && p.status !== 'open' ? STATUS[p.status] : ['Terminé', '']), h('b', null, p.title)),
+        h('span', { class: 'small' }, `${fmtDate(p.starts_at)} → ${fmtDate(p.ends_at)}`)),
+      h('div', { class: 'muted' }, 'Hôte : ', h('a', { href: `#/member/${p.host_id}` }, p.host_name), ` · ${d.kinds[p.place_kind] || p.place_kind} · ${p.going} accepté${p.going > 1 ? 's' : ''} sur ${p.max_guests} · ${p.messages} message${p.messages > 1 ? 's' : ''}`),
+      p.description ? h('p', { style: { margin: '0' } }, p.description) : null,
+      p.status !== 'removed' ? h('details', null, h('summary', null, 'Retirer ce plan'), dec.el, h('div', { class: 'row' }, h('button', { class: 'btn danger', onclick: remove }, "Retirer et prévenir l'hôte"))) : null);
+  };
+  layout('plans',
+    h('h1', null, 'Plans à plusieurs'),
+    h('div', { class: 'note' }, "Organisés par les membres dans un lieu privé ou un établissement. Retire tout plan avec une contrepartie d'argent (proxénétisme, Code pénal art. 225-5 et suivants), de la drogue, ou un lieu exposé au public. L'adresse n'est visible que de l'hôte, des participants acceptés et, en cas de signalement, de la modération."),
+    d.plans.length ? d.plans.map(row) : h('p', { class: 'empty' }, 'Aucun plan sur les 30 derniers jours.'));
+}
+
 async function pageSubscriptions() {
   const d = await api('GET', '/api/admin/subscriptions');
   const enabled = h('input', { type: 'checkbox', checked: d.payments_enabled });
@@ -405,7 +439,7 @@ async function pageSubscriptions() {
   const freeLikes = h('input', { class: 'input', type: 'number', min: 1, value: d.free_daily_likes, style: { width: '90px' }, 'aria-label': 'Likes gratuits par jour' });
   const feats = Object.entries(d.features).map(([k, v]) => ({ k, box: h('input', { type: 'checkbox', checked: d.plus_features.includes(k) }), v }));
   layout('subscriptions',
-    h('h1', null, 'Abonnements ILD+'),
+    h('h1', null, 'Abonnements'),
     h('div', { class: `note ${d.payments_enabled ? 'warn' : ''}` }, d.payments_enabled
       ? `Le payant est activé (prestataire : ${d.provider}). Les fonctions cochées ci-dessous demandent un abonnement.`
       : "L'app est gratuite : toutes les fonctions sont offertes à tout le monde. Active le payant le jour du lancement d'ILD+."),
@@ -523,6 +557,7 @@ async function route() {
       case 'appeals': return await pageAppeals(params);
       case 'events': return await pageEvents();
       case 'spots': return await pageSpots(params);
+      case 'plans': return await pagePlans();
       case 'subscriptions': return await pageSubscriptions();
       case 'compliance': return await pageCompliance();
       case 'audit': return await pageAudit();

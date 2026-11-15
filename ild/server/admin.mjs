@@ -83,6 +83,8 @@ export function registerAdminRoutes(r) {
       located: one("SELECT COUNT(*) AS n FROM users WHERE status = 'member' AND lat IS NOT NULL"),
       available_now: one("SELECT COUNT(*) AS n FROM users WHERE status = 'member' AND presence_until > ?", Date.now()),
       spots_pending: one("SELECT COUNT(*) AS n FROM spots WHERE status = 'pending'"),
+      plans_live: one("SELECT COUNT(*) AS n FROM plans WHERE status = 'open' AND ends_at > ?", Date.now()),
+      online_now: one("SELECT COUNT(*) AS n FROM users WHERE status = 'member' AND last_seen_at > ?", Date.now() - 5 * 60e3),
       edition: ctx.config.edition,
       suspended: one("SELECT COUNT(*) AS n FROM users WHERE status IN ('suspended', 'banned')"),
       payments_enabled: paymentsEnabled(db)
@@ -282,6 +284,7 @@ export function registerAdminRoutes(r) {
         if (rep.target_type === 'message') db.prepare('UPDATE messages SET removed = 1 WHERE id = ?').run(rep.target_id);
         if (rep.target_type === 'post') db.prepare('UPDATE posts SET removed = 1 WHERE id = ?').run(rep.target_id);
         if (rep.target_type === 'photo') db.prepare("UPDATE photos SET status = 'rejected' WHERE id = ?").run(rep.target_id);
+        if (rep.target_type === 'plan') db.prepare("UPDATE plans SET status = 'removed' WHERE id = ?").run(rep.target_id);
       }
       if (target && target.role !== 'admin') {
         if (action === 'remove_content') notify(db, target.id, 'content_removed', String(ctx.body.ground), ctx.body.explanation, related);
@@ -459,6 +462,9 @@ export function purge(ctx) {
     blocklist_deleted: db.prepare('DELETE FROM blocklist WHERE created_at < ?').run(now - months('retention_months_blocklist')).changes,
     presences_cleared: db.prepare('UPDATE users SET presence_until = NULL, presence_note = NULL, presence_place = NULL WHERE presence_until < ?').run(now).changes,
     checkins_deleted: db.prepare('DELETE FROM spot_checkins WHERE until < ?').run(now).changes,
+    // Plans à plusieurs terminés depuis 30 jours : annonce, adresse, demandes et discussion.
+    plans_deleted: db.prepare('DELETE FROM plans WHERE ends_at < ?').run(now - 30 * DAY).changes,
+    trips_cleared: db.prepare('UPDATE users SET trip_lat = NULL, trip_lng = NULL, trip_label = NULL, trip_until = NULL WHERE trip_until < ?').run(now).changes,
     subscriptions: settleSubscriptions(db)
   };
   setSetting(db, 'last_purge_at', now);
