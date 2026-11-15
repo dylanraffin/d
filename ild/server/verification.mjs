@@ -14,7 +14,8 @@ import { blockEmail, notify, verifySignature } from './core.mjs';
 
 export const provider = () => process.env.ILD_VERIFICATION_PROVIDER || 'mock';
 
-export function completeVerification(db, sessionId, result) {
+// edition « cruise » (carte en direct, ouverte à tous les adultes) : l'âge vérifié donne directement accès.
+export function completeVerification(db, sessionId, result, edition = 'club') {
   if (!['verified', 'failed', 'minor'].includes(result)) fail(400, 'Résultat inconnu.');
   const session = db.prepare('SELECT * FROM verifications WHERE id = ?').get(String(sessionId));
   if (!session) fail(404, 'Session de vérification inconnue.');
@@ -25,7 +26,9 @@ export function completeVerification(db, sessionId, result) {
     db.prepare('UPDATE verifications SET status = ?, completed_at = ? WHERE id = ?').run(result, now, session.id);
     if (result === 'verified') {
       db.prepare(`UPDATE users SET id_check_status = 'verified', id_verified_at = ?, age_verified_at = ?,
-        status = CASE WHEN status = 'pending' THEN 'waitlist' ELSE status END WHERE id = ?`).run(now, now, user.id);
+        accepted_at = CASE WHEN status = 'pending' AND ? THEN ? ELSE accepted_at END,
+        status = CASE WHEN status = 'pending' THEN ? ELSE status END WHERE id = ?`)
+        .run(now, now, edition === 'cruise' ? 1 : 0, now, edition === 'cruise' ? 'member' : 'waitlist', user.id);
     } else if (result === 'failed') {
       db.prepare("UPDATE users SET id_check_status = 'failed' WHERE id = ?").run(user.id);
     } else {
@@ -61,7 +64,7 @@ export function registerVerificationRoutes(r) {
     const secret = process.env.ILD_VERIFICATION_SECRET;
     if (!secret) fail(503, 'Webhook de vérification non configuré.');
     if (!verifySignature(secret, ctx.rawBody, ctx.req.headers['x-ild-signature'])) fail(401, 'Signature invalide.');
-    return completeVerification(ctx.db, ctx.body.session, ctx.body.result);
+    return completeVerification(ctx.db, ctx.body.session, ctx.body.result, ctx.config.edition);
   });
 
   // Simulation du prestataire, uniquement en développement.
@@ -70,6 +73,6 @@ export function registerVerificationRoutes(r) {
     const u = requireAccount(ctx);
     const s = ctx.db.prepare('SELECT * FROM verifications WHERE id = ?').get(ctx.params.id);
     if (!s || s.user_id !== u.id) fail(404, 'Session de vérification inconnue.');
-    return completeVerification(ctx.db, s.id, String(ctx.body.result));
+    return completeVerification(ctx.db, s.id, String(ctx.body.result), ctx.config.edition);
   });
 }

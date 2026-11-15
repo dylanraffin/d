@@ -81,6 +81,9 @@ export function registerAdminRoutes(r) {
       messages_7d: one('SELECT COUNT(*) AS n FROM messages WHERE created_at > ?', since),
       signups_7d: one('SELECT COUNT(*) AS n FROM users WHERE created_at > ?', since),
       located: one("SELECT COUNT(*) AS n FROM users WHERE status = 'member' AND lat IS NOT NULL"),
+      available_now: one("SELECT COUNT(*) AS n FROM users WHERE status = 'member' AND presence_until > ?", Date.now()),
+      spots_pending: one("SELECT COUNT(*) AS n FROM spots WHERE status = 'pending'"),
+      edition: ctx.config.edition,
       suspended: one("SELECT COUNT(*) AS n FROM users WHERE status IN ('suspended', 'banned')"),
       payments_enabled: paymentsEnabled(db)
     };
@@ -118,9 +121,10 @@ export function registerAdminRoutes(r) {
     const ok = ctx.body.result !== 'failed';
     const note = str(ctx.body.note, 500, { required: true, label: 'Justification' });
     const now = Date.now();
+    const next = ctx.config.edition === 'cruise' ? 'member' : 'waitlist';
     ctx.db.prepare(`UPDATE users SET id_check_status = ?, id_verified_at = ?, age_verified_at = ?,
-      status = CASE WHEN status = 'pending' AND ? THEN 'waitlist' ELSE status END WHERE id = ?`)
-      .run(ok ? 'verified' : 'failed', ok ? now : null, ok ? now : null, ok ? 1 : 0, u.id);
+      status = CASE WHEN status = 'pending' AND ? THEN ? ELSE status END WHERE id = ?`)
+      .run(ok ? 'verified' : 'failed', ok ? now : null, ok ? now : null, ok ? 1 : 0, next, u.id);
     audit(ctx.db, admin.id, ok ? 'age_verified_manually' : 'age_check_failed', `user:${u.id}`, { note });
     return { ok: true };
   });
@@ -453,6 +457,8 @@ export function purge(ctx) {
       .run(now - 30 * DAY, now - 30 * DAY).changes,
     reports_deleted: db.prepare("DELETE FROM reports WHERE status != 'open' AND resolved_at < ?").run(now - months('retention_months_reports')).changes,
     blocklist_deleted: db.prepare('DELETE FROM blocklist WHERE created_at < ?').run(now - months('retention_months_blocklist')).changes,
+    presences_cleared: db.prepare('UPDATE users SET presence_until = NULL, presence_note = NULL, presence_place = NULL WHERE presence_until < ?').run(now).changes,
+    checkins_deleted: db.prepare('DELETE FROM spot_checkins WHERE until < ?').run(now).changes,
     subscriptions: settleSubscriptions(db)
   };
   setSetting(db, 'last_purge_at', now);

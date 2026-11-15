@@ -15,6 +15,7 @@ import { registerVerificationRoutes } from './verification.mjs';
 import { registerNoticeRoutes } from './notices.mjs';
 import { registerLegalRoutes, renderLegal } from './legal.mjs';
 import { registerAdminRoutes } from './admin.mjs';
+import { registerLiveRoutes } from './live.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = join(ROOT, 'public');
@@ -25,15 +26,20 @@ export function createApp(options = {}) {
   const config = {
     uploadsDir: join(dataDir, 'uploads'),
     secureCookies: options.secureCookies ?? process.env.ILD_SECURE_COOKIES === '1',
-    rateLimit: options.rateLimit ?? true
+    rateLimit: options.rateLimit ?? true,
+    // « club » : ILD, sur invitation (liste d'attente, parrainages, comité).
+    // « cruise » : carte en direct ouverte à tous les adultes vérifiés (façon Sniffies).
+    edition: (options.edition || process.env.ILD_EDITION) === 'cruise' ? 'cruise' : 'club'
   };
+  const brandName = options.brand || process.env.ILD_BRAND || (config.edition === 'cruise' ? 'Nuit' : 'ILD');
+  config.brand = { name: brandName, plus: `${brandName}+` };
   mkdirSync(config.uploadsDir, { recursive: true });
   const db = options.db || openDb(options.dbFile || join(dataDir, 'ild.sqlite'));
   try { allowImageOrigins([new URL(mapTiles().url.replace(/[{}]/g, '')).origin]); } catch { /* adresse de tuiles invalide */ }
 
   const router = new Router();
   for (const register of [registerMemberRoutes, registerAlbumRoutes, registerNearbyRoutes, registerBillingRoutes,
-    registerVerificationRoutes, registerNoticeRoutes, registerLegalRoutes, registerAdminRoutes]) register(router);
+    registerVerificationRoutes, registerNoticeRoutes, registerLegalRoutes, registerAdminRoutes, registerLiveRoutes]) register(router);
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
@@ -52,7 +58,7 @@ export function createApp(options = {}) {
 
       const legal = /^\/legal\/([a-z]+)$/.exec(path);
       if (legal && req.method === 'GET') {
-        const html = renderLegal(db, legal[1]);
+        const html = renderLegal(db, legal[1], config);
         if (!html) throw new HttpError(404, 'Page introuvable.');
         res.writeHead(200, { ...SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
         res.end(html);
@@ -84,7 +90,7 @@ export function createApp(options = {}) {
 
       if (req.method !== 'GET' && req.method !== 'HEAD') throw new HttpError(405, 'Méthode non autorisée.');
       if (path === '/' || path === '/index.html') {
-        if (await serveStatic(res, PUBLIC, 'app/index.html')) return;
+        if (await serveStatic(res, PUBLIC, config.edition === 'cruise' ? 'live/index.html' : 'app/index.html')) return;
       }
       if (path === '/admin' || path === '/admin/') {
         if (await serveStatic(res, PUBLIC, 'admin/index.html')) return;

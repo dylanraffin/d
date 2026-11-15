@@ -11,7 +11,8 @@ export const FEATURES = {
   travel_mode: 'Mode voyage',
   advanced_filters: 'Filtres avancés (âge, distance, position, recherche)',
   incognito: 'Mode incognito',
-  unlimited_likes: 'Likes illimités'
+  unlimited_likes: 'Likes illimités',
+  extended_map: 'Carte en direct sans limite de distance'
 };
 
 export const provider = () => process.env.ILD_PAYMENT_PROVIDER || 'mock';

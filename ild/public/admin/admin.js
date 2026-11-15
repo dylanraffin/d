@@ -51,7 +51,7 @@ function layout(active, ...content) {
     label, count ? h('span', { class: `count${urgent ? ' urgent' : ''}` }, String(count)) : null);
   root.replaceChildren(h('div', { class: 'layout' },
     h('nav', { class: 'side', 'aria-label': 'Back office' },
-      h('div', { class: 'brand' }, 'ILD', h('span', null, ' ·'), ' admin'),
+      h('div', { class: 'brand' }, meta?.brand?.name || 'ILD', h('span', null, ' ·'), ' admin'),
       link('dashboard', 'Tableau de bord'),
       link('applications', 'Candidatures', stats?.ready_for_committee),
       link('members', 'Membres'),
@@ -59,6 +59,7 @@ function layout(active, ...content) {
       link('reports', 'Signalements', stats?.reports_open, stats?.reports_urgent > 0 || stats?.reports_late > 0),
       link('appeals', 'Recours', stats?.appeals_pending),
       link('events', 'Événements'),
+      link('spots', 'Lieux (carte)', stats?.spots_pending),
       link('subscriptions', 'Abonnements'),
       link('compliance', 'Conformité légale'),
       link('audit', 'Journal'),
@@ -105,6 +106,8 @@ function pageDashboard() {
       kpi("Liste d'attente", s.waitlist, '#/applications?status=waitlist'),
       kpi('Âge à vérifier', s.pending_id, '#/applications?status=pending'),
       kpi('Position activée', s.located),
+      kpi('Dispos maintenant', s.available_now),
+      kpi('Lieux à valider', s.spots_pending, '#/spots'),
       kpi(s.payments_enabled ? 'Abonnés ILD+' : 'Abonnés (payant désactivé)', s.subscribers, '#/subscriptions'),
       kpi('Suspendus ou bannis', s.suspended, '#/members?status=banned')),
     h('h2', null, '7 derniers jours'),
@@ -364,6 +367,37 @@ async function pageEvents() {
         h('td', { class: 'actions' }, ev.removed ? null : h('button', { class: 'btn danger', onclick: () => act(() => api('DELETE', `/api/admin/posts/${ev.id}`), 'Événement retiré.', pageEvents) }, 'Retirer'))))))) : h('p', { class: 'empty' }, 'Aucun événement.'));
 }
 
+async function pageSpots(params) {
+  const status = params.get('status') || 'pending';
+  const d = await api('GET', `/api/admin/spots?status=${status}`);
+  const f = {
+    name: h('input', { class: 'input', placeholder: 'Nom', maxlength: 80, 'aria-label': 'Nom' }),
+    category: h('select', { class: 'input', 'aria-label': 'Catégorie' }, Object.entries(d.categories).map(([k, v]) => h('option', { value: k }, v))),
+    lat: h('input', { class: 'input', placeholder: 'Latitude (48.8590)', inputmode: 'decimal', style: { width: '150px' }, 'aria-label': 'Latitude' }),
+    lng: h('input', { class: 'input', placeholder: 'Longitude (2.3622)', inputmode: 'decimal', style: { width: '150px' }, 'aria-label': 'Longitude' }),
+    description: h('input', { class: 'input grow', placeholder: 'Description', maxlength: 300, 'aria-label': 'Description' })
+  };
+  const review = (s, decision) => act(() => api('POST', `/api/admin/spots/${s.id}/review`, { decision }), decision === 'approve' ? 'Lieu publié.' : 'Lieu refusé.', () => pageSpots(params));
+  layout('spots',
+    h('h1', null, 'Lieux de la carte'),
+    h('div', { class: 'note' }, "Seulement des établissements et des événements (bars, clubs, saunas, cafés, soirées). Refuse les lieux publics de drague (parcs, aires, plages) : les relations sexuelles dans un lieu exposé au public sont un délit (Code pénal, art. 222-32) et ces lieux servent aussi aux guet-apens."),
+    h('div', { class: 'tabs' }, [['pending', 'À valider'], ['approved', 'Publiés'], ['rejected', 'Refusés']].map(([k, v]) => h('a', { href: `#/spots?status=${k}`, class: status === k ? 'on' : '' }, v))),
+    h('form', { class: 'card', onsubmit: (e) => {
+      e.preventDefault();
+      act(() => api('POST', '/api/admin/spots', { name: f.name.value, category: f.category.value, lat: Number(f.lat.value), lng: Number(f.lng.value), description: f.description.value }), 'Lieu ajouté.', () => pageSpots(params));
+    } }, h('h2', null, 'Ajouter un lieu'), h('div', { class: 'row' }, f.name, f.category, f.lat, f.lng), h('div', { class: 'row' }, f.description, h('button', { class: 'btn primary', type: 'submit' }, 'Ajouter'))),
+    d.spots.length ? h('div', { class: 'table-wrap' }, h('table', null,
+      h('thead', null, h('tr', null, h('th', null, 'Lieu'), h('th', null, 'Catégorie'), h('th', null, 'Position'), h('th', null, 'Proposé par'), h('th', null, ''))),
+      h('tbody', null, d.spots.map((s) => h('tr', null,
+        h('td', null, h('b', null, s.name), s.description ? h('div', { class: 'small' }, s.description) : null),
+        h('td', null, d.categories[s.category] || s.category),
+        h('td', { class: 'small nowrap' }, h('a', { href: `https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lng}#map=18/${s.lat}/${s.lng}`, target: '_blank', rel: 'noopener' }, `${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`)),
+        h('td', null, s.creator || '—', h('div', { class: 'small' }, fmtDate(s.created_at))),
+        h('td', { class: 'actions' },
+          s.status !== 'approved' ? h('button', { class: 'btn ok', onclick: () => review(s, 'approve') }, 'Publier') : null,
+          s.status !== 'rejected' ? h('button', { class: 'btn danger', onclick: () => review(s, 'reject') }, s.status === 'approved' ? 'Retirer' : 'Refuser') : null)))))) : h('p', { class: 'empty' }, 'Aucun lieu.'));
+}
+
 async function pageSubscriptions() {
   const d = await api('GET', '/api/admin/subscriptions');
   const enabled = h('input', { type: 'checkbox', checked: d.payments_enabled });
@@ -488,6 +522,7 @@ async function route() {
       case 'reports': return await pageReports(params);
       case 'appeals': return await pageAppeals(params);
       case 'events': return await pageEvents();
+      case 'spots': return await pageSpots(params);
       case 'subscriptions': return await pageSubscriptions();
       case 'compliance': return await pageCompliance();
       case 'audit': return await pageAudit();

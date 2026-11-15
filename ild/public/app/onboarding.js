@@ -1,7 +1,7 @@
 // Entrée dans ILD : accueil, connexion, inscription en 5 étapes, vérification d'âge, liste d'attente,
 // décisions de modération et recours, nouvelles conditions.
 import { api, h, icon, toast, fmtDate } from '/shared/lib.js';
-import { state, mount, go, run, refreshMe, backBtn, chips, select, logout, deleteAccount, legalLinks } from './ui.js';
+import { state, mount, go, run, refreshMe, backBtn, chips, select, logout, deleteAccount, legalLinks, isLive } from './ui.js';
 
 export function screenWelcome() {
   mount(h('main', { class: 'screen' },
@@ -75,8 +75,8 @@ export function screenSignup() {
       h('label', { class: 'field' }, h('span', null, 'Prénom'), first),
       h('label', { class: 'field' }, h('span', null, 'Naissance'), birth),
       h('label', { class: 'field' }, h('span', null, 'Ville'), city),
-      h('label', { class: 'field' }, h('span', null, 'Code'), code)),
-    h('p', { class: 'small' }, "Ton âge est affiché, jamais ta date de naissance. Le code est celui d'un membre qui peut te parrainer.")];
+      isLive() ? null : h('label', { class: 'field' }, h('span', null, 'Code'), code)),
+    h('p', { class: 'small' }, isLive() ? 'Ton âge est affiché, jamais ta date de naissance.' : "Ton âge est affiché, jamais ta date de naissance. Le code est celui d'un membre qui peut te parrainer.")];
     validate = () => {
       if (!first.value.trim()) return 'Indique ton prénom.';
       if (!birth.value) return 'Indique ta date de naissance.';

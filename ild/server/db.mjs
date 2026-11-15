@@ -53,6 +53,11 @@ CREATE TABLE IF NOT EXISTS users (
   location_source TEXT,                           -- gps | neighborhood
   location_updated_at INTEGER,
   geo_consent_at INTEGER,
+  map_precision TEXT NOT NULL DEFAULT '1km',      -- zone | 1km | 500m (carte en direct)
+  presence_until INTEGER,                         -- « dispo » jusqu'à
+  presence_note TEXT,
+  presence_place TEXT,                            -- host | travel | out | any
+  messages_from TEXT NOT NULL DEFAULT 'everyone', -- everyone | photo | nobody
   album_matches_only INTEGER NOT NULL DEFAULT 1,
   album_enabled INTEGER NOT NULL DEFAULT 0,
   blur_explicit INTEGER NOT NULL DEFAULT 1,
@@ -120,10 +125,15 @@ CREATE TABLE IF NOT EXISTS likes (
   PRIMARY KEY (from_id, to_id)
 );
 
+-- Conversation entre deux membres : née d'un like réciproque (origin = like) ou d'un premier
+-- message envoyé depuis la carte (origin = chat, considérée comme un match une fois la réponse reçue).
 CREATE TABLE IF NOT EXISTS matches (
   id INTEGER PRIMARY KEY,
   a_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   b_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  origin TEXT NOT NULL DEFAULT 'like',
+  opened_by INTEGER,
+  replied_at INTEGER,
   created_at INTEGER NOT NULL,
   UNIQUE (a_id, b_id)
 );
@@ -236,6 +246,26 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   canceled_at INTEGER
 );
 
+-- Lieux de la carte : établissements et événements (bars, clubs, saunas…), validés par la modération.
+CREATE TABLE IF NOT EXISTS spots (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  description TEXT,
+  lat REAL NOT NULL,
+  lng REAL NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',         -- pending | approved | rejected
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS spot_checkins (
+  spot_id INTEGER NOT NULL REFERENCES spots(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  until INTEGER NOT NULL,
+  PRIMARY KEY (spot_id, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY,
   admin_id INTEGER,
@@ -261,6 +291,7 @@ CREATE INDEX IF NOT EXISTS idx_shares_grantee ON album_shares(grantee_id);
 CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
 CREATE INDEX IF NOT EXISTS idx_notices_user ON notices(user_id);
 CREATE INDEX IF NOT EXISTS idx_subs_user ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_spots_status ON spots(status);
 `;
 
 // Colonnes ajoutées après la première version : ajoutées automatiquement aux bases existantes.
@@ -271,8 +302,10 @@ const ADDED_COLUMNS = {
     intimate_visibility: "TEXT NOT NULL DEFAULT 'matches'", age_verified_at: 'INTEGER',
     legal_version: 'TEXT', legal_accepted_at: 'INTEGER', show_distance: 'INTEGER NOT NULL DEFAULT 1',
     incognito: 'INTEGER NOT NULL DEFAULT 0', lat: 'REAL', lng: 'REAL', location_source: 'TEXT',
-    location_updated_at: 'INTEGER', geo_consent_at: 'INTEGER'
+    location_updated_at: 'INTEGER', geo_consent_at: 'INTEGER', map_precision: "TEXT NOT NULL DEFAULT '1km'",
+    presence_until: 'INTEGER', presence_note: 'TEXT', presence_place: 'TEXT', messages_from: "TEXT NOT NULL DEFAULT 'everyone'"
   },
+  matches: { origin: "TEXT NOT NULL DEFAULT 'like'", opened_by: 'INTEGER', replied_at: 'INTEGER' },
   photos: { album_id: 'INTEGER REFERENCES albums(id) ON DELETE CASCADE' },
   messages: { kind: "TEXT NOT NULL DEFAULT 'text'", share_id: 'INTEGER' },
   reports: { reporter_contact: 'TEXT' }
@@ -294,7 +327,9 @@ export const SETTINGS_SPEC = {
   // Abonnement (désactivé : l'app est gratuite)
   payments_enabled: { type: 'bool', def: '0', label: 'Abonnement ILD+ payant activé' },
   plus_price_cents: { type: 'int', min: 0, max: 100000, def: '1499', label: 'Prix mensuel ILD+ (centimes, TTC)' },
-  plus_features: { type: 'list', def: 'who_liked_me,travel_mode,advanced_filters,incognito,unlimited_likes', label: 'Fonctions réservées à ILD+' },
+  plus_features: { type: 'list', def: 'who_liked_me,travel_mode,advanced_filters,incognito,unlimited_likes,extended_map', label: 'Fonctions réservées à la version payante' },
+  free_map_radius_km: { type: 'int', min: 1, max: 500, def: '15', label: 'Carte en direct : rayon gratuit autour de soi (km, si payant activé)' },
+  daily_new_chats: { type: 'int', min: 1, max: 1000, def: '40', label: 'Carte en direct : nouvelles conversations par jour et par membre' },
   free_daily_likes: { type: 'int', min: 1, max: 1000, def: '50', label: 'Likes par jour en gratuit (quand le payant est activé)' },
   // Informations légales (mentions légales, CGU, politique de confidentialité)
   legal_company: { type: 'text', max: 120, def: '', label: 'Raison sociale' },

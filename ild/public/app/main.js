@@ -1,11 +1,11 @@
 // Écrans principaux : Découvrir, profil, Autour (grille et carte), Ce soir, messages, albums reçus.
 import { api, h, icon, toast, fmtDate, ago } from '/shared/lib.js';
-import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, chips, select, sheet, nav, reportSheet, label } from './ui.js';
+import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, chips, select, sheet, nav, reportSheet, label, isLive } from './ui.js';
 
 const DURATION_LABEL = { '1h': '1 heure', '24h': '24 heures', '7d': '7 jours', forever: "Jusqu'à ce que je retire" };
 const DISTANCES = { '': 'Toutes', 1: 'Moins de 1 km', 2: 'Moins de 2 km', 5: 'Moins de 5 km', 10: 'Moins de 10 km', 25: 'Moins de 25 km' };
 
-function filterQuery() {
+export function filterQuery() {
   const f = state.filters;
   const p = new URLSearchParams();
   if (f.age_min) p.set('age_min', f.age_min);
@@ -42,7 +42,7 @@ function filtersSheet(onApply) {
   });
 }
 
-function filterButton(onApply) {
+export function filterButton(onApply) {
   const n = filterCount();
   return h('button', { class: 'icon-btn badge-host', 'aria-label': `Filtres${n ? ` (${n} actifs)` : ''}`, onclick: () => filtersSheet(onApply) },
     icon('filter'), n ? h('span', { class: 'badge-count' }, String(n)) : null);
@@ -152,7 +152,8 @@ export async function screenProfile(id) {
   }
   const section = (title, items, group) => items.length ? [h('span', { class: 'section-label' }, title), h('div', { class: 'row wrap' }, items.map((t) => h('span', { class: 'chip' }, group ? label(group, t) : t)))] : null;
   mount(h('main', { class: 'screen' },
-    h('div', { class: 'row between' }, backBtn('#/discover'), h('button', { class: 'icon-btn', 'aria-label': "Plus d'options : masquer, bloquer, signaler", onclick: more }, icon('more'))),
+    h('div', { class: 'row between' }, backBtn(isLive() ? '#/map' : '#/discover'), h('button', { class: 'icon-btn', 'aria-label': "Plus d'options : masquer, bloquer, signaler", onclick: more }, icon('more'))),
+    p.presence ? h('div', { class: 'notice live-presence' }, h('span', { class: 'live-dot', 'aria-hidden': 'true' }), h('span', { class: 'grow' }, `Dispo jusqu'à ${fmtDate(p.presence.until)}${p.presence.place ? ` · ${label('presence_places', p.presence.place)}` : ''}${p.presence.note ? ` · « ${p.presence.note} »` : ''}`)) : null,
     imgBox,
     p.vouched_by.length ? h('p', { class: 'small text2' }, h('span', { class: 'tag-blue' }, 'Parrainé'), ` par ${p.vouched_by.join(', ')}`) : null,
     p.travel ? h('p', { class: 'small tag-yellow' }, `De passage à ${p.travel.city} du ${fmtDate(Date.parse(p.travel.from), false)} au ${fmtDate(Date.parse(p.travel.to), false)}`) : null,
@@ -164,7 +165,10 @@ export async function screenProfile(id) {
     section('Côté intime', p.intimate),
     albums,
     h('div', { class: 'row' },
-      p.matched ? h('button', { class: 'btn primary grow', onclick: async () => {
+      isLive() ? h('button', { class: 'btn primary grow', onclick: async () => {
+        const r = await run(() => api('POST', '/api/conversations', { user_id: p.id }));
+        go(`#/chat/${r.id}`);
+      } }, 'Écrire') : p.matched ? h('button', { class: 'btn primary grow', onclick: async () => {
         const m = (await api('GET', '/api/matches')).matches.find((x) => x.user.id === p.id);
         if (m) go(`#/chat/${m.id}`);
       } }, 'Message') : h('button', { class: 'btn primary grow', onclick: async () => {
@@ -172,6 +176,7 @@ export async function screenProfile(id) {
         toast(r.match ? `C'est un match avec ${p.first_name} !` : 'Like envoyé.');
         if (r.match) go(`#/chat/${r.match}`);
       } }, "J'aime"))));
+  if (isLive()) imgBox.classList.add('live-profile');
 }
 
 // ---------- albums reçus ----------

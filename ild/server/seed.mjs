@@ -120,6 +120,20 @@ photo(leo, 'album-5.jpg', 'album', leoSoiree);
 const leoPrive = newAlbum(leo, 'Privé');
 photo(leo, 'album-6.jpg', 'album', leoPrive);
 
+// Carte en direct : quelques membres « dispo », des précisions différentes et des lieux d'exemple.
+const presence = db.prepare('UPDATE users SET presence_until = ?, presence_note = ?, presence_place = ? WHERE email = ?');
+presence.run(now + 2 * 3600e3, 'Un verre au Marais ?', 'out', 'samir@ild.local');
+presence.run(now + 3600e3, null, 'host', 'bilal@ild.local');
+presence.run(now + 4 * 3600e3, 'Partant pour un café', 'out', 'nathan@ild.local');
+db.prepare("UPDATE users SET map_precision = 'zone' WHERE email IN ('adrien@ild.local', 'jules@ild.local', 'mathis@ild.local')").run();
+db.prepare("UPDATE users SET map_precision = '500m' WHERE email IN ('karim@ild.local', 'theo@ild.local')").run();
+const spot = db.prepare("INSERT INTO spots (name, category, description, lat, lng, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+spot.run('Bar du Marais (exemple)', 'bar', 'Bar de quartier, terrasse.', 48.8597, 2.3561, 'approved', admin, now);
+spot.run('Club Pigalle (exemple)', 'club', 'Soirées le week-end.', 48.8826, 2.3372, 'approved', admin, now);
+spot.run('Sauna (exemple)', 'sauna', 'Établissement réservé aux majeurs.', 48.8642, 2.3528, 'approved', admin, now);
+spot.run('Café Belleville (exemple)', 'cafe', null, 48.8718, 2.3770, 'pending', hugo, now);
+db.prepare('INSERT INTO spot_checkins (spot_id, user_id, until) VALUES (1, ?, ?)').run(samir, now + 2 * 3600e3);
+
 const tonight = new Date(); tonight.setHours(19, 0, 0, 0);
 db.prepare(`INSERT INTO posts (user_id, kind, title, body, place, starts_at, visibility, city, created_at)
   VALUES (NULL, 'event', ?, ?, ?, ?, 'members', 'Paris', ?)`)
@@ -146,3 +160,4 @@ console.log('  Autres membres : samir@, hugo@, mathis@, yanis@, adrien@, karim@,
 console.log('  Suspendu    : kevin@ild.local (recours en attente)');
 console.log('  Candidats   : thomas@ (dossier complet), nico@ (photo à valider), julien@ (âge en cours), max@ (nouveau)');
 console.log(`  Mot de passe des comptes de démo : ${demoPassword}`);
+console.log('  Carte en direct : ILD_EDITION=cruise npm start (même base de démo)');

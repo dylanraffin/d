@@ -4,7 +4,8 @@ import { fail } from './http.mjs';
 import { hashPassword, verifyPassword, createSession, sessionCookie, clearCookie,
   requireAccount, requireUser, requireMember, rateLimiter } from './auth.mjs';
 import { getSetting, tx } from './db.mjs';
-import { LEGAL_VERSION, MODES, SEEKING, POSITIONS, VISIBILITY, TASTES, INTIMATE, REPORT_REASONS, NEIGHBORHOODS, pickList } from './options.mjs';
+import { LEGAL_VERSION, MODES, SEEKING, POSITIONS, VISIBILITY, TASTES, INTIMATE, REPORT_REASONS, NEIGHBORHOODS, pickList,
+  SPOT_CATEGORIES, PRESENCE_PLACES, MAP_PRECISION, MESSAGES_FROM } from './options.mjs';
 import { DAY, str, bool, isoDay, ageOf, parseBirthDate, hiddenBetween, matchBetween, visibleMember, profilePhotoIds,
   vouchCount, waitlistPosition, saveJpeg, scanImage, deleteFiles, deletePhotoFiles, isBlocklisted, activeShare } from './core.mjs';
 import { hasFeature, requireFeature, entitlements, likesToday, dailyLikeLimit, paymentsEnabled } from './billing.mjs';
@@ -77,6 +78,7 @@ export function publicProfile(db, viewer, u) {
     vouched_by: vouchers,
     travel: travelActive(db, u) ? { city: u.travel_city, from: u.travel_from, to: u.travel_to } : null,
     distance: d ? (u.show_distance ? d.label : 'Distance masquée') : null,
+    presence: u.presence_until > Date.now() ? { until: u.presence_until, note: u.presence_note, place: u.presence_place } : null,
     albums: { count: albumCount, shared, requested },
     matched
   };
@@ -107,6 +109,8 @@ function meView(db, u) {
     travel_city: u.travel_city, travel_from: u.travel_from, travel_to: u.travel_to,
     hide_from_map: !!u.hide_from_map, show_distance: !!u.show_distance, incognito: !!u.incognito,
     album_matches_only: !!u.album_matches_only, blur_explicit: !!u.blur_explicit, discreet_icon: !!u.discreet_icon,
+    map_precision: u.map_precision, messages_from: u.messages_from,
+    presence: u.presence_until > Date.now() ? { until: u.presence_until, note: u.presence_note, place: u.presence_place } : null,
     location: { enabled: u.lat != null, source: u.location_source, consent: !!u.geo_consent_at, updated_at: u.location_updated_at },
     photos: db.prepare("SELECT id, status FROM photos WHERE user_id = ? AND kind = 'profile' ORDER BY position, id").all(u.id),
     legal: { accepted: u.legal_version, current: LEGAL_VERSION, needs_consent: u.role !== 'admin' && u.legal_version !== LEGAL_VERSION },
@@ -154,10 +158,12 @@ function profileFields(b, { partial }) {
 }
 
 export function registerMemberRoutes(r) {
-  r.get('/api/meta', () => ({
+  r.get('/api/meta', (ctx) => ({
+    brand: ctx.config.brand, edition: ctx.config.edition,
     modes: MODES, seeking: SEEKING, positions: POSITIONS, visibility: VISIBILITY, tastes: TASTES, intimate: INTIMATE,
     neighborhoods: Object.keys(NEIGHBORHOODS), report_reasons: REPORT_REASONS, legal_version: LEGAL_VERSION,
-    album_durations: Object.keys(DURATIONS), map: mapTiles()
+    album_durations: Object.keys(DURATIONS), map: mapTiles(),
+    spot_categories: SPOT_CATEGORIES, presence_places: PRESENCE_PLACES, map_precision: MAP_PRECISION, messages_from: MESSAGES_FROM
   }));
 
   // --- comptes ---
@@ -226,6 +232,14 @@ export function registerMemberRoutes(r) {
     }
     for (const k of ['hide_from_map', 'show_distance', 'album_matches_only', 'blur_explicit', 'discreet_icon']) {
       if (k in b) set[k] = bool(b[k]);
+    }
+    if ('map_precision' in b) {
+      if (!MAP_PRECISION[b.map_precision]) fail(400, 'Précision inconnue.');
+      set.map_precision = b.map_precision;
+    }
+    if ('messages_from' in b) {
+      if (!MESSAGES_FROM[b.messages_from]) fail(400, 'Réglage inconnu.');
+      set.messages_from = b.messages_from;
     }
     if ('incognito' in b) {
       if (b.incognito) requireFeature(db, u, 'incognito');
@@ -390,7 +404,7 @@ export function registerMemberRoutes(r) {
       const last = db.prepare('SELECT kind, body, sender_id, created_at, removed FROM messages WHERE match_id = ? ORDER BY id DESC LIMIT 1').get(m.id);
       const preview = !last ? null : last.removed ? 'Message retiré par la modération' : last.kind === 'album' ? `Album « ${last.body} »` : last.body;
       out.push({
-        id: m.id, created_at: m.created_at,
+        id: m.id, created_at: m.created_at, waiting_reply: m.origin === 'chat' && !m.replied_at, opened_by_me: m.opened_by === u.id,
         user: { id: other.id, first_name: other.first_name, photo: profilePhotoIds(db, other.id, false)[0] || null },
         last: last ? { body: preview, mine: last.sender_id === u.id, created_at: last.created_at } : null
       });
@@ -430,7 +444,13 @@ export function registerMemberRoutes(r) {
     const u = requireMember(ctx);
     const { m } = ownMatch(ctx, u);
     const body = str(ctx.body.body, 2000, { required: true, label: 'Message' });
+    if (m.origin === 'chat' && !m.replied_at && m.opened_by === u.id
+      && ctx.db.prepare('SELECT COUNT(*) AS n FROM messages WHERE match_id = ? AND sender_id = ?').get(m.id, u.id).n >= 3) {
+      fail(429, "Attends sa réponse avant d'envoyer d'autres messages.");
+    }
     const info = ctx.db.prepare("INSERT INTO messages (match_id, sender_id, kind, body, created_at) VALUES (?, ?, 'text', ?, ?)").run(m.id, u.id, body, Date.now());
+    // Première réponse à une conversation lancée depuis la carte : elle devient un match.
+    if (m.origin === 'chat' && !m.replied_at && m.opened_by !== u.id) ctx.db.prepare('UPDATE matches SET replied_at = ? WHERE id = ?').run(Date.now(), m.id);
     return { id: Number(info.lastInsertRowid) };
   });
 

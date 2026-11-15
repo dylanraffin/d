@@ -2,6 +2,13 @@
 
 App de rencontre sur invitation pour hommes gays et queer (Paris d'abord), avec son back office. Style « galerie de nuit » (direction C des maquettes).
 
+Le même code fait tourner **deux produits** :
+
+| Édition | Lancement | Principe |
+|---|---|---|
+| **ILD** (`club`, par défaut) | `npm start` | Club sur invitation, façon Raya : liste d'attente, parrainages, comité, Découvrir un profil à la fois. |
+| **Carte en direct** (`cruise`, nom provisoire « Nuit ») | `ILD_EDITION=cruise npm start` | Carte des mecs disponibles autour de soi, façon Sniffies : ouverte à tous les adultes dont l'âge est vérifié, statut « dispo maintenant », conversations sans match, lieux. Nom changeable avec `ILD_BRAND`. |
+
 C'est un **prototype qui fonctionne** : vraie base de données, vraie API, vrais comptes. Il n'est **pas prêt pour un lancement public** tant que les prestataires et les étapes juridiques listés plus bas ne sont pas faits.
 
 ## Lancer en local
@@ -12,7 +19,7 @@ Il faut Node.js 22.13 ou plus récent. Aucune dépendance à installer (la carte
 cd ild
 npm run seed     # base de démo + identifiants affichés
 npm start        # http://localhost:3000 (app) et http://localhost:3000/admin (back office)
-npm test         # 18 tests de bout en bout de l'API
+npm test         # 24 tests de bout en bout de l'API (18 ILD, 6 carte en direct)
 ```
 
 Comptes créés par `npm run seed` (mot de passe des membres : `demo-ild-2026`) :
@@ -40,6 +47,26 @@ Comptes créés par `npm run seed` (mot de passe des membres : `demo-ild-2026`) 
 | Moi | Profil, albums, position, confidentialité (distance masquée, absent d'Autour, incognito, flou, mode discret), personnes bloquées, décisions de modération, export JSON et suppression du compte. |
 | ILD+ | Liste des fonctions, mode voyage, abonnement et résiliation en trois clics (voir « Abonnement »). |
 | Compte sanctionné | Une personne suspendue, bannie ou refusée voit la décision, son motif, et peut **faire un recours** pendant 6 mois. |
+
+## La carte en direct (édition `cruise`)
+
+| Écran | Contenu |
+|---|---|
+| Accueil et inscription | Même inscription en 5 étapes, sans code de parrainage. Dès que l'âge est vérifié, la personne entre (pas de liste d'attente). |
+| Carte | Carte plein écran : membres (point vert s'ils sont dispo), zones, lieux. Bouton « Je suis dispo » (30 min à 4 h, « je reçois », « je me déplace », « verre ou café d'abord », un mot). Filtre « Dispos », filtres avancés, conseils de sécurité. |
+| Fiche | Photo, âge, tranche de distance, position si elle est publique, statut dispo, « Écrire », « Voir le profil », « Signaler ». |
+| Liste | Les dispos d'abord, puis par tranche de distance. |
+| Lieux | Bars, clubs, saunas, cafés, événements, proposés par les membres et publiés après validation. « J'y suis » pendant 2 h : seul le nombre de personnes est affiché. |
+| Messages, albums, Moi | Les mêmes qu'ILD, plus « Précision de mon point » et « Qui peut m'écrire ». |
+
+Protections propres à la carte :
+
+- **un point n'est jamais la vraie position** : position arrondie à l'enregistrement, point placé dans une case d'environ 1 km (ou 500 m au choix) avec un décalage fixe pour la journée ; option « seulement dans une zone » (pas de point du tout, regroupé avec au moins 3 membres) ;
+- l'app ne reçoit jamais la position du membre lui-même, seulement son point approximatif ;
+- **écrire sans match**, mais : 40 nouvelles conversations par jour au plus, 3 messages sans réponse au plus, préférence « qui peut m'écrire » (tout le monde, profils avec photo, personne) ; un album ne peut être envoyé qu'après une réponse ;
+- **lieux = établissements et événements seulement** : pas de parcs, aires ou plages (relations sexuelles dans un lieu exposé au public : Code pénal, art. 222-32 ; ces lieux servent aussi aux guet-apens) ;
+- motifs de signalement « Guet-apens ou menace » et « Drogue (vente, chemsex) », conseils de sécurité à la première ouverture ;
+- version payante : la carte au-delà de 15 km autour de soi (réglable) devient payante le jour où le payant est activé.
 
 ## Le processus de validation
 
@@ -98,6 +125,7 @@ L'app est **gratuite** : tant que « Abonnement payant activé » est décoché 
 | Variable | Rôle |
 |---|---|
 | `PORT`, `ILD_DATA_DIR` | Port et dossier des données (base + photos) |
+| `ILD_EDITION`, `ILD_BRAND` | `club` (ILD, défaut) ou `cruise` (carte en direct) ; nom affiché du produit |
 | `ILD_SECURE_COOKIES=1` | Obligatoire derrière HTTPS |
 | `ILD_VERIFICATION_PROVIDER` | `mock` (défaut) ou `hosted` |
 | `ILD_VERIFICATION_URL`, `ILD_VERIFICATION_SECRET` | Parcours du prestataire (`{session}` dans l'URL) et secret du webhook `/api/webhooks/verification` |
@@ -118,7 +146,8 @@ L'app est **gratuite** : tant que « Abonnement payant activé » est décoché 
 ## Organisation du code
 
 - `server/db.mjs` : schéma SQLite et migrations automatiques ; `options.mjs` : listes fermées (positions, goûts, motifs) et version des conditions.
-- `server/api.mjs` (comptes, profil, Découvrir, messages, Ce soir, signalements), `albums.mjs`, `nearby.mjs` + `geo.mjs` (Autour et carte), `verification.mjs`, `notices.mjs` (décisions et recours), `billing.mjs`, `legal.mjs`, `admin.mjs`, `core.mjs` (fonctions communes), `index.mjs` (serveur), `seed.mjs` + `seed-assets/` (démo).
+- `server/api.mjs` (comptes, profil, Découvrir, messages, Ce soir, signalements), `live.mjs` (carte en direct, présence, conversations sans match, lieux), `albums.mjs`, `nearby.mjs` + `geo.mjs` (Autour et carte), `verification.mjs`, `notices.mjs` (décisions et recours), `billing.mjs`, `legal.mjs`, `admin.mjs`, `core.mjs` (fonctions communes), `index.mjs` (serveur), `seed.mjs` + `seed-assets/` (démo).
 - `public/app/` : app membre (`app.js` routeur, `onboarding.js`, `main.js`, `me.js`, `ui.js`).
-- `public/admin/` : back office. `public/shared/lib.js` : outils communs.
+- `public/live/` : app de la carte en direct (réutilise les écrans de `public/app/`).
+- `public/admin/` : back office (page « Lieux » en plus). `public/shared/lib.js` : outils communs.
 - `tests/api.test.mjs` : tests de bout en bout.

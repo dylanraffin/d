@@ -15,7 +15,7 @@ function freshSince(db) {
 }
 
 // Membres localisés que `viewer` a le droit de voir dans Autour / Carte.
-function locatedMembers(db, viewer) {
+export function locatedMembers(db, viewer) {
   const rows = db.prepare(`SELECT * FROM users WHERE status = 'member' AND id != ? AND lat IS NOT NULL
     AND location_updated_at > ? AND hide_from_map = 0`).all(viewer.id, freshSince(db));
   return rows.filter((x) => {

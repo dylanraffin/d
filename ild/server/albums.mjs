@@ -93,7 +93,7 @@ export function registerAlbumRoutes(r) {
     const a = ownAlbum(ctx, u);
     const grantee = visibleMember(db, u, ctx.body.user_id);
     const m = matchBetween(db, u.id, grantee.id);
-    if (!m) fail(403, 'Tu ne peux envoyer un album qu\'à un match.');
+    if (!m) fail(403, "Tu peux envoyer un album seulement à un match ou à quelqu'un qui t'a déjà répondu.");
     if (!(ctx.body.duration in DURATIONS)) fail(400, 'Durée inconnue.');
     const ms = DURATIONS[ctx.body.duration];
     const now = Date.now();

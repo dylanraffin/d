@@ -52,7 +52,14 @@ export function hiddenBetween(db, viewerId, targetId) {
     .get(targetId, viewerId, viewerId, targetId);
 }
 
+// Match : like réciproque, ou conversation lancée depuis la carte à laquelle l'autre a répondu.
 export function matchBetween(db, a, b) {
+  const [x, y] = a < b ? [a, b] : [b, a];
+  return db.prepare("SELECT * FROM matches WHERE a_id = ? AND b_id = ? AND (origin = 'like' OR replied_at IS NOT NULL)").get(x, y);
+}
+
+// N'importe quelle conversation, même sans réponse.
+export function conversationBetween(db, a, b) {
   const [x, y] = a < b ? [a, b] : [b, a];
   return db.prepare('SELECT * FROM matches WHERE a_id = ? AND b_id = ?').get(x, y);
 }

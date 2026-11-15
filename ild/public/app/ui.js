@@ -1,7 +1,12 @@
 // Outils d'interface partagés par les écrans de l'app membre.
 import { api, h, icon, toast } from '/shared/lib.js';
 
-export const state = { me: null, meta: null, mode: 'dating', filters: {}, aroundView: 'grid', cleanup: [] };
+export const state = { me: null, meta: null, mode: 'dating', filters: {}, aroundView: 'grid', cleanup: [], navItems: null };
+
+// L'édition « carte en direct » remplace la barre de navigation.
+export function setNav(items) { state.navItems = items; }
+export const brand = () => state.meta?.brand || { name: 'ILD', plus: 'ILD+' };
+export const isLive = () => state.meta?.edition === 'cruise';
 export const root = document.getElementById('app');
 
 export const clean = (list) => list.flat(Infinity).filter((n) => n != null && n !== false);
@@ -80,7 +85,7 @@ export function sheet(content) {
 }
 
 export function nav(active) {
-  const items = [
+  const items = state.navItems || [
     ['discover', '#/discover', 'card', 'Découvrir'],
     ['around', '#/around', 'map', 'Autour'],
     ['tonight', '#/tonight', 'moon', 'Ce soir'],

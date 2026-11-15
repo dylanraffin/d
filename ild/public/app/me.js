@@ -1,6 +1,6 @@
 // Espace « Moi » : profil, albums, ILD+, position, confidentialité, décisions, informations légales.
 import { api, h, icon, toast, fmtDate, fileToJpeg } from '/shared/lib.js';
-import { state, mount, go, run, refreshMe, backBtn, photoEl, chips, select, sheet, nav, logout, deleteAccount, label, euros, legalLinks } from './ui.js';
+import { state, mount, go, run, refreshMe, backBtn, photoEl, chips, select, sheet, nav, logout, deleteAccount, label, euros, legalLinks, brand, isLive } from './ui.js';
 
 export async function screenMe() {
   await refreshMe();
@@ -21,7 +21,7 @@ export async function screenMe() {
       me.vouch_requests.map((r) => h('div', { class: 'row' }, h('span', { class: 'grow' }, r.first_name),
         h('button', { class: 'btn primary small', onclick: async () => { await run(() => api('POST', '/api/vouch', { applicant_id: r.id }), `Tu parraines ${r.first_name}.`); screenMe(); } }, 'Parrainer'))),
       h('p', { class: 'small' }, 'Ne parraine que des personnes que tu connais vraiment.')) : null,
-    h('a', { class: 'notice', href: '#/plus' }, h('span', { class: 'plus-mark' }, 'ILD', h('span', null, '+')), h('span', { class: 'grow' }, plusText), icon('chevron', 16, '#2997ff')),
+    h('a', { class: 'notice', href: '#/plus' }, h('span', { class: 'plus-mark' }, brand().name, h('span', null, '+')), h('span', { class: 'grow' }, plusText), icon('chevron', 16, '#2997ff')),
     h('div', { class: 'list' },
       h('a', { href: '#/me/albums', class: 'text' }, icon('lock', 20, '#2997ff'), h('span', { class: 'grow' }, 'Mes albums privés'),
         me.album_requests ? h('span', { class: 'chip blue' }, String(me.album_requests)) : null, icon('chevron', 16, '#86868b')),
@@ -31,7 +31,7 @@ export async function screenMe() {
     h('span', { class: 'section-label' }, 'Confidentialité'),
     h('div', { class: 'list' },
       toggle('show_distance', 'Afficher ma distance'),
-      h('label', null, h('span', { class: 'grow stack small-gap' }, h('span', null, 'Apparaître dans Autour'), h('span', { class: 'small' }, 'Grille et carte')),
+      h('label', null, h('span', { class: 'grow stack small-gap' }, h('span', null, isLive() ? 'Apparaître sur la carte' : 'Apparaître dans Autour'), h('span', { class: 'small' }, isLive() ? 'Carte et liste' : 'Grille et carte')),
         h('input', { type: 'checkbox', checked: !me.hide_from_map, onchange: async (e) => {
           try { state.me = await run(() => api('PATCH', '/api/me', { hide_from_map: !e.target.checked })); } catch { e.target.checked = !e.target.checked; }
         } })),
@@ -39,11 +39,17 @@ export async function screenMe() {
       toggle('album_matches_only', 'Demandes d’album : mes matchs seulement'),
       toggle('blur_explicit', 'Flouter les photos explicites reçues'),
       toggle('discreet_icon', 'Mode discret', 'Titre neutre dans le navigateur')),
+    isLive() ? [h('span', { class: 'section-label' }, 'Carte en direct'),
+      h('div', { class: 'list' },
+        h('label', null, h('span', { class: 'grow' }, 'Précision de mon point'), select(state.meta.map_precision, me.map_precision, { class: 'inline-select', 'aria-label': 'Précision de mon point',
+          onchange: async (e) => { state.me = await run(() => api('PATCH', '/api/me', { map_precision: e.target.value }), 'Réglage enregistré.'); } })),
+        h('label', null, h('span', { class: 'grow' }, 'Qui peut m’écrire'), select(state.meta.messages_from, me.messages_from, { class: 'inline-select', 'aria-label': 'Qui peut m’écrire',
+          onchange: async (e) => { state.me = await run(() => api('PATCH', '/api/me', { messages_from: e.target.value }), 'Réglage enregistré.'); } })))] : null,
     blocks.length ? [h('span', { class: 'section-label' }, 'Personnes bloquées ou masquées'),
       h('div', { class: 'list' }, blocks.map((b) => h('div', null, h('span', { class: 'grow' }, `${b.first_name} · ${b.kind === 'hide' ? 'masqué' : 'bloqué'}`),
         h('button', { class: 'btn ghost small', onclick: async () => { await run(() => api('DELETE', `/api/blocks/${b.id}`)); screenMe(); } }, 'Annuler'))))] : null,
-    h('span', { class: 'section-label' }, 'Mon code de parrainage'),
-    h('div', { class: 'row' }, h('span', { class: 'code-box' }, me.referral_code)),
+    isLive() ? null : [h('span', { class: 'section-label' }, 'Mon code de parrainage'),
+      h('div', { class: 'row' }, h('span', { class: 'code-box' }, me.referral_code))],
     h('span', { class: 'section-label' }, 'Mes données'),
     h('div', { class: 'list' },
       h('a', { href: '/api/me/export', download: 'ild-mes-donnees.json', class: 'text' }, 'Télécharger mes données'),
@@ -192,16 +198,16 @@ export async function screenPlus() {
         h('button', { class: 'btn primary small grow', onclick: async () => { state.me = await run(() => api('PATCH', '/api/me', { travel_city: city.value, travel_from: from.value, travel_to: to.value }), 'Voyage enregistré.'); } }, 'Enregistrer'),
         me.travel_city ? h('button', { class: 'btn small', onclick: async () => { await run(() => api('PATCH', '/api/me', { travel_city: '' }), 'Voyage retiré.'); screenPlus(); } }, 'Retirer') : null));
   };
-  const cancelFlow = () => sheet((close) => [h('h2', null, 'Résilier ILD+ ?'),
+  const cancelFlow = () => sheet((close) => [h('h2', null, `Résilier ${brand().plus} ?`),
     h('p', { class: 'small' }, `Tu gardes ILD+ jusqu'au ${fmtDate(b.subscription.current_period_end, false)}, puis l'abonnement s'arrête. Aucun autre prélèvement.`),
     h('button', { class: 'btn danger-fill block', onclick: async () => { await run(() => api('POST', '/api/billing/cancel', {}), 'Résiliation enregistrée.'); close(); screenPlus(); } }, 'Confirmer la résiliation'),
-    h('button', { class: 'btn ghost', onclick: close }, 'Garder ILD+')]);
+    h('button', { class: 'btn ghost', onclick: close }, `Garder ${brand().plus}`)]);
   const accept = h('input', { type: 'checkbox' });
   let action;
   if (!b.payments_enabled) {
-    action = h('div', { class: 'notice' }, icon('heart', 18, '#2997ff'), "Pendant le lancement, ILD est entièrement gratuit : tout est offert.");
+    action = h('div', { class: 'notice' }, icon('heart', 18, '#2997ff'), `Pendant le lancement, ${brand().name} est entièrement gratuit : tout est offert.`);
   } else if (b.offered) {
-    action = h('div', { class: 'notice' }, 'ILD+ t’est offert par l’équipe.');
+    action = h('div', { class: 'notice' }, `${brand().plus} t’est offert par l’équipe.`);
   } else if (b.subscription) {
     action = h('div', { class: 'stack' },
       h('div', { class: 'notice' }, b.subscription.cancel_at_period_end ? `Résilié : actif jusqu'au ${fmtDate(b.subscription.current_period_end, false)}.` : `Abonné · prochain renouvellement le ${fmtDate(b.subscription.current_period_end, false)}.`),
@@ -213,7 +219,7 @@ export async function screenPlus() {
       h('label', { class: 'check' }, accept, h('span', null, "J'accepte les ", h('a', { href: '/legal/cgv', target: '_blank', rel: 'noopener' }, 'conditions générales de vente'), " et je demande que l'abonnement commence tout de suite.")),
       h('button', { class: 'btn primary block', onclick: async () => {
         if (!accept.checked) { toast('Accepte les conditions de vente pour continuer.', true); return; }
-        await run(() => api('POST', '/api/billing/subscribe', { accept_terms: true }), 'Bienvenue dans ILD+.');
+        await run(() => api('POST', '/api/billing/subscribe', { accept_terms: true }), `Bienvenue dans ${brand().plus}.`);
         screenPlus();
       } }, `S'abonner · ${euros(b.price_cents)} TTC / mois`),
       h('p', { class: 'small center' }, 'Sans engagement. Rétractation possible 14 jours. Résiliation en 3 clics.'));
@@ -221,7 +227,7 @@ export async function screenPlus() {
   mount(h('main', { class: 'screen' },
     h('div', { class: 'row between' }, h('span'), h('a', { class: 'icon-btn', href: '#/me', 'aria-label': 'Fermer' }, icon('close', 18))),
     h('div', { class: 'stack', style: { padding: '0 4px', gap: '8px' } },
-      h('span', { class: 'huge plus-title' }, 'ILD', h('span', null, '+')),
+      h('span', { class: 'huge plus-title' }, brand().name, h('span', null, '+')),
       h('p', { class: 'lead' }, 'Pour ceux qui sortent, voyagent et ne veulent rien rater.')),
     h('div', { class: 'list' }, rows),
     action,
@@ -249,7 +255,7 @@ export async function screenLocation() {
     me.location.enabled ? h('button', { class: 'btn danger block', onclick: async () => {
       await run(() => api('DELETE', '/api/me/location'), 'Position effacée.');
       go('#/me');
-    } }, 'Effacer ma position et retirer mon accord') : h('a', { class: 'btn primary block', href: '#/around' }, 'Activer dans Autour')));
+    } }, 'Effacer ma position et retirer mon accord') : h('a', { class: 'btn primary block', href: isLive() ? '#/map' : '#/around' }, isLive() ? 'Activer sur la carte' : 'Activer dans Autour')));
 }
 
 export function adminHint() {

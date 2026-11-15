@@ -31,8 +31,15 @@ export const INTIMATE = [
 
 export const REPORT_REASONS = {
   harassment: 'Harcèlement', fake: 'Faux profil', minor: 'Personne mineure', non_consensual: 'Contenu partagé sans accord',
-  hate: 'Propos haineux', spam: 'Spam ou arnaque', prostitution: 'Prostitution ou contenu payant', illegal: 'Contenu illégal', other: 'Autre'
+  hate: 'Propos haineux', spam: 'Spam ou arnaque', prostitution: 'Prostitution ou contenu payant', drugs: 'Drogue (vente, chemsex)',
+  danger: 'Guet-apens ou menace', illegal: 'Contenu illégal', other: 'Autre'
 };
+
+// Carte en direct
+export const SPOT_CATEGORIES = { bar: 'Bar', club: 'Club', sauna: 'Sauna', cafe: 'Café ou resto', event: 'Événement', other: 'Autre établissement' };
+export const PRESENCE_PLACES = { host: 'Je reçois', travel: 'Je me déplace', out: 'Verre ou café d’abord', any: 'À voir' };
+export const MAP_PRECISION = { zone: 'Seulement dans une zone (pas de point à moi)', '1km': 'Environ 1 km', '500m': 'Environ 500 m' };
+export const MESSAGES_FROM = { everyone: 'Tout le monde', photo: 'Profils avec une photo validée', nobody: 'Personne (seulement mes matchs)' };
 
 // Motifs qu'un administrateur peut invoquer. Jamais l'apparence, l'âge (au-delà de 18 ans), l'origine, etc.
 export const GROUNDS = {
@@ -45,6 +52,8 @@ export const GROUNDS = {
   explicit_public: "Nudité hors de l'album privé (charte, art. 3)",
   prostitution: "Prostitution, escort ou contenu payant (charte, art. 5)",
   spam: 'Spam, arnaque ou publicité (charte, art. 5)',
+  drugs: 'Vente ou incitation à consommer des drogues (charte, art. 5)',
+  danger: 'Guet-apens, menace ou mise en danger (charte, art. 4)',
   illegal: 'Contenu illégal (CGU, art. 7)',
   charter: 'Autre manquement à la charte'
 };
