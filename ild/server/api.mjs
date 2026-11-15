@@ -171,7 +171,7 @@ export function registerMemberRoutes(r) {
     modes: MODES, positions: POSITIONS, tastes: TASTES, intimate: INTIMATE,
     // Carte en direct : pas de « match », on parle de conversations ; on cherche plutôt pour maintenant.
     ...(ctx.config.edition === 'cruise' ? {
-      seeking: { now: 'Maintenant', dates: 'Plan régulier', chat: 'Discuter', friends: 'Potes' },
+      seeking: { now: 'Tout de suite', dates: 'Plan régulier', chat: 'Discuter', friends: 'Potes' },
       visibility: { ...VISIBILITY, matches: 'Ceux avec qui j’ai échangé' }
     } : { seeking: SEEKING, visibility: VISIBILITY }),
     neighborhoods: Object.keys(NEIGHBORHOODS), report_reasons: REPORT_REASONS, legal_version: LEGAL_VERSION,

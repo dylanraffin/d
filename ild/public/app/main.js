@@ -1,5 +1,6 @@
 // Écrans principaux : Découvrir, profil, Autour (grille et carte), Ce soir, messages, albums reçus.
 import { api, h, icon, toast, fmtDate, ago, fileToJpeg, raw } from '/shared/lib.js';
+import { tr } from '/shared/i18n.js';
 import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, chips, select, sheet, nav, reportSheet, label, isLive, isWide, brand,
   personSummary, presenceText, statusLine, cruiseRows, veil } from './ui.js';
 
@@ -139,7 +140,7 @@ export async function screenProfile(id) {
   };
   drawPhoto();
   const more = () => sheet((close) => [
-    h('h2', null, p.first_name),
+    h('h2', null, raw(p.first_name)),
     h('button', { class: 'btn block', onclick: async () => { await run(() => api('POST', '/api/blocks', { user_id: p.id, kind: 'hide' }), `Ton profil est masqué à ${p.first_name}.`); close(); go('#/discover'); } }, 'Masquer mon profil à cette personne'),
     h('button', { class: 'btn block', onclick: async () => { await run(() => api('POST', '/api/blocks', { user_id: p.id, kind: 'block' }), `${p.first_name} est bloqué.`); close(); go('#/discover'); } }, 'Bloquer'),
     h('button', { class: 'btn danger block', onclick: () => { close(); reportSheet('user', p.id, 'ce profil'); } }, 'Signaler'),
@@ -152,7 +153,7 @@ export async function screenProfile(id) {
   const drawFav = () => {
     fav.classList.toggle('on', favorite);
     fav.setAttribute('aria-pressed', String(favorite));
-    fav.setAttribute('aria-label', favorite ? 'Retirer des favoris' : 'Ajouter aux favoris');
+    fav.setAttribute('aria-label', tr(favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'));
   };
   drawFav();
   const summary = personSummary(p);
@@ -301,7 +302,7 @@ export async function screenAround() {
   const map = L.map(mapBox, { zoomControl: true, attributionControl: true }).setView(center, 13);
   onLeave(() => map.remove());
   L.tileLayer(state.meta.map.url, { maxZoom: 16, minZoom: 9, attribution: state.meta.map.attribution }).addTo(map);
-  if (d.me) L.circleMarker(center, { radius: 7, color: '#f5f5f7', weight: 3, fillColor: '#0071e3', fillOpacity: 1 }).addTo(map).bindTooltip('Toi (position arrondie)');
+  if (d.me) L.circleMarker(center, { radius: 7, color: '#f5f5f7', weight: 3, fillColor: '#0071e3', fillOpacity: 1 }).addTo(map).bindTooltip(tr('Toi (position arrondie)'));
   for (const z of d.zones) {
     L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: '#2997ff', weight: 1, fillColor: '#2997ff', fillOpacity: 0.16 }).addTo(map);
     const el = h('button', { class: 'zone-count', 'aria-label': `${z.count} membres dans cette zone` }, String(z.count));
@@ -370,7 +371,7 @@ async function conversationAside(activeId) {
     d.matches.length ? h('div', { class: 'list' }, d.matches.map((m) => h('a', { href: `#/chat/${m.id}`, class: 'text tall', 'aria-current': String(m.id) === String(activeId) ? 'page' : null,
       style: String(m.id) === String(activeId) ? { background: '#2c2c2e' } : null },
       avatar(m.user.photo, m.user.first_name),
-      h('div', { class: 'grow stack small-gap ellipsis-box' }, h('span', { class: 'strong' }, m.user.first_name),
+      h('div', { class: 'grow stack small-gap ellipsis-box' }, h('span', { class: 'strong' }, raw(m.user.first_name)),
         m.last ? h('span', { class: 'small ellipsis' }, m.last.mine ? 'Toi : ' : null, ['Photo', 'Photo retirée', 'Message retiré par la modération'].includes(m.last.body) ? m.last.body : raw(m.last.body))
           : h('span', { class: 'small ellipsis' }, isLive() ? 'Nouvelle conversation' : 'Nouveau match : dis bonjour')),
       m.unread ? h('span', { class: 'unread-dot', 'aria-label': 'Non lu' }) : h('span', { class: 'small' }, ago(m.last?.created_at || m.created_at)))))
@@ -504,12 +505,12 @@ export async function screenChat(matchId) {
     h('div', { class: 'chat-pane' },
       h('div', { class: 'row chat-head' },
         h('span', { class: 'only-narrow' }, backBtn('#/messages')), avatar(other.photos[0], other.first_name),
-        h('a', { class: 'grow stack text', style: { gap: '0' }, href: `#/u/${other.id}` }, h('span', { class: 'strong' }, other.first_name),
+        h('a', { class: 'grow stack text', style: { gap: '0' }, href: `#/u/${other.id}` }, h('span', { class: 'strong' }, raw(other.first_name)),
           h('span', { class: 'small' }, [other.online === 'now' ? 'En ligne' : null, other.distance, other.vouched_by.length ? 'Parrainé' : other.neighborhood].filter(Boolean).join(' · '))),
         h('button', { class: 'btn small', onclick: reportConv }, 'Signaler')),
       box,
       h('p', { class: 'small center' }, 'Appui long ou clic droit sur un message ou une photo pour le signaler. Le signalement garde une copie sécurisée : pas besoin de captures.'),
-      isLive() ? h('div', { class: 'quick', role: 'group', 'aria-label': 'Réponses rapides' }, QUICK.map((t) => h('button', { type: 'button', onclick: () => { input.value = t; input.focus(); } }, t))) : null,
+      isLive() ? h('div', { class: 'quick', role: 'group', 'aria-label': 'Réponses rapides' }, QUICK.map((t) => h('button', { type: 'button', onclick: () => { input.value = tr(t); input.focus(); } }, t))) : null,
       h('form', { class: 'composer', onsubmit: send },
         fileInput,
         h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Envoyer une photo', title: 'Envoyer une photo', onclick: pickPhoto }, icon('camera')),

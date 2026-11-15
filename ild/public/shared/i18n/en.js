@@ -28,6 +28,9 @@ export default {
     'Retour': 'Back',
     'Fermer': 'Close',
     'Annuler': 'Cancel',
+    'Débloquer': 'Unblock',
+    'Abonnement actif': 'Active',
+    'Tout de suite': 'Looking now',
     'Envoyer': 'Send',
     'Enregistrer': 'Save',
     'Supprimer': 'Delete',
@@ -487,7 +490,7 @@ export default {
     'Ajouter des photos': 'Add photos',
     'Qui y a accès': 'Who has access',
     "jusqu'au retrait": 'until removed',
-    'Personne pour le moment. Pour envoyer cet album, ouvre une conversation et touche l’icône photo.':
+    'Personne pour le moment. Pour envoyer cet album, ouvre une conversation et touche le cadenas.':
       'Nobody yet. To send this album, open a conversation and tap the lock icon.',
     "Supprimer l'album": 'Delete album',
 
@@ -650,7 +653,7 @@ export default {
     "et je demande que l'abonnement commence tout de suite.": 'and ask for my subscription to start right away.',
     'Accepte les conditions de vente pour continuer.': 'Accept the terms of sale to continue.',
     "S'abonner": 'Subscribe',
-    'Sans engagement. Rétractation possible 14 jours. Résiliation en 3 clics.': 'No commitment. 14-day right to cancel. Cancel in 3 clicks.',
+    'Sans engagement. Rétractation possible 14 jours. Résiliation en 3 clics.': 'No commitment. 14-day right of withdrawal. Cancel in 3 clicks.',
     'Résilier': 'Cancel subscription',
     'Confirmer la résiliation': 'Confirm cancellation',
     'Résiliation enregistrée.': 'Subscription canceled.',
@@ -715,7 +718,7 @@ export default {
     'Vérifie ton âge': 'Verify your age',
     'Chaque membre est une vraie personne majeure. Ça prend 2 minutes.': 'Every member is a real adult. It takes 2 minutes.',
     "Photo de ta pièce d'identité": 'Photo of your ID',
-    'Selfie vidéo de quelques secondes': 'A video selfie of a few seconds',
+    'Selfie vidéo de quelques secondes': 'A short video selfie',
     'Résultat immédiat': 'Instant result',
     "La vérification n'a pas abouti. Vérifie la lumière et que ta pièce est lisible, puis réessaie.":
       'Verification didn’t go through. Check the lighting and that your ID is readable, then try again.',
@@ -1030,7 +1033,8 @@ export default {
     ['^(.+), (\\d+), dispo, en ligne$', '$1, $2, available now, online'],
     ['^(.+), (\\d+), dispo$', '$1, $2, available now'],
     ['^(.+), (\\d+), en ligne$', '$1, $2, online'],
-    ['^« (.+) »$', '“$1”'],
+    // No pattern for « … » on its own: what is between the quotes is a member's note or message, and a captured
+    // group goes through the dictionary (« Dispo » would come out as “Available now”). It stays as written.
 
     // ---------- map and list ----------
     ['^1 membre sur la carte, dont (\\d+) dispo$', '1 member on the map, $1 available now'],

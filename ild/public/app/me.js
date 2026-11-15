@@ -1,5 +1,5 @@
 // Espace « Moi » : profil, albums, ILD+, position, confidentialité, décisions, informations légales.
-import { api, h, icon, toast, fmtDate, fileToJpeg } from '/shared/lib.js';
+import { api, h, icon, toast, fmtDate, fileToJpeg, raw } from '/shared/lib.js';
 import { state, mount, go, run, refreshMe, backBtn, photoEl, chips, select, sheet, nav, logout, deleteAccount, label, euros, legalLinks, langSwitch, brand, isLive, personSummary,
   placeSelect, placeLabel } from './ui.js';
 
@@ -12,7 +12,7 @@ export async function screenMe() {
     } }));
   const blocks = (await api('GET', '/api/blocks')).blocks;
   const approved = me.photos.find((p) => p.status === 'approved');
-  const plusText = !me.payments_enabled ? 'Offert pendant le lancement' : me.premium ? `Offert par ${brand().name}` : me.entitlements.travel_mode ? 'Actif' : isLive() ? 'Mode voyage, filtres, incognito, accusés de lecture' : "Qui t'a liké, mode voyage, filtres";
+  const plusText = !me.payments_enabled ? 'Offert pendant le lancement' : me.premium ? `Offert par ${brand().name}` : me.entitlements.travel_mode ? 'Abonnement actif' : isLive() ? 'Mode voyage, filtres, incognito, accusés de lecture' : "Qui t'a liké, mode voyage, filtres";
   const summary = isLive() ? personSummary({ stats: me, position: me.position }) : '';
   mount(h('main', { class: 'screen with-nav' },
     h('div', { class: 'row profile-head' },
@@ -52,7 +52,7 @@ export async function screenMe() {
           onchange: async (e) => { state.me = await run(() => api('PATCH', '/api/me', { messages_from: e.target.value }), 'Réglage enregistré.'); } })))] : null,
     blocks.length ? [h('span', { class: 'section-label' }, 'Personnes bloquées ou masquées'),
       h('div', { class: 'list' }, blocks.map((b) => h('div', null, h('span', { class: 'grow' }, `${b.first_name} · ${b.kind === 'hide' ? 'masqué' : 'bloqué'}`),
-        h('button', { class: 'btn ghost small', onclick: async () => { await run(() => api('DELETE', `/api/blocks/${b.id}`)); screenMe(); } }, 'Annuler'))))] : null,
+        h('button', { class: 'btn ghost small', onclick: async () => { await run(() => api('DELETE', `/api/blocks/${b.id}`)); screenMe(); } }, 'Débloquer'))))] : null,
     isLive() ? null : [h('span', { class: 'section-label' }, 'Mon code de parrainage'),
       h('div', { class: 'row' }, h('span', { class: 'code-box' }, me.referral_code))],
     installCard(),
@@ -238,7 +238,7 @@ export async function screenMyAlbums() {
       h('span', { class: 'small' }, `${a.photos.length} photo${a.photos.length > 1 ? 's' : ''}${a.shares.length ? ` · partagé avec ${a.shares.length}` : ''}`))))
       : h('p', { class: 'empty' }, 'Aucun album pour le moment.'),
     requests.length ? [h('span', { class: 'section-label' }, 'Ils aimeraient voir tes albums'),
-      h('div', { class: 'list' }, requests.map((r) => h('div', null, h('span', { class: 'grow' }, r.first_name),
+      h('div', { class: 'list' }, requests.map((r) => h('div', null, h('span', { class: 'grow' }, raw(r.first_name)),
         h('a', { class: 'btn ghost small', href: '#/messages' }, 'Répondre'),
         h('button', { class: 'btn ghost small', onclick: async () => { await run(() => api('DELETE', `/api/me/album/requests/${r.id}`)); screenMyAlbums(); } }, 'Ignorer'))))] : null));
 }
@@ -274,7 +274,7 @@ export async function screenAlbumDetail(id) {
     a.shares.length ? h('div', { class: 'list' }, a.shares.map((s) => h('div', null,
       h('span', { class: 'grow' }, `${s.first_name} · ${s.expires_at ? `jusqu'au ${fmtDate(s.expires_at)}` : "jusqu'au retrait"}`),
       h('button', { class: 'btn danger small', onclick: async () => { await run(() => api('DELETE', `/api/me/albums/shares/${s.id}`), 'Accès retiré.'); screenAlbumDetail(id); } }, 'Retirer'))))
-      : h('p', { class: 'small' }, 'Personne pour le moment. Pour envoyer cet album, ouvre une conversation et touche l’icône photo.'),
+      : h('p', { class: 'small' }, 'Personne pour le moment. Pour envoyer cet album, ouvre une conversation et touche le cadenas.'),
     h('button', { class: 'btn danger block', onclick: remove }, "Supprimer l'album")));
 }
 

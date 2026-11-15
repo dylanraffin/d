@@ -143,16 +143,16 @@ const cruise = db.prepare(`UPDATE users SET height_cm = ?, weight_kg = ?, body_t
   WHERE email = ?`);
 const fiche = (name, height, weight, body, identity, tribes, can, vibes, safer, seenMinutesAgo) =>
   cruise.run(height, weight, body, identity, tribes, can, vibes, safer, now - seenMinutesAgo * 60e3, `${name}@ild.local`);
-fiche('leo', 181, 74, 'athletic', 'gay', 'Sportif,Tatoué', 'host,travel', 'talk', 'condoms', 0);
+fiche('leo', 181, 74, 'athletic', 'gay', 'Jock,Tatoué', 'host,travel', 'talk', 'condoms', 0);
 fiche('samir', 185, 82, 'muscular', 'gay', 'Daddy,Poilu', 'travel', 'direct,dirty_talk', 'bb_prep', 1);
 fiche('hugo', 176, 68, 'slim', 'gay', 'Minet,Geek', 'travel', 'talk', 'condoms', 30);
 fiche('mathis', 183, 79, 'average', 'bi', 'Discret', 'host', 'talk', 'ask', 200);
 fiche('yanis', 172, 63, 'slim', 'queer', 'Minet,Lisse', 'travel,venue', 'direct,group', 'bb_prep', 2);
 fiche('adrien', 180, 77, 'average', 'gay', 'Mûr,Discret', 'host', 'talk', 'condoms', 400);
-fiche('karim', 178, 80, 'muscular', 'gay', 'Sportif,Muscle', 'host,travel', 'direct', 'ask', 3);
+fiche('karim', 178, 80, 'muscular', 'gay', 'Jock,Muscle', 'host,travel', 'direct', 'ask', 3);
 fiche('nathan', 174, 70, 'athletic', 'gay', 'Lisse', 'travel', 'talk,watch', 'condoms', 12);
 fiche('romain', 188, 90, 'bear', 'gay', 'Ours,Poilu,Tatoué', 'host', 'group,dirty_talk', 'ask', 4);
-fiche('bilal', 179, 72, 'athletic', 'bi', 'Discret,Sportif', 'host', 'direct,group', 'bb_prep', 0);
+fiche('bilal', 179, 72, 'athletic', 'bi', 'Discret,Jock', 'host', 'direct,group', 'bb_prep', 0);
 fiche('theo', 170, 60, 'slim', 'curious', 'Minet', 'travel', 'talk', 'condoms', 50);
 fiche('jules', 186, 84, 'stocky', 'gay', 'Daddy', 'host,travel', 'direct', 'ask', 600);
 // Plus de monde sur la carte : une carte de cruising se lit comme un mur de photos.

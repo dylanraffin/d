@@ -44,7 +44,7 @@ export const MESSAGES_FROM = { everyone: 'Tout le monde', photo: 'Profils avec u
 // Profil « cruising » : tout est facultatif. Identité, rôle, pratiques et santé sont des données sensibles (RGPD art. 9).
 export const BODY_TYPES = { slim: 'Mince', average: 'Moyen', athletic: 'Sportif', muscular: 'Musclé', stocky: 'Costaud', bear: 'Ours', large: 'Fort' };
 export const IDENTITIES = { gay: 'Gay', bi: 'Bi', curious: 'Curieux', straight: 'Hétéro', queer: 'Queer', trans: 'Trans', nonbinary: 'Non binaire' };
-export const TRIBES = ['Daddy', 'Discret', 'Ours', 'Minet', 'Sportif', 'Muscle', 'Cuir', 'Sneakers', 'Poilu', 'Lisse', 'Tatoué', 'Mûr', 'Geek', 'Chaser'];
+export const TRIBES = ['Daddy', 'Discret', 'Ours', 'Minet', 'Jock', 'Muscle', 'Cuir', 'Sneakers', 'Poilu', 'Lisse', 'Tatoué', 'Mûr', 'Geek', 'Chaser'];
 export const CAN = { host: 'Peut recevoir', travel: 'Peut se déplacer', venue: 'Sur place (bar, club, sauna)' };
 export const VIBES = { talk: 'Discuter d’abord', direct: 'Direct', dirty_talk: 'Dirty talk', no_talk: 'Sans parler', group: 'À plusieurs', watch: 'Mater ou être maté' };
 export const CUT = { cut: 'Circoncis', uncut: 'Non circoncis' };

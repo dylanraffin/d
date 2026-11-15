@@ -86,7 +86,7 @@ function personSheet(x) {
     const drawFav = () => {
       fav.classList.toggle('on', favorite);
       fav.setAttribute('aria-pressed', String(favorite));
-      fav.setAttribute('aria-label', favorite ? 'Retirer des favoris' : 'Ajouter aux favoris');
+      fav.setAttribute('aria-label', tr(favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'));
     };
     drawFav();
     api('GET', `/api/users/${x.id}`).then((p) => {
@@ -202,7 +202,7 @@ function planSheet(id, after) {
         action = [
           p.requests.length ? [h('span', { class: 'section-label' }, `Demandes (${p.requests.length})`),
             h('div', { class: 'list' }, p.requests.map((r) => h('div', { class: 'tall', style: { minHeight: '64px' } }, avatar(r.photo, r.first_name),
-              h('a', { class: 'grow stack small-gap text ellipsis-box', href: `#/u/${r.id}`, onclick: close }, h('span', { class: 'strong' }, r.first_name), r.message ? h('span', { class: 'small ellipsis' }, `« ${r.message} »`) : null),
+              h('a', { class: 'grow stack small-gap text ellipsis-box', href: `#/u/${r.id}`, onclick: close }, h('span', { class: 'strong' }, raw(r.first_name)), r.message ? h('span', { class: 'small ellipsis' }, raw(`« ${r.message} »`)) : null),
               h('button', { class: 'btn primary small', onclick: () => act(() => api('POST', `/api/plans/${id}/requests/${r.id}`, { decision: 'accept' }), `${r.first_name} est accepté.`) }, 'Accepter'),
               h('button', { class: 'btn small', 'aria-label': `Décliner ${r.first_name}`, onclick: () => act(() => api('POST', `/api/plans/${id}/requests/${r.id}`, { decision: 'decline' })) }, 'Non'))))]
             : h('p', { class: 'small' }, 'Pas de demande en attente.'),
@@ -225,7 +225,7 @@ function planSheet(id, after) {
         h('h2', null, raw(p.title)),
         h('p', { class: 'small text2' }, [planWhen(p), p.distance].filter(Boolean).join(' · ')),
         h('a', { class: 'row text', href: `#/u/${p.host.id}`, onclick: close }, avatar(p.host.photo, p.host.first_name),
-          h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, p.host.first_name), h('span', { class: 'small' }, 'Hôte'))),
+          h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, raw(p.host.first_name)), h('span', { class: 'small' }, 'Hôte'))),
         p.description ? h('p', { class: 'body-text text2' }, raw(p.description)) : null,
         h('p', { class: 'small' }, `Participants : ${planCount(p)}. ${inside ? '' : "L'adresse et la liste des participants sont visibles une fois ta demande acceptée."}`),
         inside && p.members.length ? h('div', { class: 'avatars' }, p.members.map((x) => avatar(x.photo, x.first_name))) : null,
@@ -298,7 +298,7 @@ function tripSheet(getMap, after) {
   const me = state.me;
   sheet((close) => {
     const city = h('input', { class: 'input', list: 'trip-cities', placeholder: 'Chercher une ville…', autocomplete: 'off', 'aria-label': 'Ville' });
-    const options = h('datalist', { id: 'trip-cities' }, state.meta.cities.map((c) => h('option', { value: c })));
+    const options = h('datalist', { id: 'trip-cities' }, state.meta.cities.map((c) => h('option', { value: tr(c) })));
     const days = chips(Object.fromEntries(state.meta.trip_days.map((d) => [d, d === 1 ? '1 jour' : `${d} jours`])), ['3'], { single: true, ariaLabel: 'Durée du voyage' });
     const start = async (body, name) => {
       await run(() => api('PUT', '/api/me/trip', { ...body, days: Number(days.value() || 3) }), `Tu apparais maintenant à ${name}.`);
@@ -315,9 +315,10 @@ function tripSheet(getMap, after) {
       h('span', { class: 'section-label' }, 'Pendant'), days.el,
       h('span', { class: 'section-label' }, 'Où'), city, options,
       h('button', { class: 'btn primary block', onclick: () => {
-        const name = state.meta.cities.find((c) => c.toLowerCase() === city.value.trim().toLowerCase());
+        const typed = city.value.trim().toLowerCase();
+        const name = state.meta.cities.find((c) => c.toLowerCase() === typed || tr(c).toLowerCase() === typed);
         if (!name) { toast('Choisis une ville dans la liste, ou utilise le centre de la carte.', true); return; }
-        start({ city: name }, name);
+        start({ city: name }, tr(name));
       } }, 'Voyager dans cette ville'),
       h('button', { class: 'btn block', onclick: () => {
         const c = getMap()?.getCenter();
@@ -418,7 +419,8 @@ async function screenMap() {
     x.position && ROLE[x.position] ? h('span', { class: 'tag role', 'aria-hidden': 'true' }, ROLE[x.position]) : null,
     x.presence && PLACE_ICON[x.presence.place] ? h('span', { class: `tag${x.presence.place === 'host' ? ' host' : ''}` }, icon(PLACE_ICON[x.presence.place], 13)) : null,
     x.trip ? h('span', { class: 'tag trip' }, icon('plane', 13)) : null);
-  const spotEl = (s) => h('button', { class: 'spot-pin', 'aria-label': `${s.name}, ${label('spot_categories', s.category)}` }, label('spot_categories', s.category)[0], s.here ? h('b', null, String(s.here)) : null);
+  const spotLetter = (s) => raw(tr(label('spot_categories', s.category))[0]); // initiale de la catégorie, dans la langue affichée
+  const spotEl = (s) => h('button', { class: 'spot-pin', 'aria-label': `${s.name}, ${tr(label('spot_categories', s.category))}` }, spotLetter(s), s.here ? h('b', null, String(s.here)) : null);
   const planEl = (p) => h('button', { class: `plan-pin${p.in_progress ? ' on' : ''}`, 'aria-label': `Plan à plusieurs : ${p.title}` }, icon('group', 20), h('b', null, String(p.going + 1)));
   const rowSub = (x) => (x.presence ? presenceText(x.presence) : [x.online === 'now' ? 'En ligne' : null, personSummary(x), x.distance].filter(Boolean).join(' · '));
 
@@ -436,7 +438,7 @@ async function screenMap() {
       if (!alive) return;
       const els = new Map();
       layer.clearLayers();
-      if (d.me) L.circleMarker([d.me.lat, d.me.lng], { radius: 8, color: '#f5f5f7', weight: 3, fillColor: '#0071e3', fillOpacity: 1 }).addTo(layer).bindTooltip(me.trip ? 'Toi, en voyage' : 'Toi (point approximatif)');
+      if (d.me) L.circleMarker([d.me.lat, d.me.lng], { radius: 8, color: '#f5f5f7', weight: 3, fillColor: '#0071e3', fillOpacity: 1 }).addTo(layer).bindTooltip(tr(me.trip ? 'Toi, en voyage' : 'Toi (point approximatif)'));
       const zoneSheet = (z) => sheet((close) => [h('h2', null, `${z.count} membres dans cette zone`),
         h('p', { class: 'small' }, 'Ils ont choisi de ne pas avoir de point à eux.'),
         h('div', { class: 'people' }, z.people.map((x) => h('button', { onclick: () => { close(); personSheet(x); } }, avatar(x.photo, x.first_name, null, x.photo_explicit),
@@ -475,7 +477,7 @@ async function screenMap() {
           x.presence ? h('span', { class: 'live-dot', 'aria-label': 'Dispo' }) : x.new_profile ? h('span', { class: 'badge-new' }, 'Nouveau') : null)))
           : h('p', { class: 'empty' }, live.onlyAvailable ? "Personne n'est dispo ici pour le moment." : 'Personne dans cette partie de la carte.'),
         d.spots.length ? [h('div', { class: 'side-label' }, 'Lieux'), h('div', { class: 'people' }, d.spots.map((s) => h('button', { onclick: () => { map.panTo([s.lat, s.lng]); spotSheet(s, load); } },
-          h('span', { class: 'spot-pin', 'aria-hidden': 'true' }, label('spot_categories', s.category)[0]),
+          h('span', { class: 'spot-pin', 'aria-hidden': 'true' }, spotLetter(s)),
           h('span', { class: 'who' }, h('b', null, raw(s.name)), h('span', null, `${label('spot_categories', s.category)}${s.here ? ` · ${s.here} ici` : ''}`)))))] : null
       ]));
     } catch (e) {
