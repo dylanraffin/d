@@ -2,83 +2,123 @@
 
 App de rencontre sur invitation pour hommes gays et queer (Paris d'abord), avec son back office. Style « galerie de nuit » (direction C des maquettes).
 
-C'est un **prototype qui fonctionne** : vraie base de données, vraie API, vrais comptes. Il n'est **pas prêt pour un lancement public** tant que les prestataires listés plus bas ne sont pas branchés.
+C'est un **prototype qui fonctionne** : vraie base de données, vraie API, vrais comptes. Il n'est **pas prêt pour un lancement public** tant que les prestataires et les étapes juridiques listés plus bas ne sont pas faits.
 
 ## Lancer en local
 
-Il faut Node.js 22.13 ou plus récent. Aucune dépendance à installer.
+Il faut Node.js 22.13 ou plus récent. Aucune dépendance à installer (la carte utilise Leaflet, copié dans `public/vendor/leaflet`).
 
 ```bash
 cd ild
-npm run seed     # crée une base de démo et affiche les identifiants
+npm run seed     # base de démo + identifiants affichés
 npm start        # http://localhost:3000 (app) et http://localhost:3000/admin (back office)
-npm test         # 14 tests de bout en bout de l'API
+npm test         # 18 tests de bout en bout de l'API
 ```
 
-Comptes de démo créés par `npm run seed` :
+Comptes créés par `npm run seed` (mot de passe des membres : `demo-ild-2026`) :
 
-| Rôle | E-mail | Mot de passe |
-|---|---|---|
-| Administrateur | admin@ild.local | affiché par la commande (ou `ILD_ADMIN_PASSWORD`) |
-| Membre ILD+ | leo@ild.local | demo-ild-2026 |
-| Autres membres | samir@, hugo@, mathis@, yanis@, adrien@, karim@ild.local | demo-ild-2026 |
-| Candidats | thomas@ (2 parrainages), nico@ (1), julien@ (identité à valider), max@ | demo-ild-2026 |
-
-Variables d'environnement : `PORT`, `ILD_DATA_DIR` (dossier de la base et des photos, par défaut `ild/data`), `ILD_SECURE_COOKIES=1` (obligatoire derrière HTTPS), `ILD_ADMIN_PASSWORD`, `ILD_DEMO_PASSWORD`.
-
-## L'app membre (`/`)
-
-| Écran | Ce qu'il fait |
+| Rôle | E-mail |
 |---|---|
-| Candidature | Prénom, année de naissance (18 ans minimum), ville, code d'un membre. Trois consentements séparés et horodatés : âge et vérification d'identité, **consentement explicite à l'orientation sexuelle** (RGPD art. 9), charte. |
-| Vérification | Lance la vérification d'identité. ILD ne stocke jamais la pièce, seulement le résultat. |
-| Liste d'attente | Rang dans la ville (parrainages d'abord, puis ancienneté), étapes, code à partager. Personne n'est « refusé » sans motif documenté. |
-| Découvrir | Un profil à la fois, modes Rencontre / Amis / Pro, diaporama photo, musique du profil, parrainages, membres de passage (mode voyage). J'aime / Passer, match si réciproque. |
-| Profil | Photos, bio, centres d'intérêt, album privé à demander, masquer son profil à cette personne, bloquer, signaler. |
-| Album privé | Photos explicites autorisées uniquement ici. Activé par la personne, accès accordé un par un pour 7 jours, révocable, réservé aux matchs par défaut, flouté jusqu'au toucher. |
-| Carte | Membres **par quartier**, jamais de position exacte (aucune géolocalisation). Option « me masquer de la carte ». |
-| Ce soir | Événements ILD et sorties des membres, visibles par tous les membres ou par les matchs seulement. |
-| Messages | Conversations entre matchs, mises à jour toutes les 4 s. Signaler un message garde une copie des 50 derniers messages : pas besoin de captures. |
-| Moi | Profil, photos, demandes de parrainage, album, confidentialité, mode discret, export JSON des données, suppression du compte. |
-| ILD+ | Qui m'a liké, mode voyage. **Démo : aucun paiement.** |
+| Administrateur | admin@ild.local (mot de passe affiché par la commande, ou `ILD_ADMIN_PASSWORD`) |
+| Membre avec albums, match et album reçu | leo@ild.local |
+| Autres membres, localisés par quartier | samir@, hugo@, mathis@, yanis@, adrien@, karim@, nathan@, romain@, bilal@, theo@, jules@ild.local |
+| Membre suspendu avec recours en attente | kevin@ild.local |
+| Candidats à chaque étape | thomas@ (dossier complet), nico@ (photo à valider), julien@ (âge en cours), max@ (nouveau) |
 
-Les photos sont réencodées dans le navigateur avant l'envoi (retire la position GPS et les autres métadonnées), puis servies uniquement aux personnes autorisées (`/photos/:id`, contrôle d'accès à chaque requête).
+## Ce que fait l'app
 
-## Le back office (`/admin`)
-
-| Page | Ce qu'elle fait |
+| Écran | Contenu |
 |---|---|
-| Tableau de bord | Ce qui est à traiter (identités, comité, photos, signalements, avec alerte pour les signalements urgents) et chiffres de la communauté. |
-| Candidatures | Identité à vérifier → liste d'attente → acceptation. Grille neutre (identité, parrainages, charte). Un refus exige un motif parmi : faux profil, sécurité, charte, mineur. Jamais l'apparence. |
-| Membres | Recherche, fiche détaillée (consentements horodatés, activité, signalements, historique), suspendre, bannir, réactiver, offrir ILD+. |
-| Photos à valider | Les photos de profil ne sont visibles qu'après validation. |
-| Signalements | Classés par urgence (mineur, contenu non consenti, illégal en premier), preuves copiées, décisions motivées : classer, retirer le contenu, suspendre, bannir. |
-| Événements | Créer et retirer les événements « Ce soir ». |
-| Journal | Toutes les actions des admins, horodatées (traçabilité RGPD / DSA). |
-| Réglages et RGPD | Durées de conservation, parrainages requis, durée d'accès aux albums, visibilité en voyage, purge des données expirées. |
+| Inscription (5 étapes) | Compte ; prénom, **date de naissance** (18 ans révolus à la date près), ville, code de parrainage ; modes (Rencontre, Amis, Pro) et ce que la personne cherche ; **goûts** (3 à 12), **position** (actif, plutôt actif, versatile, plutôt passif, passif, side) et **goûts intimes**, tous facultatifs avec le choix de qui les voit (tous les membres, mes matchs, personne) ; trois accords explicites et horodatés. |
+| Vérification de l'âge | Parcours chez un prestataire (pièce d'identité + selfie). ILD ne reçoit que le résultat. En développement, une page simule le prestataire (`/app/verify-mock.html`). |
+| Liste d'attente | Rang, étapes du dossier (âge, photo validée, profil complet, parrainages, comité), code à partager. |
+| Découvrir | Un profil à la fois (façon Raya), modes, diaporama, musique, position et recherche si visibles, distance par tranche, filtres (âge, distance, position, recherche). |
+| Autour | **Grille par distance** (façon Grindr) et **carte**. Voir « Géolocalisation » plus bas. |
+| Albums privés | Plusieurs albums nommés. On **envoie un album à un match depuis la conversation**, pour 1 heure, 24 heures, 7 jours ou jusqu'au retrait, et on peut **retirer l'accès** à tout moment. Photos floutées jusqu'au toucher. |
+| Messages | Conversations entre matchs, albums envoyés, signalement qui garde une copie des 50 derniers messages. |
+| Ce soir | Événements ILD et sorties des membres, visibles par tous ou par les matchs seulement. |
+| Moi | Profil, albums, position, confidentialité (distance masquée, absent d'Autour, incognito, flou, mode discret), personnes bloquées, décisions de modération, export JSON et suppression du compte. |
+| ILD+ | Liste des fonctions, mode voyage, abonnement et résiliation en trois clics (voir « Abonnement »). |
+| Compte sanctionné | Une personne suspendue, bannie ou refusée voit la décision, son motif, et peut **faire un recours** pendant 6 mois. |
+
+## Le processus de validation
+
+1. **Inscription** : date de naissance (refus immédiat avant 18 ans), trois accords horodatés (âge et vérification, données sensibles, CGU et charte), version des conditions enregistrée.
+2. **Âge vérifié** par le prestataire. Résultat « mineur » : candidature refusée automatiquement, motif envoyé, e-mail bloqué.
+3. **Photo de profil validée** par la modération (pas de nudité, la personne reconnaissable).
+4. **Parrainages** par des membres (conseillés ; rendus obligatoires dans les réglages si besoin).
+5. **Comité** : le dossier montre une liste de vérifications. Le bouton « Accepter » n'est actif que si les points obligatoires sont faits : âge vérifié, majeur, accords à jour, photo validée, e-mail absent de la liste des bannis.
+6. **Refus** : seulement avec un motif de la liste (faux profil, sécurité, mineur, harcèlement…) et une explication écrite, envoyée à la personne. Jamais l'apparence, l'âge au-delà de 18 ans, l'origine ou un autre critère interdit (Code pénal, art. 225-1).
+
+## Géolocalisation
+
+Sur une app gay, la position est la donnée la plus dangereuse : des attaquants ont déjà retrouvé des membres par **trilatération** (en comparant les distances affichées depuis plusieurs points). Protections :
+
+- accord explicite avant d'utiliser la position, retrait à tout moment (effacement immédiat) ;
+- option « quartier » au lieu du GPS ;
+- position **arrondie à environ 500 m avant d'être enregistrée** ; la position exacte n'est jamais stockée ;
+- une mise à jour par minute au plus (empêche de « sonder » en se déplaçant) ;
+- distances affichées **par tranches** (moins de 1 km, 1 à 2 km, 2 à 5 km…), jamais de coordonnées d'autres membres envoyées à l'app ;
+- dans la grille, ordre **aléatoire à l'intérieur d'une tranche** (trier par distance exacte trahirait la position même avec la distance masquée) ;
+- carte par **zones d'au moins 3 membres** ; les zones trop peu peuplées sont fusionnées ou cachées ;
+- options « masquer ma distance », « ne pas apparaître dans Autour », « incognito » ;
+- positions effacées après 7 jours sans mise à jour.
+
+À ajouter avant un lancement international : avertissement et réglages renforcés par défaut dans les pays qui pénalisent l'homosexualité.
+
+Les tuiles de la carte viennent par défaut d'OpenStreetMap (`ILD_MAP_TILES`, `ILD_MAP_ATTRIBUTION`). Pour la production, prendre un fournisseur de tuiles hébergé dans l'UE ou ses propres tuiles : chaque requête de tuile indique au fournisseur la zone regardée.
+
+## Vérifications légales intégrées
+
+- **Pages légales** servies par l'app : CGU, politique de confidentialité, charte, mentions légales, CGV (pour plus tard), formulaire public de signalement. Ce sont des **modèles à faire relire par un avocat** ; les informations de la société se remplissent dans le back office (Conformité légale).
+- **Accords versionnés** : changer `LEGAL_VERSION` (`server/options.mjs`) redemande l'accord de chaque membre avant de continuer.
+- **Données sensibles** (orientation, position, goûts intimes) : consentement explicite (RGPD art. 9), facultatives, visibilité au choix, jamais utilisées pour l'admission.
+- **DSA** : signalement ouvert à tous, même sans compte (art. 16) ; exposé des motifs envoyé à chaque personne sanctionnée (art. 17) ; recours interne examiné par un humain (art. 20) ; point de contact (art. 11 et 12).
+- **RGPD** : export et suppression dans l'app, durées de conservation réglables, purge, journal de toutes les actions d'administration, liste des bannis stockée en empreintes hachées.
+- **Page « Conformité légale »** du back office : 13 contrôles automatiques (mentions complètes, DPO, hébergement UE, vrai prestataire de vérification, détection des contenus pédocriminels, HTTPS, purge récente, signalements et recours traités à temps, médiateur et paiement si le payant est activé) et la liste de ce qui se fait hors de l'app.
+
+## Abonnement (gratuit pour l'instant)
+
+L'app est **gratuite** : tant que « Abonnement payant activé » est décoché (back office › Abonnements), toutes les fonctions sont offertes. Le jour du lancement d'ILD+ :
+
+- on choisit le prix et les fonctions réservées à ILD+ (qui m'a liké, mode voyage, filtres avancés, incognito, likes illimités) et la limite de likes gratuits par jour ;
+- l'abonnement demande l'acceptation des CGV, et la page indique la rétractation de 14 jours et la **résiliation en trois clics** (Moi › ILD+ › Résilier › Confirmer), effective en fin de période ;
+- le paiement réel se branche dans `server/billing.mjs` (prestataire `ILD_PAYMENT_PROVIDER`, webhook signé `/api/webhooks/payments`). Dans une app mobile, Apple et Google imposent leur système d'achat intégré.
 
 ## Sécurité
 
-- Mots de passe hachés avec scrypt, sessions en cookie `HttpOnly` + `SameSite=Lax`, limitation des tentatives de connexion.
-- Protection CSRF : toute requête qui modifie quelque chose doit porter l'en-tête `X-ILD: 1`.
-- En-têtes de sécurité stricts (CSP, pas d'iframe, pas de référent).
-- Tout le texte affiché passe par `textContent` : pas d'injection HTML.
-- Blocage dans les deux sens : un membre bloqué ne voit plus le profil, l'album, les messages ni les publications.
+- Mots de passe hachés (scrypt), sessions en cookie `HttpOnly` + `SameSite=Lax`, limitation des tentatives.
+- Protection CSRF (en-tête `X-ILD` obligatoire), webhooks authentifiés par signature HMAC-SHA256.
+- En-têtes stricts (CSP, pas d'iframe), tout le texte affiché via `textContent`.
+- Photos servies avec contrôle d'accès à chaque requête, réencodées dans le navigateur (métadonnées et GPS retirés).
+- Blocage dans les deux sens ; un blocage retire aussi les accès aux albums.
 
-## À brancher avant un vrai lancement
+## Variables d'environnement
 
-1. **Vérification d'identité** : un prestataire certifié (pièce + selfie). Son webhook remplace le bouton « Identité OK » du back office (`POST /api/admin/applications/:id/verify-id`).
-2. **Détection de contenus pédocriminels connus** sur chaque photo (hash matching) : fonction `scanImage` dans `server/api.mjs`. Signalement à PHAROS en cas de correspondance.
-3. **Paiement ILD+** : App Store / Google Play ou prestataire web (`POST /api/me/premium` est une démo).
-4. **App mobile native** : le blocage des captures d'écran n'est pas possible sur le web.
-5. **Notifications** push et e-mails (match, message, acceptation).
-6. **Hébergement dans l'UE**, HTTPS, sauvegardes chiffrées, purge planifiée (`POST /api/admin/maintenance/purge`).
-7. **Juridique** : analyse d'impact (AIPD), DPO, CGU, politique de confidentialité, mentions légales, dépôt de la marque à l'INPI.
+| Variable | Rôle |
+|---|---|
+| `PORT`, `ILD_DATA_DIR` | Port et dossier des données (base + photos) |
+| `ILD_SECURE_COOKIES=1` | Obligatoire derrière HTTPS |
+| `ILD_VERIFICATION_PROVIDER` | `mock` (défaut) ou `hosted` |
+| `ILD_VERIFICATION_URL`, `ILD_VERIFICATION_SECRET` | Parcours du prestataire (`{session}` dans l'URL) et secret du webhook `/api/webhooks/verification` |
+| `ILD_PAYMENT_PROVIDER`, `ILD_PAYMENT_SECRET` | Prestataire de paiement et secret du webhook `/api/webhooks/payments` |
+| `ILD_BLOCKLIST_PEPPER` | Clé secrète des empreintes d'e-mails bannis |
+| `ILD_CSAM_SCANNER` | À définir quand la détection de contenus pédocriminels est branchée (`scanImage` dans `server/core.mjs`) |
+| `ILD_MAP_TILES`, `ILD_MAP_ATTRIBUTION` | Fournisseur de tuiles de carte |
+| `ILD_ADMIN_PASSWORD`, `ILD_DEMO_PASSWORD` | Mots de passe de la base de démo |
+
+## À faire avant un vrai lancement
+
+1. Prestataire de vérification d'âge certifié, branché sur le webhook.
+2. Détection des contenus pédocriminels connus sur chaque photo, signalement à PHAROS.
+3. App mobile native (blocage des captures d'écran, notifications, achat intégré).
+4. Hébergement dans l'UE, HTTPS, sauvegardes chiffrées, purge planifiée chaque jour.
+5. Juridique : AIPD avec un DPO, registre des traitements, relecture des CGU, de la politique de confidentialité et de la charte, contrats de sous-traitance, dépôt de la marque à l'INPI.
 
 ## Organisation du code
 
-- `server/` : `db.mjs` (schéma SQLite, module intégré à Node), `http.mjs` (routeur), `auth.mjs`, `api.mjs` (app membre), `admin.mjs` (back office), `index.mjs` (serveur), `seed.mjs`.
-- `public/app/` : l'app membre (HTML, CSS, JavaScript sans étape de build).
-- `public/admin/` : le back office.
-- `public/shared/lib.js` : outils communs (appels API, création d'éléments, icônes, réencodage des photos).
+- `server/db.mjs` : schéma SQLite et migrations automatiques ; `options.mjs` : listes fermées (positions, goûts, motifs) et version des conditions.
+- `server/api.mjs` (comptes, profil, Découvrir, messages, Ce soir, signalements), `albums.mjs`, `nearby.mjs` + `geo.mjs` (Autour et carte), `verification.mjs`, `notices.mjs` (décisions et recours), `billing.mjs`, `legal.mjs`, `admin.mjs`, `core.mjs` (fonctions communes), `index.mjs` (serveur), `seed.mjs` + `seed-assets/` (démo).
+- `public/app/` : app membre (`app.js` routeur, `onboarding.js`, `main.js`, `me.js`, `ui.js`).
+- `public/admin/` : back office. `public/shared/lib.js` : outils communs.
 - `tests/api.test.mjs` : tests de bout en bout.

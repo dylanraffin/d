@@ -1,6 +1,7 @@
 // Mots de passe (scrypt), sessions par cookie, limitation des tentatives.
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { parseCookies, fail } from './http.mjs';
+import { LEGAL_VERSION } from './options.mjs';
 
 const SESSION_DAYS = 30;
 export const COOKIE = 'ild_session';
@@ -46,6 +47,13 @@ export function currentUser(db, req) {
   return { ...row, _token: token };
 }
 
+// Tout compte connecté, même suspendu, banni ou refusé : pour lire une décision, faire un recours,
+// exporter ou supprimer ses données (RGPD, DSA).
+export function requireAccount(ctx) {
+  if (!ctx.user) fail(401, 'Connecte-toi pour continuer.');
+  return ctx.user;
+}
+
 export function requireUser(ctx) {
   if (!ctx.user) fail(401, 'Connecte-toi pour continuer.');
   if (ctx.user.status === 'banned') fail(403, 'Ce compte a été banni.');
@@ -56,6 +64,7 @@ export function requireUser(ctx) {
 export function requireMember(ctx) {
   const u = requireUser(ctx);
   if (u.status !== 'member' && u.role !== 'admin') fail(403, 'Réservé aux membres acceptés.');
+  if (u.role !== 'admin' && u.legal_version !== LEGAL_VERSION) fail(428, 'Accepte les nouvelles conditions pour continuer.');
   return u;
 }
 

@@ -1,12 +1,19 @@
-// Serveur ILD : API membre, API back office, photos protégées et fichiers de l'app.
+// Serveur ILD : API membre, API back office, webhooks, pages légales, photos protégées et fichiers de l'app.
 import { createServer } from 'node:http';
 import { createReadStream, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Router, HttpError, readJson, sendJson, serveStatic, SECURITY_HEADERS } from './http.mjs';
+import { Router, HttpError, readBody, parseJson, sendJson, serveStatic, SECURITY_HEADERS, allowImageOrigins } from './http.mjs';
 import { openDb } from './db.mjs';
 import { currentUser } from './auth.mjs';
-import { registerMemberRoutes, canSeePhoto } from './api.mjs';
+import { canSeePhoto } from './core.mjs';
+import { registerMemberRoutes, mapTiles } from './api.mjs';
+import { registerAlbumRoutes } from './albums.mjs';
+import { registerNearbyRoutes } from './nearby.mjs';
+import { registerBillingRoutes } from './billing.mjs';
+import { registerVerificationRoutes } from './verification.mjs';
+import { registerNoticeRoutes } from './notices.mjs';
+import { registerLegalRoutes, renderLegal } from './legal.mjs';
 import { registerAdminRoutes } from './admin.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -22,10 +29,11 @@ export function createApp(options = {}) {
   };
   mkdirSync(config.uploadsDir, { recursive: true });
   const db = options.db || openDb(options.dbFile || join(dataDir, 'ild.sqlite'));
+  try { allowImageOrigins([new URL(mapTiles().url.replace(/[{}]/g, '')).origin]); } catch { /* adresse de tuiles invalide */ }
 
   const router = new Router();
-  registerMemberRoutes(router);
-  registerAdminRoutes(router);
+  for (const register of [registerMemberRoutes, registerAlbumRoutes, registerNearbyRoutes, registerBillingRoutes,
+    registerVerificationRoutes, registerNoticeRoutes, registerLegalRoutes, registerAdminRoutes]) register(router);
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
@@ -42,20 +50,30 @@ export function createApp(options = {}) {
         return;
       }
 
+      const legal = /^\/legal\/([a-z]+)$/.exec(path);
+      if (legal && req.method === 'GET') {
+        const html = renderLegal(db, legal[1]);
+        if (!html) throw new HttpError(404, 'Page introuvable.');
+        res.writeHead(200, { ...SECURITY_HEADERS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+        res.end(html);
+        return;
+      }
+
       if (path.startsWith('/api/')) {
         const found = router.match(req.method, path);
         if (!found) throw new HttpError(404, 'Route inconnue.');
-        if (req.method !== 'GET') {
-          // Protection CSRF : un formulaire d'un autre site ne peut pas ajouter cet en-tête.
-          if (req.headers['x-ild'] !== '1') throw new HttpError(403, 'En-tête de requête manquant.');
-        }
+        const isWebhook = path.startsWith('/api/webhooks/');
+        // Protection CSRF : un formulaire d'un autre site ne peut pas ajouter cet en-tête.
+        // Les webhooks n'en ont pas besoin : ils sont authentifiés par leur signature.
+        if (req.method !== 'GET' && !isWebhook && req.headers['x-ild'] !== '1') throw new HttpError(403, 'En-tête de requête manquant.');
+        const rawBody = req.method === 'GET' ? '' : await readBody(req, MAX_BODY);
         let cookie = null;
         const ctx = {
-          db, config, req, res,
+          db, config, req, res, rawBody,
           params: found.params,
           query: url.searchParams,
-          body: req.method === 'GET' ? {} : await readJson(req, MAX_BODY),
-          user: currentUser(db, req),
+          body: parseJson(rawBody),
+          user: isWebhook ? null : currentUser(db, req),
           ip: req.socket.remoteAddress || 'unknown',
           setCookie: (c) => { cookie = c; }
         };

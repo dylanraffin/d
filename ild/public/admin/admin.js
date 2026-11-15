@@ -1,50 +1,50 @@
-// Back office ILD : candidatures, membres, modération, événements, journal, réglages.
-import { api, h, toast, fmtDate, ago } from '/shared/lib.js';
+// Back office ILD : candidatures, membres, modération, recours, événements, abonnements, conformité, journal, réglages.
+import { api, h, fmtDate, ago } from '/shared/lib.js';
 
 const root = document.getElementById('admin');
 let me = null;
 let stats = null;
+let meta = null;
+const PHOTO_STATUS = { pending: 'à valider', approved: 'validée', rejected: 'refusée' };
 
 const REASON_LABEL = {
   harassment: 'Harcèlement', fake: 'Faux profil', minor: 'Personne mineure', non_consensual: 'Partagé sans accord',
-  hate: 'Haine', spam: 'Spam / arnaque', illegal: 'Contenu illégal', other: 'Autre'
+  hate: 'Haine', spam: 'Spam / arnaque', prostitution: 'Prostitution / payant', illegal: 'Contenu illégal', other: 'Autre'
 };
 const URGENT = ['minor', 'non_consensual', 'illegal'];
 const STATUS_BADGE = {
-  member: ['Membre', 'ok'], waitlist: ["Liste d'attente", 'info'], pending: 'Identité à vérifier', refused: ['Refusé', 'bad'],
+  member: ['Membre', 'ok'], waitlist: ["Liste d'attente", 'info'], pending: ['Âge à vérifier', 'warn'], refused: ['Refusé', 'bad'],
   suspended: ['Suspendu', 'warn'], banned: ['Banni', 'bad']
 };
-const ID_BADGE = { none: ['Non lancée', ''], submitted: ['À valider', 'warn'], verified: ['Vérifiée', 'ok'], failed: ['Échec', 'bad'] };
-const SETTING_LABEL = {
-  retention_months_applicants: 'Conservation des candidatures non abouties (mois)',
-  retention_months_reports: 'Conservation des signalements traités (mois)',
-  vouches_required: 'Parrainages requis avant examen par le comité',
-  album_grant_days: "Durée d'accès par défaut à un album (jours)",
-  travel_visible_days: 'Visibilité avant un voyage (jours)'
-};
+const ID_BADGE = { none: ['Non lancée', ''], submitted: ['En cours', 'warn'], verified: ['Vérifié', 'ok'], failed: ['Échec', 'bad'] };
+const NOTICE_LABEL = { application_refused: 'Candidature refusée', account_suspended: 'Compte suspendu', account_banned: 'Compte banni', content_removed: 'Contenu retiré', photo_rejected: 'Photo refusée' };
+const euros = (c) => `${(c / 100).toFixed(2).replace('.', ',')} €`;
 
-const badge = (pair) => {
-  const [label, cls] = Array.isArray(pair) ? pair : [pair, 'warn'];
-  return h('span', { class: `badge ${cls}` }, label);
-};
-
-async function act(fn, okMsg, after) {
-  try {
-    await fn();
-    if (okMsg) toastMsg(okMsg);
-    await loadStats();
-    if (after) await after();
-  } catch (e) { toastMsg(e.message, true); }
-}
+const badge = ([label, cls]) => h('span', { class: `badge ${cls || ''}` }, label);
 
 function toastMsg(m, err) {
   document.querySelectorAll('.toast').forEach((t) => t.remove());
   const el = h('div', { class: `toast${err ? ' error' : ''}`, role: err ? 'alert' : 'status' }, m);
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3500);
+  setTimeout(() => el.remove(), 4500);
 }
 
-async function loadStats() { stats = await api('GET', '/api/admin/stats'); }
+async function act(fn, okMsg, after) {
+  try {
+    await fn();
+    if (okMsg) toastMsg(okMsg);
+    stats = await api('GET', '/api/admin/stats');
+    if (after) await after();
+  } catch (e) { toastMsg(e.message, true); }
+}
+
+// Choix d'un motif + explication écrite pour la personne (DSA art. 17).
+function decisionFields(grounds, def) {
+  const ground = h('select', { class: 'input', 'aria-label': 'Motif' }, h('option', { value: '' }, 'Motif…'),
+    Object.entries(grounds).map(([k, v]) => h('option', { value: k, selected: k === def }, v)));
+  const explanation = h('textarea', { class: 'input', maxlength: 2000, placeholder: 'Explication envoyée à la personne : faits, date, contenu concerné', 'aria-label': 'Explication' });
+  return { ground, explanation, el: h('div', { class: 'stack' }, ground, explanation) };
+}
 
 function layout(active, ...content) {
   const link = (key, label, count, urgent) => h('a', { href: `#/${key}`, class: active === key ? 'on' : '', 'aria-current': active === key ? 'page' : null },
@@ -53,13 +53,16 @@ function layout(active, ...content) {
     h('nav', { class: 'side', 'aria-label': 'Back office' },
       h('div', { class: 'brand' }, 'ILD', h('span', null, ' ·'), ' admin'),
       link('dashboard', 'Tableau de bord'),
-      link('applications', 'Candidatures', (stats?.id_to_review || 0) + (stats?.ready_for_committee || 0)),
+      link('applications', 'Candidatures', stats?.ready_for_committee),
       link('members', 'Membres'),
       link('photos', 'Photos à valider', stats?.photos_to_review),
-      link('reports', 'Signalements', stats?.reports_open, stats?.reports_urgent > 0),
+      link('reports', 'Signalements', stats?.reports_open, stats?.reports_urgent > 0 || stats?.reports_late > 0),
+      link('appeals', 'Recours', stats?.appeals_pending),
       link('events', 'Événements'),
+      link('subscriptions', 'Abonnements'),
+      link('compliance', 'Conformité légale'),
       link('audit', 'Journal'),
-      link('settings', 'Réglages et RGPD'),
+      link('settings', 'Réglages'),
       h('div', { class: 'grow' }),
       h('a', { href: '/', target: '_blank', rel: 'noopener' }, "Voir l'app"),
       h('a', { href: '#/logout' }, 'Se déconnecter')),
@@ -88,20 +91,21 @@ function pageDashboard() {
     href ? h('a', { href }, 'Voir') : null);
   layout('dashboard',
     h('h1', null, 'Tableau de bord'),
-    s.reports_urgent ? h('div', { class: 'note', style: { borderColor: '#5c1f1c', background: '#2a1312', color: '#ffd6d3' } },
-      `${s.reports_urgent} signalement${s.reports_urgent > 1 ? 's' : ''} urgent${s.reports_urgent > 1 ? 's' : ''} (mineur, contenu non consenti ou illégal) : à traiter en priorité. Un contenu pédocriminel doit être signalé à PHAROS.`) : null,
+    s.reports_urgent ? h('div', { class: 'note bad' }, `${s.reports_urgent} signalement(s) urgent(s) : mineur, contenu non consenti ou illégal. À traiter en priorité. Contenu pédocriminel : PHAROS.`) : null,
+    s.reports_late ? h('div', { class: 'note warn' }, `${s.reports_late} signalement(s) ouvert(s) depuis plus de 24 h.`) : null,
     h('h2', null, 'À traiter'),
     h('div', { class: 'kpis' },
-      kpi('Identités à valider', s.id_to_review, '#/applications?status=pending', false),
       kpi('Prêts pour le comité', s.ready_for_committee, '#/applications?status=waitlist'),
       kpi('Photos à valider', s.photos_to_review, '#/photos'),
-      kpi('Signalements ouverts', s.reports_open, '#/reports', s.reports_urgent > 0)),
+      kpi('Signalements ouverts', s.reports_open, '#/reports', s.reports_urgent > 0),
+      kpi('Recours en attente', s.appeals_pending, '#/appeals')),
     h('h2', null, 'Communauté'),
     h('div', { class: 'kpis' },
       kpi('Membres', s.members, '#/members'),
-      kpi('Dont ILD+', s.premium),
       kpi("Liste d'attente", s.waitlist, '#/applications?status=waitlist'),
-      kpi('Identité non lancée ou en cours', s.pending_id, '#/applications?status=pending'),
+      kpi('Âge à vérifier', s.pending_id, '#/applications?status=pending'),
+      kpi('Position activée', s.located),
+      kpi(s.payments_enabled ? 'Abonnés ILD+' : 'Abonnés (payant désactivé)', s.subscribers, '#/subscriptions'),
       kpi('Suspendus ou bannis', s.suspended, '#/members?status=banned')),
     h('h2', null, '7 derniers jours'),
     h('div', { class: 'kpis' }, kpi('Candidatures', s.signups_7d), kpi('Matchs', s.matches_7d), kpi('Messages', s.messages_7d)));
@@ -110,43 +114,73 @@ function pageDashboard() {
 async function pageApplications(params) {
   const status = params.get('status') || 'waitlist';
   const d = await api('GET', `/api/admin/applications?status=${status}`);
-  const refuse = (a) => {
-    const sel = h('select', { class: 'input', 'aria-label': 'Motif de refus' }, h('option', { value: '' }, 'Motif…'),
-      Object.entries(d.reasons).map(([k, v]) => h('option', { value: k }, v)));
-    const btn = h('button', { class: 'btn danger', onclick: () => {
-      if (!sel.value) return toastMsg('Choisis un motif documenté.', true);
-      act(() => api('POST', `/api/admin/applications/${a.id}/refuse`, { reason: sel.value }), `Candidature de ${a.first_name} refusée.`, () => pageApplications(params));
-    } }, 'Refuser');
-    return h('span', { class: 'row', style: { justifyContent: 'flex-end' } }, sel, btn);
-  };
   const rows = d.applications.map((a) => h('tr', null,
     status === 'waitlist' ? h('td', null, h('b', null, `#${a.waitlist_position}`)) : null,
-    h('td', null, h('div', { class: 'stack', style: { gap: '2px' } }, h('b', null, `${a.first_name}, ${a.age}`), h('span', { class: 'small' }, a.email), h('span', { class: 'small' }, a.city))),
-    h('td', null, a.photos.length ? h('div', { class: 'thumbs' }, a.photos.slice(0, 3).map((p) => h('img', { src: `/photos/${p.id}`, alt: '' }))) : h('span', { class: 'small' }, '—')),
+    h('td', null, h('a', { href: `#/application/${a.id}` }, h('b', null, `${a.first_name}, ${a.age}`)), h('div', { class: 'small' }, a.email)),
+    h('td', null, a.photos.length ? h('div', { class: 'thumbs' }, a.photos.slice(0, 3).map((p) => h('img', { src: `/photos/${p.id}`, alt: '', title: p.status }))) : h('span', { class: 'small' }, '—')),
     h('td', null, badge(ID_BADGE[a.id_check_status])),
-    h('td', null, h('div', { class: 'stack', style: { gap: '2px' } },
-      h('span', null, `${a.vouches} / ${d.vouches_required}`, a.vouches >= d.vouches_required ? ' ' : '', a.vouches >= d.vouches_required ? badge(['OK', 'ok']) : null),
-      h('span', { class: 'small' }, a.vouchers.map((v) => v.first_name).join(', ') || (a.invited_by ? `Invité par ${a.invited_by.first_name}` : '')))),
-    h('td', null, a.charter_at ? badge(['Acceptée', 'ok']) : badge(['Non', 'bad'])),
+    h('td', null, `${a.vouches}`, a.vouchers.length ? h('div', { class: 'small' }, a.vouchers.map((v) => v.first_name).join(', ')) : null),
+    h('td', null, a.mandatory_ok ? badge(['Complet', 'ok']) : badge([`${a.checks_ok}/${a.checks_total}`, 'warn'])),
     h('td', { class: 'small nowrap' }, ago(a.created_at)),
-    h('td', { class: 'actions' },
-      status === 'pending' ? h('div', { class: 'stack', style: { alignItems: 'flex-end', gap: '6px' } }, h('span', { class: 'row', style: { justifyContent: 'flex-end' } },
-        h('button', { class: 'btn ok', onclick: () => act(() => api('POST', `/api/admin/applications/${a.id}/verify-id`, { result: 'verified' }), 'Identité validée : passage en liste d\'attente.', () => pageApplications(params)) }, 'Identité OK'),
-        h('button', { class: 'btn', onclick: () => act(() => api('POST', `/api/admin/applications/${a.id}/verify-id`, { result: 'failed' }), 'Vérification marquée en échec.', () => pageApplications(params)) }, 'Échec')),
-        refuse(a)) : null,
-      status === 'waitlist' ? h('div', { class: 'stack', style: { alignItems: 'flex-end', gap: '6px' } },
-        h('button', { class: 'btn primary', onclick: () => act(() => api('POST', `/api/admin/applications/${a.id}/accept`), `${a.first_name} est membre.`, () => pageApplications(params)) }, 'Accepter'),
-        refuse(a)) : null,
-      status === 'refused' ? h('span', { class: 'small' }, d.reasons[a.refusal_reason] || '') : null)));
+    h('td', { class: 'actions' }, h('a', { class: 'btn', href: `#/application/${a.id}` }, 'Ouvrir le dossier'))));
   layout('applications',
     h('h1', null, 'Candidatures'),
-    h('div', { class: 'tabs' }, [['pending', 'Identité à vérifier'], ['waitlist', "Liste d'attente"], ['refused', 'Refusées']].map(([k, v]) =>
+    h('div', { class: 'tabs' }, [['pending', 'Âge à vérifier'], ['waitlist', "Liste d'attente"], ['refused', 'Refusées']].map(([k, v]) =>
       h('a', { href: `#/applications?status=${k}`, class: status === k ? 'on' : '' }, v))),
-    h('div', { class: 'note' }, "Grille neutre : identité vérifiée, parrainages, charte. On ne refuse jamais pour l'apparence, l'âge (au-delà de 18 ans), l'origine, le handicap ou le lieu de vie : ce sont des critères de discrimination interdits (art. 225-1 du Code pénal). Les personnes non acceptées restent en liste d'attente. Un refus exige un motif documenté."),
+    h('div', { class: 'note' }, "Processus : 1. inscription et accords → 2. âge vérifié par le prestataire → 3. photo validée → 4. parrainages → 5. comité. On n'accepte qu'un dossier dont les vérifications obligatoires sont faites. On ne refuse jamais pour l'apparence, l'âge (au-delà de 18 ans), l'origine, le handicap ou le lieu de vie (art. 225-1 du Code pénal)."),
     d.applications.length ? h('div', { class: 'table-wrap' }, h('table', null,
-      h('thead', null, h('tr', null, status === 'waitlist' ? h('th', null, 'Rang') : null, h('th', null, 'Candidat'), h('th', null, 'Photos'), h('th', null, 'Identité'),
-        h('th', null, 'Parrainages'), h('th', null, 'Charte'), h('th', null, 'Reçue'), h('th', null, ''))),
+      h('thead', null, h('tr', null, status === 'waitlist' ? h('th', null, 'Rang') : null, h('th', null, 'Candidat'), h('th', null, 'Photos'), h('th', null, 'Âge'),
+        h('th', null, 'Parrainages'), h('th', null, 'Dossier'), h('th', null, 'Reçue'), h('th', null, ''))),
       h('tbody', null, rows))) : h('p', { class: 'empty' }, 'Rien ici.'));
+}
+
+async function pageApplication(id) {
+  const d = await api('GET', `/api/admin/applications/${id}`);
+  const u = d.user;
+  const p = d.profile;
+  const mandatoryOk = d.checks.filter((c) => c.mandatory).every((c) => c.ok);
+  const dec = decisionFields(d.grounds, 'fake_profile');
+  const manualNote = h('input', { class: 'input grow', maxlength: 500, placeholder: "Justification (ex. pièce vérifiée en visio par l'équipe)", 'aria-label': 'Justification' });
+  const reload = () => pageApplication(id);
+  layout('applications',
+    h('div', { class: 'row' }, h('a', { href: `#/applications?status=${u.status === 'refused' ? 'refused' : u.status}` }, '← Candidatures')),
+    h('div', { class: 'row between' }, h('h1', null, `${u.first_name}, ${u.age}`), badge(STATUS_BADGE[u.status] || [u.status, ''])),
+    h('div', { class: 'row', style: { alignItems: 'flex-start', gap: '18px' } },
+      h('div', { class: 'card grow', style: { minWidth: '300px' } },
+        h('h2', null, 'Vérifications'),
+        h('ul', { class: 'checklist' }, d.checks.map((c) => h('li', { class: c.ok ? 'ok' : c.mandatory ? 'bad' : 'warn' },
+          h('span', { class: 'mark', 'aria-hidden': 'true' }, c.ok ? '✓' : c.mandatory ? '✕' : '!'),
+          h('span', { class: 'grow' }, c.label, c.mandatory ? '' : ' (conseillé)', c.detail ? h('div', { class: 'small' }, c.detail) : null),
+          h('span', { class: 'visually-hidden' }, c.ok ? 'fait' : 'manquant')))),
+        u.status === 'waitlist' ? h('button', { class: 'btn primary', disabled: !mandatoryOk, onclick: () => act(() => api('POST', `/api/admin/applications/${id}/accept`), `${u.first_name} est membre.`, reload) }, mandatoryOk ? 'Accepter' : 'Accepter (vérifications manquantes)') : null,
+        ['pending', 'waitlist'].includes(u.status) && !d.checks.find((c) => c.key === 'age_verified').ok ? h('details', null,
+          h('summary', null, "Valider l'âge manuellement"),
+          h('p', { class: 'small' }, "À utiliser seulement si le prestataire n'a pas pu conclure et que l'âge a été contrôlé autrement. La justification est inscrite au journal."),
+          h('div', { class: 'row' }, manualNote, h('button', { class: 'btn', onclick: () => act(() => api('POST', `/api/admin/applications/${id}/verify-id`, { result: 'verified', note: manualNote.value }), 'Âge validé.', reload) }, 'Valider'))) : null),
+      h('div', { class: 'card grow', style: { minWidth: '300px' } },
+        h('h2', null, 'Profil'),
+        u.photos.length ? h('div', { class: 'thumbs big' }, u.photos.map((ph) => h('figure', null, h('img', { src: `/photos/${ph.id}`, alt: '' }), h('figcaption', { class: 'small' }, ph.status === 'pending' ? h('a', { href: '#/photos' }, 'à valider') : PHOTO_STATUS[ph.status])))) : h('span', { class: 'small' }, 'Aucune photo.'),
+        h('dl', null,
+          h('dt', null, 'E-mail'), h('dd', null, u.email),
+          h('dt', null, 'Ville'), h('dd', null, u.city),
+          h('dt', null, 'Cherche'), h('dd', null, p.seeking.map((x) => meta.seeking[x] || x).join(', ') || '—'),
+          h('dt', null, 'Goûts'), h('dd', null, [...p.tastes, ...p.interests].join(', ') || '—'),
+          h('dt', null, 'Métier / bio'), h('dd', null, [p.job, p.bio].filter(Boolean).join(' · ') || '—'),
+          h('dt', null, 'Invité par'), h('dd', null, u.invited_by ? u.invited_by.first_name : '—'),
+          h('dt', null, 'Parrainé par'), h('dd', null, u.vouchers.map((v) => v.first_name).join(', ') || '—'),
+          h('dt', null, 'Accords'), h('dd', null, `âge ${fmtDate(d.consents.age, false)} · orientation ${fmtDate(d.consents.orientation, false)} · CGU v${d.consents.legal_version || '—'}`),
+          h('dt', null, 'Vérifications'), h('dd', null, d.verifications.map((v) => `${v.provider} : ${v.status} (${fmtDate(v.created_at)})`).join(' · ') || '—')),
+        h('p', { class: 'small' }, "Position et goûts intimes ne servent jamais à décider d'une admission."))),
+    ['pending', 'waitlist'].includes(u.status) ? h('div', { class: 'card' },
+      h('h2', null, 'Refuser la candidature'),
+      h('p', { class: 'small' }, "La personne reçoit le motif et l'explication, et peut faire un recours. Pour un refus « sécurité » ou « mineur », son e-mail est bloqué."),
+      dec.el,
+      h('div', null, h('button', { class: 'btn danger', onclick: () => {
+        if (!dec.ground.value) return toastMsg('Choisis un motif.', true);
+        act(() => api('POST', `/api/admin/applications/${id}/refuse`, { ground: dec.ground.value, explanation: dec.explanation.value }), 'Candidature refusée.', reload);
+      } }, 'Refuser'))) : null,
+    d.notices.length ? h('div', { class: 'card' }, h('h2', null, 'Décisions envoyées'), d.notices.map((n) => h('div', { class: 'small' }, `${fmtDate(n.created_at)} · ${NOTICE_LABEL[n.kind]} · recours : ${n.appeal_status}`))) : null,
+    d.history.length ? h('div', { class: 'card' }, h('h2', null, 'Historique'), d.history.map((x) => h('div', { class: 'small' }, `${fmtDate(x.created_at)} · ${x.action}`))) : null);
 }
 
 async function pageMembers(params) {
@@ -166,7 +200,7 @@ async function pageMembers(params) {
         h('td', null, h('a', { href: `#/member/${m.id}` }, h('b', null, `${m.first_name}, ${m.age}`)), h('div', { class: 'small' }, m.email)),
         h('td', null, m.neighborhood || '—'),
         h('td', null, badge(STATUS_BADGE[m.status])),
-        h('td', null, m.premium ? badge(['ILD+', 'info']) : '—'),
+        h('td', null, m.premium ? badge(['Offert', 'info']) : m.subscribed ? badge(['Abonné', 'info']) : '—'),
         h('td', null, m.reports ? badge([String(m.reports), 'warn']) : '0'),
         h('td', { class: 'small' }, fmtDate(m.accepted_at || m.created_at, false))))))) : h('p', { class: 'empty' }, 'Aucun membre trouvé.'));
 }
@@ -174,65 +208,73 @@ async function pageMembers(params) {
 async function pageMember(id) {
   const d = await api('GET', `/api/admin/members/${id}`);
   const u = d.user;
-  const note = h('input', { class: 'input grow', placeholder: 'Note interne (motif factuel)', maxlength: 500, 'aria-label': 'Note' });
-  const setStatus = (status, label) => act(() => api('POST', `/api/admin/members/${id}/status`, { status, note: note.value }), label, () => pageMember(id));
+  const dec = decisionFields(d.grounds, 'charter');
+  const setStatus = (status, label) => {
+    if (status !== 'member' && !dec.ground.value) return toastMsg('Choisis un motif.', true);
+    act(() => api('POST', `/api/admin/members/${id}/status`, { status, ground: dec.ground.value, explanation: dec.explanation.value }), label, () => pageMember(id));
+  };
   layout('members',
     h('div', { class: 'row' }, h('a', { href: '#/members' }, '← Membres')),
-    h('div', { class: 'row between' }, h('h1', null, `${u.first_name}, ${u.age}`), badge(STATUS_BADGE[u.status])),
+    h('div', { class: 'row between' }, h('h1', null, `${u.first_name}, ${u.age}`), badge(STATUS_BADGE[u.status] || [u.status, ''])),
     h('div', { class: 'row', style: { alignItems: 'flex-start', gap: '18px' } },
-      h('div', { class: 'card grow', style: { minWidth: '280px' } },
+      h('div', { class: 'card grow', style: { minWidth: '300px' } },
         h('h2', null, 'Profil'),
         u.photos.length ? h('div', { class: 'thumbs' }, u.photos.map((p) => h('img', { src: `/photos/${p.id}`, alt: '', title: p.status }))) : null,
         h('dl', null,
           h('dt', null, 'E-mail'), h('dd', null, u.email),
           h('dt', null, 'Ville'), h('dd', null, `${u.city}${u.neighborhood ? ` · ${u.neighborhood}` : ''}`),
           h('dt', null, 'Métier'), h('dd', null, d.profile.job || '—'),
-          h('dt', null, 'Identité'), h('dd', null, badge(ID_BADGE[u.id_check_status])),
+          h('dt', null, 'Position'), h('dd', null, u.position || '—'),
+          h('dt', null, 'Localisation'), h('dd', null, u.location ? `${u.location.source === 'gps' ? 'GPS' : 'Quartier'} · ${fmtDate(u.location.updated_at)}` : 'Désactivée'),
           h('dt', null, 'Parrainé par'), h('dd', null, u.vouchers.map((v) => v.first_name).join(', ') || '—'),
-          h('dt', null, 'Consentement orientation'), h('dd', null, fmtDate(u.consent_orientation_at)),
-          h('dt', null, 'Charte acceptée'), h('dd', null, fmtDate(u.charter_at)),
+          h('dt', null, 'Accords'), h('dd', null, `orientation ${fmtDate(u.consents.orientation, false)} · CGU v${u.consents.legal_version || '—'}${u.consents.geo ? ` · position ${fmtDate(u.consents.geo, false)}` : ''}`),
           h('dt', null, 'Membre depuis'), h('dd', null, u.accepted_at ? fmtDate(u.accepted_at, false) : '—'),
-          h('dt', null, 'Activité'), h('dd', null, `${d.stats.matches} matchs · ${d.stats.messages} messages · ${d.stats.album_photos} photos d'album`)),
-        d.profile.bio ? h('p', { style: { margin: '0', color: 'var(--text-2)' } }, d.profile.bio) : null),
-      h('div', { class: 'card grow', style: { minWidth: '280px' } },
-        h('h2', null, 'Actions'),
-        h('div', { class: 'row' }, note),
+          h('dt', null, 'Abonnement'), h('dd', null, u.premium ? 'ILD+ offert' : d.subscription ? `${d.subscription.status}${d.subscription.cancel_at_period_end ? ' (résilié)' : ''} · fin ${fmtDate(d.subscription.current_period_end, false)}` : '—'),
+          h('dt', null, 'Activité'), h('dd', null, `${d.stats.matches} matchs · ${d.stats.messages} messages · ${d.stats.albums} albums (${d.stats.album_photos} photos)`))),
+      h('div', { class: 'card grow', style: { minWidth: '300px' } },
+        h('h2', null, 'Sanction ou réactivation'),
+        h('p', { class: 'small' }, 'Toute suspension ou bannissement envoie le motif et ton explication à la personne, qui peut faire un recours. Bannir bloque aussi son e-mail.'),
+        dec.el,
         h('div', { class: 'row' },
           u.status !== 'member' ? h('button', { class: 'btn ok', onclick: () => setStatus('member', 'Compte réactivé.') }, 'Réactiver') : null,
           u.status !== 'suspended' ? h('button', { class: 'btn', onclick: () => setStatus('suspended', 'Compte suspendu.') }, 'Suspendre') : null,
-          u.status !== 'banned' ? h('button', { class: 'btn danger', onclick: () => setStatus('banned', 'Compte banni.') }, 'Bannir') : null,
-          h('button', { class: 'btn', onclick: () => act(() => api('POST', `/api/admin/members/${id}/premium`, { active: !u.premium }), u.premium ? 'ILD+ retiré.' : 'ILD+ offert.', () => pageMember(id)) }, u.premium ? 'Retirer ILD+' : 'Offrir ILD+')),
+          u.status !== 'banned' ? h('button', { class: 'btn danger', onclick: () => setStatus('banned', 'Compte banni.') }, 'Bannir') : null),
+        h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => act(() => api('POST', `/api/admin/members/${id}/premium`, { active: !u.premium }), u.premium ? 'ILD+ retiré.' : 'ILD+ offert.', () => pageMember(id)) }, u.premium ? 'Retirer ILD+ offert' : 'Offrir ILD+')),
         h('h2', null, `Signalements reçus (${d.reports_against.length})`),
         d.reports_against.length ? d.reports_against.map((r) => h('div', { class: 'row between' }, h('span', null, REASON_LABEL[r.reason] || r.reason), badge(r.status === 'open' ? ['Ouvert', 'warn'] : [r.status === 'actioned' ? 'Sanctionné' : 'Classé', '']), h('span', { class: 'small' }, fmtDate(r.created_at))))
           : h('span', { class: 'small' }, 'Aucun.'),
         h('span', { class: 'small' }, `Signalements faits par ce membre : ${d.reports_made}`),
+        d.notices.length ? [h('h2', null, 'Décisions envoyées'), d.notices.map((n) => h('div', { class: 'small' }, `${fmtDate(n.created_at)} · ${NOTICE_LABEL[n.kind]} · recours : ${n.appeal_status}`))] : null,
         h('h2', null, 'Historique admin'),
         d.history.length ? d.history.map((x) => h('div', { class: 'small' }, `${fmtDate(x.created_at)} · ${x.action}`)) : h('span', { class: 'small' }, 'Aucune action.'))));
 }
 
 async function pagePhotos() {
   const d = await api('GET', '/api/admin/photos');
-  const review = (p, decision) => act(() => api('POST', `/api/admin/photos/${p.id}/review`, { decision }), decision === 'approve' ? 'Photo validée.' : 'Photo refusée.', pagePhotos);
   layout('photos',
     h('h1', null, 'Photos de profil à valider'),
-    h('div', { class: 'note' }, "Règle : visage ou silhouette, pas de nudité, pas de mineur, pas d'autre personne identifiable sans accord. Les photos d'album privé ne sont pas relues ici : elles passent par la détection automatique de contenus illégaux et par les signalements."),
-    d.photos.length ? h('div', { class: 'photos' }, d.photos.map((p) => h('div', { class: 'photo' },
-      h('img', { src: `/photos/${p.id}`, alt: `Photo de ${p.first_name}` }),
-      h('div', { class: 'row' }, h('a', { href: `#/member/${p.user_id}` }, p.first_name), h('span', { class: 'small' }, ago(p.created_at))),
-      h('div', { class: 'row', style: { paddingTop: '0' } },
-        h('button', { class: 'btn ok grow', onclick: () => review(p, 'approve') }, 'Valider'),
-        h('button', { class: 'btn danger grow', onclick: () => review(p, 'reject') }, 'Refuser')))))
-      : h('p', { class: 'empty' }, 'Aucune photo en attente.'));
+    h('div', { class: 'note' }, "Règle : la personne reconnaissable, pas de nudité, pas de mineur, pas d'autre personne identifiable. Les photos d'albums privés ne passent pas ici : détection automatique et signalements. Un refus envoie le motif à la personne."),
+    d.photos.length ? h('div', { class: 'photos' }, d.photos.map((p) => {
+      const reason = h('select', { class: 'input', 'aria-label': 'Motif du refus' }, Object.entries(d.templates).map(([k, v]) => h('option', { value: k }, v)));
+      return h('div', { class: 'photo' },
+        h('img', { src: `/photos/${p.id}`, alt: `Photo de ${p.first_name}` }),
+        h('div', { class: 'row' }, h('a', { href: `#/${p.user_status === 'member' ? 'member' : 'application'}/${p.user_id}` }, p.first_name), h('span', { class: 'small' }, ago(p.created_at))),
+        h('div', { class: 'stack', style: { padding: '0 10px 10px' } },
+          h('button', { class: 'btn ok', onclick: () => act(() => api('POST', `/api/admin/photos/${p.id}/review`, { decision: 'approve' }), 'Photo validée.', pagePhotos) }, 'Valider'),
+          reason,
+          h('button', { class: 'btn danger', onclick: () => act(() => api('POST', `/api/admin/photos/${p.id}/review`, { decision: 'reject', ground: reason.value }), 'Photo refusée, motif envoyé.', pagePhotos) }, 'Refuser')));
+    })) : h('p', { class: 'empty' }, 'Aucune photo en attente.'));
 }
 
 function evidenceView(r) {
   const e = r.evidence || {};
   if (e.conversation) {
     return h('div', { class: 'evidence' }, e.conversation.map((m) => h('div', { class: `msg${m.id === e.reported_message_id ? ' flag' : ''}` },
-      h('b', null, `${m.sender} `), h('span', { class: 'small' }, `${fmtDate(m.created_at)} `), m.body)));
+      h('b', null, `${m.sender} `), h('span', { class: 'small' }, `${fmtDate(m.created_at)} `), m.kind === 'album' ? `[album « ${m.body} »]` : m.body)));
   }
   if (e.post) return h('div', { class: 'evidence' }, e.post.body);
-  if (e.photo_id) return h('div', { class: 'thumbs' }, h('img', { src: `/photos/${e.photo_id}`, alt: 'Photo signalée', style: { width: '120px', height: '160px' } }));
+  if (e.photo_id) return h('div', { class: 'thumbs' }, h('img', { src: `/photos/${e.photo_id}`, alt: 'Photo signalée', style: { width: '120px', height: '160px' } }), e.kind === 'album' ? h('span', { class: 'small' }, "Photo d'album privé") : null);
+  if (e.location) return h('div', { class: 'evidence' }, `Emplacement indiqué : ${e.location}`);
   if (e.profile) return h('div', { class: 'evidence' }, `Profil : ${e.profile.first_name || ''}${e.profile.job ? ` · ${e.profile.job}` : ''}${e.profile.bio ? ` · « ${e.profile.bio} »` : ''}`);
   return null;
 }
@@ -241,34 +283,61 @@ async function pageReports(params) {
   const status = params.get('status') || 'open';
   const d = await api('GET', `/api/admin/reports?status=${status}`);
   const card = (r) => {
-    const note = h('input', { class: 'input grow', placeholder: 'Note (décision, éléments)', maxlength: 1000, 'aria-label': 'Note' });
-    const resolve = (action, label) => act(() => api('POST', `/api/admin/reports/${r.id}/resolve`, { action, note: note.value }), label, () => pageReports(params));
+    const dec = decisionFields(d.grounds, r.reason in d.grounds ? r.reason : r.reason === 'fake' ? 'fake_profile' : 'charter');
+    const note = h('input', { class: 'input grow', placeholder: 'Note interne (facultatif)', maxlength: 1000, 'aria-label': 'Note interne' });
+    const resolve = (action, label) => {
+      if (['remove_content', 'suspend', 'ban'].includes(action) && !dec.ground.value) return toastMsg('Choisis un motif.', true);
+      act(() => api('POST', `/api/admin/reports/${r.id}/resolve`, { action, ground: dec.ground.value, explanation: dec.explanation.value, note: note.value }), label, () => pageReports(params));
+    };
     const resolution = r.resolution ? JSON.parse(r.resolution) : null;
+    const typeLabel = { message: 'Conversation', photo: 'Photo', post: 'Publication', user: 'Profil', external: 'Signalement public (sans compte)' }[r.target_type];
     return h('div', { class: 'card' },
       h('div', { class: 'row between' },
-        h('div', { class: 'row' }, badge(URGENT.includes(r.reason) ? [REASON_LABEL[r.reason], 'bad'] : [REASON_LABEL[r.reason] || r.reason, 'warn']), h('span', { class: 'muted' }, `${r.target_type === 'message' ? 'Conversation' : r.target_type === 'photo' ? 'Photo' : r.target_type === 'post' ? 'Publication' : 'Profil'}`)),
-        h('span', { class: 'small' }, fmtDate(r.created_at))),
-      h('div', { class: 'row' },
-        h('span', null, 'Visé : ', r.target_user_id ? h('a', { href: `#/member/${r.target_user_id}` }, r.target_name || `#${r.target_user_id}`) : '—', r.target_status && r.target_status !== 'member' ? ' ' : '', r.target_status && r.target_status !== 'member' ? badge(STATUS_BADGE[r.target_status]) : null),
-        h('span', { class: 'muted' }, `· Signalé par ${r.reporter_name || 'un compte supprimé'}`)),
+        h('div', { class: 'row' }, badge([REASON_LABEL[r.reason] || r.reason, URGENT.includes(r.reason) ? 'bad' : 'warn']), h('span', { class: 'muted' }, typeLabel)),
+        h('span', { class: 'small' }, `${fmtDate(r.created_at)} · ${ago(r.created_at)}`)),
+      r.target_user_id ? h('div', null, 'Visé : ', h('a', { href: `#/member/${r.target_user_id}` }, r.target_name || `#${r.target_user_id}`), r.target_status && r.target_status !== 'member' ? [' ', badge(STATUS_BADGE[r.target_status] || [r.target_status, ''])] : null) : null,
+      h('div', { class: 'muted' }, r.reporter_contact ? `Signalé par ${r.reporter_contact.name || 'anonyme'}${r.reporter_contact.email ? ` (${r.reporter_contact.email})` : ''}` : `Signalé par ${r.reporter_name || 'un compte supprimé'}`),
       r.details ? h('p', { style: { margin: '0' } }, `« ${r.details} »`) : null,
       evidenceView(r),
-      URGENT.includes(r.reason) && status === 'open' ? h('div', { class: 'note', style: { borderColor: '#5c1f1c', background: '#2a1312', color: '#ffd6d3' } },
-        'Priorité absolue. Contenu pédocriminel : retirer, bannir, conserver les preuves et signaler sur internet-signalement.gouv.fr (PHAROS).') : null,
-      status === 'open' ? [h('div', { class: 'row' }, note),
+      URGENT.includes(r.reason) && status === 'open' ? h('div', { class: 'note bad' }, 'Priorité absolue. Contenu pédocriminel : retirer, bannir, conserver les preuves et signaler sur internet-signalement.gouv.fr (PHAROS).') : null,
+      status === 'open' ? [
+        r.target_user_id ? [h('p', { class: 'small' }, 'Pour une sanction : motif et explication envoyés à la personne (elle peut faire un recours).'), dec.el] : null,
+        h('div', { class: 'row' }, note),
         h('div', { class: 'row' },
           h('button', { class: 'btn', onclick: () => resolve('dismiss', 'Signalement classé.') }, 'Classer sans suite'),
-          r.target_type !== 'user' ? h('button', { class: 'btn', onclick: () => resolve('remove_content', 'Contenu retiré.') }, 'Retirer le contenu') : null,
-          h('button', { class: 'btn', onclick: () => resolve('suspend', 'Membre suspendu.') }, 'Suspendre'),
-          h('button', { class: 'btn danger', onclick: () => resolve('ban', 'Membre banni.') }, 'Bannir'))]
+          !r.target_user_id ? h('button', { class: 'btn', onclick: () => resolve('handled', 'Signalement traité.') }, 'Traité (action hors app)') : null,
+          r.target_user_id && r.target_type !== 'user' ? h('button', { class: 'btn', onclick: () => resolve('remove_content', 'Contenu retiré, motif envoyé.') }, 'Retirer le contenu') : null,
+          r.target_user_id ? h('button', { class: 'btn', onclick: () => resolve('suspend', 'Membre suspendu.') }, 'Suspendre') : null,
+          r.target_user_id ? h('button', { class: 'btn danger', onclick: () => resolve('ban', 'Membre banni.') }, 'Bannir') : null)]
         : h('span', { class: 'small' }, `Décision : ${resolution?.action || r.status}${resolution?.note ? ` · ${resolution.note}` : ''} · ${fmtDate(r.resolved_at)}`));
   };
   layout('reports',
     h('h1', null, 'Signalements'),
-    h('div', { class: 'tabs' }, [['open', 'Ouverts'], ['actioned', 'Sanctionnés'], ['dismissed', 'Classés']].map(([k, v]) =>
+    h('div', { class: 'tabs' }, [['open', 'Ouverts'], ['actioned', 'Traités'], ['dismissed', 'Classés']].map(([k, v]) =>
       h('a', { href: `#/reports?status=${k}`, class: status === k ? 'on' : '' }, v))),
-    h('p', { class: 'small' }, "DSA : chaque décision est motivée et horodatée dans le journal. Les preuves sont une copie faite au moment du signalement."),
+    h('p', { class: 'small' }, 'Les preuves sont une copie faite au moment du signalement. Chaque décision est horodatée dans le journal.'),
     d.reports.length ? d.reports.map(card) : h('p', { class: 'empty' }, 'Aucun signalement.'));
+}
+
+async function pageAppeals(params) {
+  const decided = params.get('status') === 'decided';
+  const d = await api('GET', `/api/admin/appeals${decided ? '?status=decided' : ''}`);
+  const card = (a) => {
+    const note = h('textarea', { class: 'input', maxlength: 2000, placeholder: 'Réponse envoyée à la personne', 'aria-label': 'Réponse' });
+    const decide = (decision) => act(() => api('POST', `/api/admin/appeals/${a.id}/decide`, { decision, note: note.value }), decision === 'overturned' ? 'Décision annulée.' : 'Décision maintenue.', () => pageAppeals(params));
+    return h('div', { class: 'card' },
+      h('div', { class: 'row between' }, h('div', { class: 'row' }, badge([a.kind_label, 'warn']), h('a', { href: `#/member/${a.user_id}` }, a.first_name)), h('span', { class: 'small' }, `Recours ${a.appeal.at ? ago(a.appeal.at) : ''}`)),
+      h('dl', null, h('dt', null, 'Motif'), h('dd', null, a.ground), h('dt', null, 'Explication donnée'), h('dd', null, a.explanation), h('dt', null, 'Décision du'), h('dd', null, fmtDate(a.created_at))),
+      h('div', { class: 'evidence' }, h('b', null, 'Recours : '), a.appeal.text),
+      decided ? h('span', { class: 'small' }, `${a.appeal.status === 'overturned' ? 'Annulée' : 'Maintenue'} · ${a.appeal.note || ''}`)
+        : [h('p', { class: 'small' }, "Le recours doit être examiné par une personne qui n'a pas pris la décision initiale, si possible."), note,
+          h('div', { class: 'row' }, h('button', { class: 'btn ok', onclick: () => decide('overturned') }, 'Annuler la décision'), h('button', { class: 'btn', onclick: () => decide('upheld') }, 'Maintenir'))]);
+  };
+  layout('appeals',
+    h('h1', null, 'Recours'),
+    h('div', { class: 'tabs' }, [['', 'En attente'], ['decided', 'Décidés']].map(([k, v]) => h('a', { href: `#/appeals${k ? `?status=${k}` : ''}`, class: (decided ? 'decided' : '') === k ? 'on' : '' }, v))),
+    h('p', { class: 'small' }, 'DSA art. 20 : recours gratuit, ouvert 6 mois, examiné par un humain. Annuler rétablit le compte et le contenu.'),
+    d.appeals.length ? d.appeals.map(card) : h('p', { class: 'empty' }, 'Aucun recours.'));
 }
 
 async function pageEvents() {
@@ -295,45 +364,104 @@ async function pageEvents() {
         h('td', { class: 'actions' }, ev.removed ? null : h('button', { class: 'btn danger', onclick: () => act(() => api('DELETE', `/api/admin/posts/${ev.id}`), 'Événement retiré.', pageEvents) }, 'Retirer'))))))) : h('p', { class: 'empty' }, 'Aucun événement.'));
 }
 
+async function pageSubscriptions() {
+  const d = await api('GET', '/api/admin/subscriptions');
+  const enabled = h('input', { type: 'checkbox', checked: d.payments_enabled });
+  const price = h('input', { class: 'input', type: 'number', min: 0, step: 1, value: d.price_cents, style: { width: '110px' }, 'aria-label': 'Prix en centimes' });
+  const freeLikes = h('input', { class: 'input', type: 'number', min: 1, value: d.free_daily_likes, style: { width: '90px' }, 'aria-label': 'Likes gratuits par jour' });
+  const feats = Object.entries(d.features).map(([k, v]) => ({ k, box: h('input', { type: 'checkbox', checked: d.plus_features.includes(k) }), v }));
+  layout('subscriptions',
+    h('h1', null, 'Abonnements ILD+'),
+    h('div', { class: `note ${d.payments_enabled ? 'warn' : ''}` }, d.payments_enabled
+      ? `Le payant est activé (prestataire : ${d.provider}). Les fonctions cochées ci-dessous demandent un abonnement.`
+      : "L'app est gratuite : toutes les fonctions sont offertes à tout le monde. Active le payant le jour du lancement d'ILD+."),
+    h('form', { class: 'card', onsubmit: (e) => {
+      e.preventDefault();
+      act(() => api('PUT', '/api/admin/settings', {
+        payments_enabled: enabled.checked, plus_price_cents: Number(price.value), free_daily_likes: Number(freeLikes.value),
+        plus_features: feats.filter((f) => f.box.checked).map((f) => f.k)
+      }), 'Réglages enregistrés.', pageSubscriptions);
+    } },
+    h('label', { class: 'row' }, enabled, h('span', null, 'Activer l’abonnement payant')),
+    h('label', { class: 'row' }, h('span', null, 'Prix mensuel TTC (centimes)'), price, h('span', { class: 'small' }, euros(Number(price.value) || 0))),
+    h('label', { class: 'row' }, h('span', null, 'Likes gratuits par jour (sans ILD+)'), freeLikes),
+    h('h2', null, 'Fonctions réservées à ILD+'),
+    feats.map((f) => h('label', { class: 'row' }, f.box, h('span', null, f.v))),
+    h('div', null, h('button', { class: 'btn primary', type: 'submit' }, 'Enregistrer')),
+    h('p', { class: 'small' }, "Avant d'activer : CGV relues par un avocat, médiateur de la consommation indiqué, prestataire de paiement branché (App Store / Google Play obligatoires pour un achat dans l'app mobile).")),
+    h('div', { class: 'kpis' },
+      h('div', { class: 'kpi' }, h('span', { class: 'muted' }, 'Abonnés actifs'), h('b', null, String(d.active.length))),
+      h('div', { class: 'kpi' }, h('span', { class: 'muted' }, 'Revenu mensuel récurrent'), h('b', null, euros(d.mrr_cents))),
+      h('div', { class: 'kpi' }, h('span', { class: 'muted' }, 'ILD+ offerts'), h('b', null, String(d.offered)))),
+    d.active.length ? h('div', { class: 'table-wrap' }, h('table', null,
+      h('thead', null, h('tr', null, h('th', null, 'Membre'), h('th', null, 'Prestataire'), h('th', null, 'Depuis'), h('th', null, 'Fin de période'), h('th', null, 'État'))),
+      h('tbody', null, d.active.map((s) => h('tr', null,
+        h('td', null, h('a', { href: `#/member/${s.user_id}` }, s.first_name), h('div', { class: 'small' }, s.email)),
+        h('td', null, s.provider), h('td', null, fmtDate(s.started_at, false)), h('td', null, fmtDate(s.current_period_end, false)),
+        h('td', null, s.cancel_at_period_end ? badge(['Résilié', 'warn']) : badge(['Actif', 'ok']))))))) : null);
+}
+
+async function pageCompliance() {
+  const [c, s] = await Promise.all([api('GET', '/api/admin/compliance'), api('GET', '/api/admin/settings')]);
+  const legalKeys = Object.keys(s.settings).filter((k) => k.startsWith('legal_'));
+  const inputs = Object.fromEntries(legalKeys.map((k) => {
+    const spec = s.settings[k];
+    return [k, spec.type === 'bool' ? h('input', { type: 'checkbox', checked: spec.value === '1' }) : h('input', { class: 'input grow', value: spec.value, maxlength: spec.max, 'aria-label': spec.label })];
+  }));
+  const ok = c.checks.filter((x) => x.ok).length;
+  layout('compliance',
+    h('h1', null, 'Conformité légale'),
+    h('div', { class: `note ${ok === c.checks.length ? '' : 'warn'}` }, `${ok} point(s) sur ${c.checks.length} au vert. Version des conditions en vigueur : ${c.legal_version}. Dernière purge : ${c.last_purge_at ? fmtDate(c.last_purge_at) : 'jamais'}.`),
+    h('div', { class: 'card' }, h('h2', null, "Contrôles automatiques"),
+      h('ul', { class: 'checklist' }, c.checks.map((x) => h('li', { class: x.ok ? 'ok' : 'bad' }, h('span', { class: 'mark', 'aria-hidden': 'true' }, x.ok ? '✓' : '✕'),
+        h('span', { class: 'grow' }, x.label, h('div', { class: 'small' }, x.ref)), h('span', { class: 'visually-hidden' }, x.ok ? 'conforme' : 'à faire'))))),
+    h('div', { class: 'card' }, h('h2', null, "À faire hors de l'app"),
+      h('ul', { class: 'plain-list' }, c.outside_app.map((t) => h('li', null, t)))),
+    h('form', { class: 'card', onsubmit: (e) => {
+      e.preventDefault();
+      act(() => api('PUT', '/api/admin/settings', Object.fromEntries(legalKeys.map((k) => [k, inputs[k].type === 'checkbox' ? inputs[k].checked : inputs[k].value]))), 'Informations légales enregistrées.', pageCompliance);
+    } }, h('h2', null, 'Informations légales (mentions, CGU, confidentialité)'),
+    legalKeys.map((k) => h('label', { class: 'row' }, h('span', { style: { minWidth: '260px' } }, s.settings[k].label), inputs[k])),
+    h('div', { class: 'row' }, h('button', { class: 'btn primary', type: 'submit' }, 'Enregistrer'),
+      [['mentions', 'Mentions légales'], ['cgu', 'CGU'], ['confidentialite', 'Confidentialité'], ['charte', 'Charte'], ['cgv', 'CGV']].map(([doc, text]) => h('a', { href: `/legal/${doc}`, target: '_blank', rel: 'noopener' }, text)))));
+}
+
 async function pageAudit() {
   const d = await api('GET', '/api/admin/audit');
   layout('audit',
     h('h1', null, 'Journal des actions'),
-    h('p', { class: 'small' }, "Toutes les décisions d'administration, pour la traçabilité (RGPD, DSA)."),
+    h('p', { class: 'small' }, "Toutes les décisions d'administration et les vérifications, pour la traçabilité (RGPD, DSA)."),
     h('div', { class: 'table-wrap' }, h('table', null,
-      h('thead', null, h('tr', null, h('th', null, 'Date'), h('th', null, 'Admin'), h('th', null, 'Action'), h('th', null, 'Cible'), h('th', null, 'Détails'))),
+      h('thead', null, h('tr', null, h('th', null, 'Date'), h('th', null, 'Par'), h('th', null, 'Action'), h('th', null, 'Cible'), h('th', null, 'Détails'))),
       h('tbody', null, d.entries.map((x) => h('tr', null,
-        h('td', { class: 'small' }, fmtDate(x.created_at)), h('td', null, x.admin_name || '—'), h('td', null, x.action),
+        h('td', { class: 'small nowrap' }, fmtDate(x.created_at)), h('td', null, x.admin_name || 'Système'), h('td', null, x.action),
         h('td', null, x.target && x.target.startsWith('user:') ? h('a', { href: `#/member/${x.target.slice(5)}` }, x.target) : (x.target || '—')),
         h('td', { class: 'small' }, x.details || '')))))));
 }
 
 async function pageSettings() {
   const d = await api('GET', '/api/admin/settings');
-  const inputs = Object.fromEntries(Object.keys(d.settings).map((k) => [k, h('input', { class: 'input', type: 'number', min: 0, max: 120, value: d.settings[k], style: { width: '90px' }, 'aria-label': SETTING_LABEL[k] || k })]));
+  const keys = Object.keys(d.settings).filter((k) => !k.startsWith('legal_') && !['payments_enabled', 'plus_price_cents', 'plus_features', 'free_daily_likes'].includes(k));
+  const inputs = Object.fromEntries(keys.map((k) => {
+    const spec = d.settings[k];
+    return [k, spec.type === 'bool' ? h('input', { type: 'checkbox', checked: spec.value === '1', 'aria-label': spec.label })
+      : h('input', { class: 'input', type: 'number', min: spec.min, max: spec.max, value: spec.value, style: { width: '100px' }, 'aria-label': spec.label })];
+  }));
   layout('settings',
-    h('h1', null, 'Réglages et RGPD'),
+    h('h1', null, 'Réglages'),
     h('form', { class: 'card', onsubmit: (e) => {
       e.preventDefault();
-      act(() => api('PUT', '/api/admin/settings', Object.fromEntries(Object.entries(inputs).map(([k, el]) => [k, Number(el.value)]))), 'Réglages enregistrés.');
+      act(() => api('PUT', '/api/admin/settings', Object.fromEntries(keys.map((k) => [k, inputs[k].type === 'checkbox' ? inputs[k].checked : Number(inputs[k].value)]))), 'Réglages enregistrés.');
     } }, h('h2', null, 'Règles'),
-    Object.entries(inputs).map(([k, el]) => h('label', { class: 'row between' }, h('span', null, SETTING_LABEL[k] || k), el)),
+    keys.map((k) => h('label', { class: 'row between' }, h('span', null, d.settings[k].label), inputs[k])),
     h('div', null, h('button', { class: 'btn primary', type: 'submit' }, 'Enregistrer'))),
     h('div', { class: 'card' },
       h('h2', null, 'Purge des données expirées'),
-      h('p', { class: 'muted', style: { margin: '0' } }, "Supprime les candidatures refusées ou jamais acceptées au-delà de la durée de conservation, les photos refusées de plus de 30 jours, les sessions et accès d'album expirés, et les signalements traités trop anciens. À lancer régulièrement (idéalement une tâche planifiée)."),
+      h('p', { class: 'muted', style: { margin: '0' } }, "Supprime les candidatures non abouties et les photos refusées anciennes, les sessions et accès d'albums expirés, les positions inactives, les signalements traités et les e-mails bannis au-delà des durées réglées. À planifier chaque jour en production."),
       h('div', null, h('button', { class: 'btn', onclick: () => act(async () => {
         const r = await api('POST', '/api/admin/maintenance/purge');
-        toastMsg(`Purge faite : ${r.applicants_deleted} candidature(s), ${r.rejected_photos_deleted} photo(s), ${r.sessions_deleted} session(s), ${r.album_grants_deleted} accès, ${r.reports_deleted} signalement(s).`);
-      }) }, 'Lancer la purge'))),
-    h('div', { class: 'card' },
-      h('h2', null, 'À brancher avant le lancement'),
-      h('ul', { style: { margin: '0', paddingLeft: '18px', lineHeight: '1.8', color: 'var(--text-2)' } },
-        h('li', null, "Vérification d'identité : prestataire certifié (pièce + selfie), webhook vers « Identité OK »."),
-        h('li', null, 'Détection de contenus pédocriminels connus (hash matching) sur chaque photo : fonction scanImage du serveur.'),
-        h('li', null, 'Paiement ILD+ : App Store / Google Play ou prestataire web.'),
-        h('li', null, 'Notifications push et e-mails transactionnels.'),
-        h('li', null, "Hébergement dans l'UE, sauvegardes chiffrées, HTTPS (cookie Secure : ILD_SECURE_COOKIES=1)."))));
+        toastMsg(`Purge : ${r.applicants_deleted} candidature(s), ${r.rejected_photos_deleted} photo(s), ${r.locations_cleared} position(s), ${r.album_shares_deleted} accès, ${r.reports_deleted} signalement(s), ${r.blocklist_deleted} e-mail(s) banni(s).`);
+      }) }, 'Lancer la purge'))));
 }
 
 // ---------- routeur ----------
@@ -345,18 +473,23 @@ async function route() {
   try {
     if (!me) me = await api('GET', '/api/me').catch(() => null);
     if (!me || me.role !== 'admin') return pageLogin();
+    if (!meta) meta = await api('GET', '/api/meta');
     if (page === 'logout') {
       await api('POST', '/api/auth/logout', {});
       me = null; location.hash = '#/dashboard'; return pageLogin();
     }
-    await loadStats();
+    stats = await api('GET', '/api/admin/stats');
     switch (page) {
       case 'applications': return await pageApplications(params);
+      case 'application': return await pageApplication(arg);
       case 'members': return await pageMembers(params);
       case 'member': return await pageMember(arg);
       case 'photos': return await pagePhotos();
       case 'reports': return await pageReports(params);
+      case 'appeals': return await pageAppeals(params);
       case 'events': return await pageEvents();
+      case 'subscriptions': return await pageSubscriptions();
+      case 'compliance': return await pageCompliance();
       case 'audit': return await pageAudit();
       case 'settings': return await pageSettings();
       default: return pageDashboard();

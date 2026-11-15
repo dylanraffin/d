@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Vérification d'âge (simulation)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap">
+<link rel="stylesheet" href="/app/app.css">
+</head>
+<body>
+<main class="screen mock-provider">
+  <span class="chip warn-chip">Simulation · développement</span>
+  <h1>Prestataire de vérification</h1>
+  <p class="lead">En production, cette page est remplacée par le parcours du prestataire certifié : photo de la pièce d'identité, puis selfie vidéo. ILD ne reçoit que le résultat.</p>
+  <div class="stack">
+    <button class="btn primary block" type="button" data-result="verified">Simuler : majeur, identité confirmée</button>
+    <button class="btn block" type="button" data-result="failed">Simuler : échec (pièce illisible)</button>
+    <button class="btn danger block" type="button" data-result="minor">Simuler : personne mineure</button>
+  </div>
+  <p id="status" class="small" role="status"></p>
+</main>
+<script type="module" src="/app/verify-mock.js"></script>
+</body>
+</html>
