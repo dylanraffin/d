@@ -95,7 +95,7 @@ const DOCS = {
 
 function page(title, body, brand = 'ILD') {
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex"><title>${esc(title)} · ${esc(brand)}</title><link rel="stylesheet" href="/app/app.css"></head>
+<meta name="robots" content="noindex"><title>${esc(title)} · ${esc(brand)}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&amp;display=swap"><link rel="stylesheet" href="/app/app.css"></head>
 <body><main class="legal"><a href="/" class="legal-back">← ${esc(brand)}</a><h1>${esc(title)}</h1>${body}
 <nav class="legal-nav"><a href="/legal/cgu">CGU</a><a href="/legal/confidentialite">Confidentialité</a><a href="/legal/charte">Charte</a><a href="/legal/mentions">Mentions légales</a><a href="/legal/signaler">Signaler un contenu</a></nav></main></body></html>`;
 }

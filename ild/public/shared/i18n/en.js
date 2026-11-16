@@ -72,8 +72,8 @@ export default {
     'Comment': 'How',
     'Un mot (facultatif) : « Dispo vers Bastille »': 'A note (optional): “Free near Bastille”',
     'Message': 'Message',
-    'Ton point s’allume en vert sur la carte et tu passes en tête de liste. Ça s’éteint tout seul.':
-      'Your pin turns green on the map and you move to the top of the list. It switches off on its own.',
+    'Ta photo se cercle de jaune sur la carte et tu passes en tête de liste. Ça s’éteint tout seul.':
+      'Your photo gets a yellow ring on the map and you move to the top of the list. It switches off on its own.',
     'Tu es dispo.': 'You’re available now.',
     "Tu n'es plus dispo.": 'You’re no longer available.',
     'Je ne suis plus dispo': 'I’m no longer available',

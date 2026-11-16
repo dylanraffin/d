@@ -64,17 +64,17 @@
     const svg = L.svg({ pane: 'base', padding: 0.6 });
     const add = (layer) => layer.addTo(map);
     const opts = (o) => ({ renderer: svg, pane: 'base', interactive: false, ...o });
-    add(L.polygon(ring(1.03), opts({ stroke: false, fillColor: '#132540', fillOpacity: 1 })));
+    add(L.polygon(ring(1.03), opts({ stroke: false, fillColor: '#e9e9e9', fillOpacity: 1 })));
     for (const p of PARKS) {
       add(L.polygon(Array.from({ length: 28 }, (_, i) => { const t = (i / 28) * 2 * Math.PI; return [p.at[0] + p.r[0] * Math.sin(t), p.at[1] + p.r[1] * Math.cos(t)]; }),
-        opts({ stroke: false, fillColor: '#123a3a', fillOpacity: 0.9 })));
+        opts({ stroke: false, fillColor: '#dcdcdc', fillOpacity: 1 })));
     }
-    add(L.polyline(fabric(), opts({ color: '#1c3558', weight: 1, opacity: 0.9 })));
-    add(L.polyline(ring(1), opts({ color: '#2b4c80', weight: 5, opacity: 0.9, fill: false })));
-    add(L.polyline(ring(0.93), opts({ color: '#24406c', weight: 2, opacity: 0.8, fill: false })));
-    add(L.polyline(MAJOR, opts({ color: '#2f5590', weight: 3, opacity: 0.95, lineJoin: 'round' })));
-    add(L.polyline(CANAL, opts({ color: '#1f5fae', weight: 3, opacity: 0.9 })));
-    add(L.polyline(SEINE, opts({ color: '#1b57a6', weight: 13, opacity: 0.95, lineJoin: 'round', lineCap: 'round' })));
+    add(L.polyline(fabric(), opts({ color: '#f7f7f7', weight: 1, opacity: 1 })));
+    add(L.polyline(ring(1), opts({ color: '#ffffff', weight: 5, opacity: 1, fill: false })));
+    add(L.polyline(ring(0.93), opts({ color: '#ffffff', weight: 2, opacity: 1, fill: false })));
+    add(L.polyline(MAJOR, opts({ color: '#ffffff', weight: 3, opacity: 1, lineJoin: 'round' })));
+    add(L.polyline(CANAL, opts({ color: '#c4c4c4', weight: 3, opacity: 1 })));
+    add(L.polyline(SEINE, opts({ color: '#c4c4c4', weight: 13, opacity: 1, lineJoin: 'round', lineCap: 'round' })));
     for (const [name, lat, lng, kind] of LABELS) {
       add(L.marker([lat, lng], { pane: 'base', interactive: false, keyboard: false,
         icon: L.divIcon({ className: `map-label${kind ? ` ${kind}` : ''}`, html: name.replace(/[&<>]/g, ''), iconSize: [160, 12], iconAnchor: [80, 6] }) }));

@@ -160,15 +160,19 @@ export async function screenProfile(id) {
   let albums = null;
   if (p.albums.shared.length) {
     albums = h('div', { class: 'list' }, p.albums.shared.map((s) => h('a', { href: `#/shared/${s.share_id}`, class: 'text' },
-      icon('lock', 18, '#2997ff'), h('span', { class: 'grow' }, `${s.name} · ${s.count} photo${s.count > 1 ? 's' : ''}`),
-      h('span', { class: 'small' }, s.expires_at ? `jusqu'au ${fmtDate(s.expires_at)}` : ''), icon('chevron', 16, '#86868b'))));
+      icon('lock', 18), h('span', { class: 'grow' }, `${s.name} · ${s.count} photo${s.count > 1 ? 's' : ''}`),
+      h('span', { class: 'small' }, s.expires_at ? `jusqu'au ${fmtDate(s.expires_at)}` : ''), icon('chevron', 16, '#575656'))));
   } else if (p.albums.count) {
-    albums = h('div', { class: 'card bordered row pad' }, icon('lock', 20, '#2997ff'),
+    albums = h('div', { class: 'card bordered row pad' }, icon('lock', 20),
       h('div', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, `${p.albums.count} album${p.albums.count > 1 ? 's' : ''} privé${p.albums.count > 1 ? 's' : ''}`),
         h('span', { class: 'small' }, p.albums.requested ? 'Demande envoyée' : `${p.first_name} choisit ce qu'il t'envoie.`)),
       p.albums.requested ? null : h('button', { class: 'btn ghost small', onclick: async () => { await run(() => api('POST', `/api/albums/${p.id}/request`, {}), 'Demande envoyée.'); screenProfile(id); } }, 'Demander'));
   }
-  const section = (title, items, group) => items.length ? [h('span', { class: 'section-label' }, title), h('div', { class: 'row wrap' }, items.map((t) => h('span', { class: 'chip' }, group ? label(group, t) : t)))] : null;
+  // Une valeur sans libellé dans cette édition (choisie dans l'autre) n'est pas affichée.
+  const section = (title, all, group) => {
+    const items = group ? all.filter((t) => state.meta?.[group]?.[t]) : all;
+    return items.length ? [h('span', { class: 'section-label' }, title), h('div', { class: 'row wrap' }, items.map((t) => h('span', { class: 'chip' }, group ? label(group, t) : t)))] : null;
+  };
   mount(h('main', { class: 'screen profile-screen' },
     h('div', { class: 'row between' }, backBtn(isLive() ? '#/map' : '#/discover'),
       h('div', { class: 'row' }, isLive() ? fav : null, h('button', { class: 'icon-btn', 'aria-label': "Plus d'options : masquer, bloquer, signaler", onclick: more }, icon('more')))),
@@ -218,7 +222,7 @@ export async function screenSharedAlbum(shareId) {
   mount(h('main', { class: 'screen' },
     h('div', { class: 'row' }, backBtn('#/messages'), h('h1', { class: 'title grow' }, a.name), h('span', { class: 'chip' }, '18+')),
     h('p', { class: 'small' }, `Envoyé par ${a.owner.first_name}`),
-    h('div', { class: 'notice' }, icon('clock', 18, '#2997ff'), a.expires_at ? `Accès jusqu'au ${fmtDate(a.expires_at)}. ${a.owner.first_name} peut le retirer à tout moment.` : `${a.owner.first_name} peut retirer l'accès à tout moment.`),
+    h('div', { class: 'notice' }, icon('clock', 18), a.expires_at ? `Accès jusqu'au ${fmtDate(a.expires_at)}. ${a.owner.first_name} peut le retirer à tout moment.` : `${a.owner.first_name} peut retirer l'accès à tout moment.`),
     a.photos.length ? grid : h('p', { class: 'empty' }, 'Cet album est vide pour le moment.'),
     h('div', { class: 'list' }, h('label', null, h('span', { class: 'grow' }, 'Flouter les photos explicites'),
       h('input', { type: 'checkbox', checked: blurOn, onchange: (e) => { blurOn = e.target.checked; draw(); } }))),
@@ -302,9 +306,9 @@ export async function screenAround() {
   const map = L.map(mapBox, { zoomControl: true, attributionControl: true }).setView(center, 13);
   onLeave(() => map.remove());
   L.tileLayer(state.meta.map.url, { maxZoom: 16, minZoom: 9, attribution: state.meta.map.attribution }).addTo(map);
-  if (d.me) L.circleMarker(center, { radius: 7, color: '#f5f5f7', weight: 3, fillColor: '#0071e3', fillOpacity: 1 }).addTo(map).bindTooltip(tr('Toi (position arrondie)'));
+  if (d.me) L.circleMarker(center, { radius: 7, color: '#ffffff', weight: 3, fillColor: '#202020', fillOpacity: 1 }).addTo(map).bindTooltip(tr('Toi (position arrondie)'));
   for (const z of d.zones) {
-    L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: '#2997ff', weight: 1, fillColor: '#2997ff', fillOpacity: 0.16 }).addTo(map);
+    L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: '#202020', weight: 1, opacity: 0.55, dashArray: '3 7', fillColor: '#ffdb5b', fillOpacity: z.size_km <= 2 ? 0.22 : 0 }).addTo(map);
     const el = h('button', { class: 'zone-count', 'aria-label': `${z.count} membres dans cette zone` }, String(z.count));
     const marker = L.marker([z.lat, z.lng], { icon: L.divIcon({ html: el, className: 'zone-icon', iconSize: [44, 44] }), keyboard: true }).addTo(map);
     marker.on('click', () => sheet((close) => [
@@ -361,15 +365,15 @@ async function conversationAside(activeId) {
   return h('div', { class: 'msg-aside' },
     h('h1', { class: 'title' }, 'Messages'),
     plans.plans.length ? [h('span', { class: 'section-label' }, 'Plans à plusieurs'),
-      h('div', { class: 'list' }, plans.plans.map((p) => h('a', { href: p.my_status === 'requested' ? '#/map' : `#/plan/${p.id}`, class: 'text tall' }, icon('group', 20, '#ff9f0a'),
+      h('div', { class: 'list' }, plans.plans.map((p) => h('a', { href: p.my_status === 'requested' ? '#/map' : `#/plan/${p.id}`, class: 'text tall' }, icon('group', 20),
         h('div', { class: 'grow stack small-gap ellipsis-box' }, h('span', { class: 'strong ellipsis' }, raw(p.title)),
           h('span', { class: 'small ellipsis' }, p.my_status === 'host' ? (p.pending ? `${p.pending} demande${p.pending > 1 ? 's' : ''} en attente` : 'Tu es l’hôte') : p.my_status === 'requested' ? 'Demande envoyée' : `Hôte : ${p.host.first_name}`)),
         p.my_status === 'host' && p.pending ? h('span', { class: 'unread-dot', 'aria-label': 'Demandes en attente' }) : null)))] : null,
     received.shares.length ? [h('span', { class: 'section-label' }, 'Albums reçus'),
-      h('div', { class: 'list' }, received.shares.map((s) => h('a', { href: `#/shared/${s.share_id}`, class: 'text' }, icon('lock', 18, '#2997ff'),
+      h('div', { class: 'list' }, received.shares.map((s) => h('a', { href: `#/shared/${s.share_id}`, class: 'text' }, icon('lock', 18),
         h('span', { class: 'grow' }, `${s.name} · ${s.owner.first_name}`), h('span', { class: 'small' }, s.expires_at ? `jusqu'au ${fmtDate(s.expires_at)}` : ''))))] : null,
     d.matches.length ? h('div', { class: 'list' }, d.matches.map((m) => h('a', { href: `#/chat/${m.id}`, class: 'text tall', 'aria-current': String(m.id) === String(activeId) ? 'page' : null,
-      style: String(m.id) === String(activeId) ? { background: '#2c2c2e' } : null },
+      style: String(m.id) === String(activeId) ? { background: '#f3f3f3' } : null },
       avatar(m.user.photo, m.user.first_name),
       h('div', { class: 'grow stack small-gap ellipsis-box' }, h('span', { class: 'strong' }, raw(m.user.first_name)),
         m.last ? h('span', { class: 'small ellipsis' }, m.last.mine ? 'Toi : ' : null, ['Photo', 'Photo retirée', 'Message retiré par la modération'].includes(m.last.body) ? m.last.body : raw(m.last.body))
@@ -389,7 +393,7 @@ function albumBubble(m, matchId) {
   const a = m.album;
   const STATE = { active: null, expired: 'Accès expiré', revoked: 'Accès retiré', deleted: 'Album supprimé', unavailable: 'Indisponible' };
   return h('div', { class: `album-bubble${m.mine ? ' mine' : ''}` },
-    h('div', { class: 'row' }, icon('lock', 18, m.mine ? '#fff' : '#2997ff'),
+    h('div', { class: 'row' }, icon('lock', 18),
       h('div', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, `Album « ${a.name} »`),
         h('span', { class: 'small inherit' }, STATE[a.state] || `${a.count} photo${a.count > 1 ? 's' : ''}${a.expires_at ? ` · jusqu'au ${fmtDate(a.expires_at)}` : ''}`))),
     a.state === 'active' ? (m.mine

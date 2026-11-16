@@ -1,6 +1,8 @@
 # Nuit
 
-La carte du cruising entre mecs : qui est dispo autour de toi, maintenant. **Site d'abord** (pas de magasin d'applications), installable depuis le navigateur, en français et en anglais, avec son back office. Style « galerie de nuit ».
+La carte du cruising entre mecs : qui est dispo autour de toi, maintenant. **Site d'abord** (pas de magasin d'applications), installable depuis le navigateur, en français et en anglais, avec son back office.
+
+**Style « miel »** : pages blanches, encre presque noire (`#202020`) pour le texte, les bordures et les actions, un seul jaune (`#ffdb5b`) en grands aplats et pour l'état « dispo », une seule police (DM Sans), coins doux (16 à 24 px), une seule ombre légère. Aucune autre couleur dans l'interface : ce sont les photos qui portent la couleur. Les jetons sont en tête de `public/app/app.css` (app) et de `public/live/site.css` (site). Le back office garde son thème sombre.
 
 Le même code fait tourner **deux produits** :
 
@@ -142,5 +144,5 @@ Tant que « Abonnement payant activé » est décoché (back office › Abonneme
 - `public/live/` : page d'accueil (`landing.html`, `landing.en.html`, `site.css`), app Nuit (`live.js`, `live.css`), icônes.
 - `public/app/` : écrans partagés par les deux éditions (`onboarding.js`, `main.js`, `me.js`, `ui.js`) et routeur du club (`app.js`).
 - `public/shared/` : `lib.js` (outils communs), `i18n.js` et `i18n/` (traductions). `public/admin/` : back office.
-- `tools/demo/` : construction de la démo statique (`build.mjs`), serveur simulé (`mock.js`), fond de carte dessiné (`basemap.js`).
+- `tools/demo/` : construction de la démo statique (`build.mjs`), serveur simulé (`mock.js`), fond de carte dessiné (`basemap.js`), portraits de démonstration dessinés, sans visage (`avatars.py`, à lancer vers `server/seed-assets`).
 - `tests/` : `api.test.mjs` (club), `live.test.mjs` et `cruise.test.mjs` (Nuit).

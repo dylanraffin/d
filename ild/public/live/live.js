@@ -54,7 +54,7 @@ function presenceSheet(after) {
       h('span', { class: 'section-label' }, 'Pendant'), dur.el,
       h('span', { class: 'section-label' }, 'Comment'), place.el,
       note,
-      h('p', { class: 'small' }, 'Ton point s’allume en vert sur la carte et tu passes en tête de liste. Ça s’éteint tout seul.'),
+      h('p', { class: 'small' }, 'Ta photo se cercle de jaune sur la carte et tu passes en tête de liste. Ça s’éteint tout seul.'),
       h('button', { class: 'btn primary block', onclick: async () => {
         await run(() => api('PUT', '/api/me/presence', { minutes: Number(dur.value() || 60), place: place.value(), note: note.value }), 'Tu es dispo.');
         await refreshMe(); close(); after?.();
@@ -285,9 +285,9 @@ function addSheet(center, after) {
   sheet((close) => [
     h('h2', null, 'Ajouter sur la carte'),
     h('div', { class: 'list' },
-      h('button', { class: 'item tall', style: { minHeight: '72px' }, onclick: () => { close(); createPlanSheet(center, after); } }, icon('group', 22, '#ff9f0a'),
+      h('button', { class: 'item tall', style: { minHeight: '72px' }, onclick: () => { close(); createPlanSheet(center, after); } }, icon('group', 22),
         h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, 'Organiser un plan à plusieurs'), h('span', { class: 'small' }, 'Chez toi, à l’hôtel ou dans un établissement. Tu choisis qui vient.'))),
-      h('button', { class: 'item tall', style: { minHeight: '72px' }, onclick: () => { close(); proposeSpotSheet(center); } }, icon('pin', 22, '#ffd500'),
+      h('button', { class: 'item tall', style: { minHeight: '72px' }, onclick: () => { close(); proposeSpotSheet(center); } }, icon('pin', 22),
         h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, 'Proposer un lieu'), h('span', { class: 'small' }, 'Bar, club, sauna, soirée. Vérifié par l’équipe.')))),
     h('button', { class: 'btn ghost', onclick: close }, 'Fermer')
   ]);
@@ -307,7 +307,7 @@ function tripSheet(getMap, after) {
     return [
       h('h2', null, 'Mode voyage'),
       h('p', { class: 'small text2' }, 'Apparais dans une autre ville avant d’y arriver, et regarde qui s’y trouve. Ton point est placé là où tu le choisis : ta position réelle n’est pas utilisée.'),
-      me.trip ? h('div', { class: 'notice' }, icon('plane', 18, '#2997ff'), h('span', { class: 'grow' }, `En voyage : ${me.trip.label}, jusqu'au ${fmtDate(me.trip.until, false)}`)) : null,
+      me.trip ? h('div', { class: 'notice' }, icon('plane', 18), h('span', { class: 'grow' }, `En voyage : ${me.trip.label}, jusqu'au ${fmtDate(me.trip.until, false)}`)) : null,
       me.trip ? h('button', { class: 'btn block', onclick: async () => {
         await run(() => api('DELETE', '/api/me/trip'), 'Voyage terminé : tu es de retour chez toi.');
         await refreshMe(); live.view = null; close(); after();
@@ -438,14 +438,14 @@ async function screenMap() {
       if (!alive) return;
       const els = new Map();
       layer.clearLayers();
-      if (d.me) L.circleMarker([d.me.lat, d.me.lng], { radius: 8, color: '#f5f5f7', weight: 3, fillColor: '#0071e3', fillOpacity: 1 }).addTo(layer).bindTooltip(tr(me.trip ? 'Toi, en voyage' : 'Toi (point approximatif)'));
+      if (d.me) L.circleMarker([d.me.lat, d.me.lng], { radius: 8, color: '#ffffff', weight: 3, fillColor: '#202020', fillOpacity: 1 }).addTo(layer).bindTooltip(tr(me.trip ? 'Toi, en voyage' : 'Toi (point approximatif)'));
       const zoneSheet = (z) => sheet((close) => [h('h2', null, `${z.count} membres dans cette zone`),
         h('p', { class: 'small' }, 'Ils ont choisi de ne pas avoir de point à eux.'),
         h('div', { class: 'people' }, z.people.map((x) => h('button', { onclick: () => { close(); personSheet(x); } }, avatar(x.photo, x.first_name, null, x.photo_explicit),
           h('span', { class: 'who' }, h('b', null, `${x.first_name}, ${x.age}`), h('span', null, rowSub(x))), x.presence ? h('span', { class: 'live-dot', 'aria-label': 'Dispo' }) : null))),
         h('button', { class: 'btn ghost', onclick: close }, 'Fermer')]);
       for (const z of d.zones) {
-        L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: '#2997ff', weight: 1, fillColor: '#2997ff', fillOpacity: 0.12 }).addTo(layer);
+        L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: '#202020', weight: 1, opacity: 0.55, dashArray: '3 7', fillColor: '#ffdb5b', fillOpacity: z.size_km <= 2 ? 0.22 : 0 }).addTo(layer);
         L.marker([z.lat, z.lng], { icon: divIcon(h('button', { class: 'zone-count', 'aria-label': `${z.count} membres dans cette zone` }, String(z.count)), 44) }).addTo(layer).on('click', () => zoneSheet(z));
       }
       for (const s of d.spots) L.marker([s.lat, s.lng], { icon: divIcon(spotEl(s), 40) }).addTo(layer).on('click', () => spotSheet(s, load));

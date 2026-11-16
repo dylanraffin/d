@@ -19,19 +19,19 @@ export async function screenMe() {
       h('span', { class: 'avatar xl' }, approved ? h('img', { src: `/photos/${approved.id}`, alt: '' }) : me.first_name[0]),
       h('div', { class: 'grow stack small-gap' }, h('span', { class: 'name' }, `${me.first_name}, ${me.age}`),
         summary ? h('span', { class: 'small text2' }, summary) : null, h('a', { href: '#/me/edit' }, isLive() && !summary ? 'Compléter ma fiche' : 'Modifier mon profil'))),
-    isLive() && me.trip ? h('a', { class: 'notice', href: '#/map' }, icon('plane', 18, '#2997ff'), h('span', { class: 'grow' }, `En voyage : ${me.trip.label}, jusqu'au ${fmtDate(me.trip.until, false)}`), icon('chevron', 16, '#2997ff')) : null,
+    isLive() && me.trip ? h('a', { class: 'notice', href: '#/map' }, icon('plane', 18), h('span', { class: 'grow' }, `En voyage : ${me.trip.label}, jusqu'au ${fmtDate(me.trip.until, false)}`), icon('chevron', 16)) : null,
     me.notices_unread ? h('a', { class: 'notice warn', href: '#/me/notices' }, icon('flag', 18), h('span', { class: 'grow' }, `${me.notices_unread} décision${me.notices_unread > 1 ? 's' : ''} de modération à lire`), icon('chevron', 16)) : null,
     (me.vouch_requests || []).length ? h('div', { class: 'card pad stack' }, h('h2', null, 'Ils demandent ton parrainage'),
       me.vouch_requests.map((r) => h('div', { class: 'row' }, h('span', { class: 'grow' }, r.first_name),
         h('button', { class: 'btn primary small', onclick: async () => { await run(() => api('POST', '/api/vouch', { applicant_id: r.id }), `Tu parraines ${r.first_name}.`); screenMe(); } }, 'Parrainer'))),
       h('p', { class: 'small' }, 'Ne parraine que des personnes que tu connais vraiment.')) : null,
-    h('a', { class: 'notice', href: '#/plus' }, h('span', { class: 'plus-mark' }, brand().name, h('span', null, '+')), h('span', { class: 'grow' }, plusText), icon('chevron', 16, '#2997ff')),
+    h('a', { class: 'notice', href: '#/plus' }, h('span', { class: 'plus-mark' }, brand().name, h('span', null, '+')), h('span', { class: 'grow' }, plusText), icon('chevron', 16)),
     h('div', { class: 'list' },
-      h('a', { href: '#/me/albums', class: 'text' }, icon('lock', 20, '#2997ff'), h('span', { class: 'grow' }, 'Mes albums privés'),
-        me.album_requests ? h('span', { class: 'chip blue' }, String(me.album_requests)) : null, icon('chevron', 16, '#86868b')),
-      h('a', { href: '#/me/location', class: 'text' }, icon('map', 20, '#2997ff'), h('span', { class: 'grow' }, 'Ma position'),
-        h('span', { class: 'small' }, placeLabel(me)), icon('chevron', 16, '#86868b')),
-      h('a', { href: '#/me/notices', class: 'text' }, icon('flag', 20, '#2997ff'), h('span', { class: 'grow' }, 'Décisions de modération'), icon('chevron', 16, '#86868b'))),
+      h('a', { href: '#/me/albums', class: 'text' }, icon('lock', 20), h('span', { class: 'grow' }, 'Mes albums privés'),
+        me.album_requests ? h('span', { class: 'chip blue' }, String(me.album_requests)) : null, icon('chevron', 16, '#575656')),
+      h('a', { href: '#/me/location', class: 'text' }, icon('map', 20), h('span', { class: 'grow' }, 'Ma position'),
+        h('span', { class: 'small' }, placeLabel(me)), icon('chevron', 16, '#575656')),
+      h('a', { href: '#/me/notices', class: 'text' }, icon('flag', 20), h('span', { class: 'grow' }, 'Décisions de modération'), icon('chevron', 16, '#575656'))),
     h('span', { class: 'section-label' }, 'Confidentialité'),
     h('div', { class: 'list' },
       toggle('show_distance', 'Afficher ma distance'),
@@ -74,7 +74,7 @@ function installCard() {
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   return [h('span', { class: 'section-label' }, 'Sur ton téléphone'),
     h('div', { class: 'card pad stack' },
-      h('div', { class: 'row' }, icon('install', 20, '#2997ff'), h('span', { class: 'strong grow' }, `Installer ${brand().name}`)),
+      h('div', { class: 'row' }, icon('install', 20), h('span', { class: 'strong grow' }, `Installer ${brand().name}`)),
       h('p', { class: 'small text2' }, ios ? 'Dans Safari : touche Partager, puis « Sur l’écran d’accueil ». L’icône s’ajoute comme une app, sans App Store.'
         : 'Ajoute l’icône à ton écran d’accueil ou à ton ordinateur, sans magasin d’applications.'),
       installPrompt ? h('button', { class: 'btn primary block', onclick: async () => {
@@ -181,7 +181,7 @@ export async function screenEditProfile() {
     h('div', { class: 'field-row' }, h('label', null, 'Taille du sexe (cm)', c.endowment), h('label', null, 'Circoncision', c.cut)),
     h('label', { class: 'stack small-gap' }, h('span', { class: 'small' }, 'Qui voit mon côté intime, mes pratiques et cette taille'), intVis),
     h('div', { class: 'card pad stack health-box' },
-      h('div', { class: 'row' }, icon('shield', 18, '#2997ff'), h('span', { class: 'strong grow' }, 'Santé sexuelle (facultatif)')),
+      h('div', { class: 'row' }, icon('shield', 18), h('span', { class: 'strong grow' }, 'Santé sexuelle (facultatif)')),
       h('p', { class: 'small text2' }, 'Statut VIH et date de dépistage sont des données de santé. Elles ne sont enregistrées qu’avec ton accord, montrées aux seules personnes que tu choisis, jamais transmises à un tiers ni utilisées pour de la publicité. Tu peux retirer ton accord à tout moment : elles sont alors effacées.'),
       h('div', { class: 'field-row' }, h('label', null, 'Statut VIH', c.hiv), h('label', null, 'Dernier dépistage', c.lastTest)),
       h('label', { class: 'stack small-gap' }, h('span', { class: 'small' }, 'Qui voit ces informations'), c.healthVis),
@@ -233,7 +233,7 @@ export async function screenMyAlbums() {
       go(`#/me/albums/${r.id}`);
     } }, name, h('button', { class: 'btn primary small', type: 'submit' }, 'Créer')),
     albums.length ? h('div', { class: 'grid2' }, albums.map((a) => h('a', { href: `#/me/albums/${a.id}`, class: 'stack text small-gap' },
-      h('div', { class: 'album-cover' }, a.photos[0] ? h('img', { src: `/photos/${a.photos[0]}`, alt: '' }) : icon('image', 28, '#86868b')),
+      h('div', { class: 'album-cover' }, a.photos[0] ? h('img', { src: `/photos/${a.photos[0]}`, alt: '' }) : icon('image', 28, '#575656')),
       h('span', { class: 'strong' }, a.name),
       h('span', { class: 'small' }, `${a.photos.length} photo${a.photos.length > 1 ? 's' : ''}${a.shares.length ? ` · partagé avec ${a.shares.length}` : ''}`))))
       : h('p', { class: 'empty' }, 'Aucun album pour le moment.'),
@@ -307,7 +307,7 @@ export async function screenPlus() {
   const accept = h('input', { type: 'checkbox' });
   let action;
   if (!b.payments_enabled) {
-    action = h('div', { class: 'notice' }, icon('heart', 18, '#2997ff'), `Pendant le lancement, ${brand().name} est entièrement gratuit : tout est offert.`);
+    action = h('div', { class: 'notice' }, icon('heart', 18), `Pendant le lancement, ${brand().name} est entièrement gratuit : tout est offert.`);
   } else if (b.offered) {
     action = h('div', { class: 'notice' }, `${brand().plus} t’est offert par l’équipe.`);
   } else if (b.subscription) {

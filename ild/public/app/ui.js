@@ -23,6 +23,10 @@ export function mount(...nodes) {
     list.push(bar);
     hasNav = true;
   }
+  // Avant d'être membre (connexion, inscription, dossier en cours), il n'y a pas de navigation : un bandeau porte le nom et ramène au site.
+  if (!hasNav && isLive() && state.me?.status !== 'member') {
+    list.unshift(h('header', { class: 'brand-band' }, h('a', { href: document.querySelector('meta[name="site-home"]')?.content || '/' }, brand().name)));
+  }
   document.body.classList.toggle('has-nav', hasNav);
   root.replaceChildren(...list);
   window.scrollTo(0, 0);

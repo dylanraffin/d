@@ -7,7 +7,7 @@ export function screenWelcome() {
   mount(h('main', { class: 'screen' },
     h('div', { class: 'media', style: { height: '40vh', minHeight: '240px' } },
       h('div', { class: 'grid2', style: { position: 'absolute', inset: '8px', gridTemplateRows: '1fr 1fr' } },
-        ['#2c2c2e', '#242426', '#262628', '#2e2e30'].map((c) => h('div', { style: { borderRadius: '20px', background: c } })))),
+        ['#ffdb5b', '#f3f3f3', '#e8e8e8', '#fff386'].map((c) => h('div', { style: { borderRadius: '20px', background: c } })))),
     h('div', { class: 'stack', style: { padding: '0 4px', flex: '1' } },
       h('span', { class: 'muted brand' }, 'ILD'),
       h('h1', { class: 'big' }, 'Paris.', h('br'), 'Sur invitation.'),
@@ -113,7 +113,7 @@ export function screenSignup() {
       h('label', { class: 'stack small-gap' }, h('span', { class: 'small' }, 'Qui la voit'), posVis),
       h('h2', null, 'Côté intime'), h('p', { class: 'small' }, 'Facultatif.'), intimate.el,
       h('label', { class: 'stack small-gap' }, h('span', { class: 'small' }, 'Qui les voit'), intVis),
-      h('div', { class: 'notice' }, icon('shield', 18, '#2997ff'), 'Ces informations concernent ta vie sexuelle : elles restent facultatives, tu choisis qui les voit et tu peux les effacer à tout moment.')
+      h('div', { class: 'notice' }, icon('shield', 18), 'Ces informations concernent ta vie sexuelle : elles restent facultatives, tu choisis qui les voit et tu peux les effacer à tout moment.')
     ];
     validate = () => {
       if (tastes.values().length < 3) return 'Choisis au moins 3 goûts.';
@@ -181,10 +181,10 @@ export function screenVerify() {
       h('li', null, h('span', { class: 'step-dot now' }, '1'), h('span', { class: 'grow' }, "Photo de ta pièce d'identité")),
       h('li', null, h('span', { class: 'step-dot todo' }, '2'), h('span', { class: 'grow' }, 'Selfie vidéo de quelques secondes')),
       h('li', null, h('span', { class: 'step-dot todo' }, '3'), h('span', { class: 'grow' }, 'Résultat immédiat'))),
-    h('div', { class: 'row top' }, icon('shield', 18, '#86868b'),
+    h('div', { class: 'row top' }, icon('shield', 18, '#575656'),
       h('p', { class: 'small' }, `Le contrôle est fait par un prestataire certifié. Ta pièce n'est jamais montrée aux membres ni conservée par ${brand().name} : seul le résultat (vérifié, majeur) est gardé.`)),
     status === 'failed' ? h('div', { class: 'notice warn' }, "La vérification n'a pas abouti. Vérifie la lumière et que ta pièce est lisible, puis réessaie.") : null,
-    status === 'submitted' ? h('div', { class: 'notice' }, icon('clock', 18, '#2997ff'), 'Vérification commencée. Si tu as quitté le parcours, relance-la.') : null,
+    status === 'submitted' ? h('div', { class: 'notice' }, icon('clock', 18), 'Vérification commencée. Si tu as quitté le parcours, relance-la.') : null,
     h('div', { class: 'grow' }),
     h('button', { class: 'btn primary block', onclick: start }, status === 'none' ? 'Vérifier mon âge' : 'Relancer la vérification'),
     h('button', { class: 'btn ghost', onclick: logout }, 'Se déconnecter')));
@@ -196,7 +196,7 @@ export function screenWaitlist() {
   const c = me.checks;
   const step = (label, st, extra, href) => h(href ? 'a' : 'div', { href, class: href ? 'link-row' : null },
     h('span', { class: `step-dot ${st}` }, st === 'done' ? icon('check', 13) : ''), h('span', { class: 'grow' }, label),
-    extra ? h('span', { class: 'small' }, extra) : null, href ? icon('chevron', 16, '#86868b') : null);
+    extra ? h('span', { class: 'small' }, extra) : null, href ? icon('chevron', 16, '#575656') : null);
   const share = async () => {
     const text = `Parraine-moi sur ILD avec mon code : ${me.referral_code}`;
     try {
