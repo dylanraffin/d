@@ -6,11 +6,11 @@ from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
 S = 2                      # dessin à double taille, réduit ensuite : bords nets
 W, H = 600 * S, 800 * S
-BACKGROUNDS = [(229, 233, 255), (243, 243, 243), (246, 239, 224), (234, 217, 189), (207, 216, 250), (220, 214, 204), (237, 201, 172), (59, 59, 59),
-               (232, 232, 232), (240, 228, 210), (226, 205, 178), (214, 221, 245)]
+BACKGROUNDS = [(236, 239, 254), (241, 243, 250), (246, 239, 224), (234, 220, 198), (215, 222, 252), (226, 222, 214), (240, 212, 190), (203, 211, 244),
+               (232, 234, 242), (242, 232, 216), (230, 213, 190), (222, 228, 250)]
 SKINS = [(241, 201, 165), (224, 172, 134), (198, 142, 99), (168, 115, 74), (138, 90, 56), (107, 66, 38), (246, 215, 189), (212, 154, 106)]
 HAIRS = [(32, 32, 32), (59, 42, 32), (90, 61, 40), (42, 42, 42), (122, 90, 58), (176, 138, 90), (138, 138, 138)]
-SHIRTS = [(32, 32, 32), (255, 255, 255), (207, 207, 207), (59, 59, 59), (246, 239, 224), (87, 86, 86)]
+SHIRTS = [(52, 57, 96), (255, 255, 255), (206, 210, 226), (84, 90, 128), (246, 239, 224), (124, 134, 182)]
 
 
 def shade(color, k):
@@ -85,7 +85,7 @@ def make(seed, kind, path):
         img.paste(Image.new('RGB', (W, H), color), (0, 0), cap)
     # lumière sur la silhouette, du même côté que celle du fond
     img = Image.composite(Image.new('RGB', (W, H), (255, 255, 255)), img, light((W, H), (cx + side * rx * 0.9, hy - ry * 0.2), rx * 1.5, 0.16))
-    img = Image.composite(Image.new('RGB', (W, H), (32, 32, 32)), img, light((W, H), (cx - side * sw * 0.8, sy + 360 * S), 300 * S, 0.14))
+    img = Image.composite(Image.new('RGB', (W, H), (34, 38, 75)), img, light((W, H), (cx - side * sw * 0.8, sy + 360 * S), 300 * S, 0.08))
     img = img.resize((450, 600), Image.LANCZOS)
     grain = Image.effect_noise((450, 600), 9).convert('RGB')
     img = Image.blend(img, ImageChops.overlay(img, grain), 0.22)

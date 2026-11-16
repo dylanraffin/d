@@ -1,14 +1,14 @@
 /* Habillage de la démo : bandeau sur la page d'accueil, étiquette discrète dans l'app. */
-.demo-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 16px; background: #202020; color: #fff;
+.demo-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 16px; background: #22264b; color: #fff;
   font: 500 15px/1.4 "DM Sans", Inter, system-ui, sans-serif; letter-spacing: 0.007em; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); text-align: center; }
-.demo-bar a { color: #202020; background: #fff; border-radius: 12px; padding: 6px 14px; text-decoration: none; font-weight: 600; white-space: nowrap; }
-.demo-tag { position: fixed; z-index: 3000; top: 2px; left: 50%; transform: translateX(-50%); padding: 1px 8px; border-radius: 1000px; background: #fff;
-  color: #202020; font: 600 10px/1.4 "DM Sans", Inter, system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; pointer-events: none; white-space: nowrap; }
+.demo-bar a { color: #22264b; background: #fff; border-radius: 12px; padding: 6px 14px; text-decoration: none; font-weight: 600; white-space: nowrap; }
+.demo-tag { position: fixed; z-index: 3000; top: 2px; left: 50%; transform: translateX(-50%); padding: 1px 8px; border-radius: 1000px; background: #22264b;
+  color: #fff; font: 600 10px/1.4 "DM Sans", Inter, system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; pointer-events: none; white-space: nowrap; }
 @media (min-width: 900px) { .demo-tag { top: 26px; font-size: 11px; padding: 3px 10px; } }
-.map-label { color: #575656; font: 600 10px/1 "DM Sans", Inter, system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; text-shadow: 0 1px 2px #fff; pointer-events: none; }
-.map-label.water { color: #3b3b3b; font-style: italic; letter-spacing: 0.2em; }
-.map-label.park { color: #575656; }
+.map-label { color: #5c6085; font: 600 10px/1 "DM Sans", Inter, system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; text-shadow: 0 1px 2px #fff; pointer-events: none; }
+.map-label.water { color: #3c4064; font-style: italic; letter-spacing: 0.2em; }
+.map-label.park { color: #5c6085; }
 .map-label { text-align: center; }
 /* Dans l'app Claude sur téléphone : l'en-tête collant se cale sous la barre du système, et la bande au-dessus prend la couleur du bandeau de démo. */
 .demo-bar ~ .site-header { top: env(safe-area-inset-top, 0px); padding-top: 0; }
-body:has(> .demo-bar)::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: #202020; }
+body:has(> .demo-bar)::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: #22264b; }

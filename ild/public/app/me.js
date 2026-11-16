@@ -28,10 +28,10 @@ export async function screenMe() {
     h('a', { class: 'notice', href: '#/plus' }, h('span', { class: 'plus-mark' }, brand().name, h('span', null, '+')), h('span', { class: 'grow' }, plusText), icon('chevron', 16)),
     h('div', { class: 'list' },
       h('a', { href: '#/me/albums', class: 'text' }, icon('lock', 20), h('span', { class: 'grow' }, 'Mes albums privés'),
-        me.album_requests ? h('span', { class: 'chip blue' }, String(me.album_requests)) : null, icon('chevron', 16, '#575656')),
+        me.album_requests ? h('span', { class: 'chip blue' }, String(me.album_requests)) : null, icon('chevron', 16, '#5c6085')),
       h('a', { href: '#/me/location', class: 'text' }, icon('map', 20), h('span', { class: 'grow' }, 'Ma position'),
-        h('span', { class: 'small' }, placeLabel(me)), icon('chevron', 16, '#575656')),
-      h('a', { href: '#/me/notices', class: 'text' }, icon('flag', 20), h('span', { class: 'grow' }, 'Décisions de modération'), icon('chevron', 16, '#575656'))),
+        h('span', { class: 'small' }, placeLabel(me)), icon('chevron', 16, '#5c6085')),
+      h('a', { href: '#/me/notices', class: 'text' }, icon('flag', 20), h('span', { class: 'grow' }, 'Décisions de modération'), icon('chevron', 16, '#5c6085'))),
     h('span', { class: 'section-label' }, 'Confidentialité'),
     h('div', { class: 'list' },
       toggle('show_distance', 'Afficher ma distance'),
@@ -233,7 +233,7 @@ export async function screenMyAlbums() {
       go(`#/me/albums/${r.id}`);
     } }, name, h('button', { class: 'btn primary small', type: 'submit' }, 'Créer')),
     albums.length ? h('div', { class: 'grid2' }, albums.map((a) => h('a', { href: `#/me/albums/${a.id}`, class: 'stack text small-gap' },
-      h('div', { class: 'album-cover' }, a.photos[0] ? h('img', { src: `/photos/${a.photos[0]}`, alt: '' }) : icon('image', 28, '#575656')),
+      h('div', { class: 'album-cover' }, a.photos[0] ? h('img', { src: `/photos/${a.photos[0]}`, alt: '' }) : icon('image', 28, '#5c6085')),
       h('span', { class: 'strong' }, a.name),
       h('span', { class: 'small' }, `${a.photos.length} photo${a.photos.length > 1 ? 's' : ''}${a.shares.length ? ` · partagé avec ${a.shares.length}` : ''}`))))
       : h('p', { class: 'empty' }, 'Aucun album pour le moment.'),

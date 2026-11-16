@@ -161,7 +161,7 @@ export async function screenProfile(id) {
   if (p.albums.shared.length) {
     albums = h('div', { class: 'list' }, p.albums.shared.map((s) => h('a', { href: `#/shared/${s.share_id}`, class: 'text' },
       icon('lock', 18), h('span', { class: 'grow' }, `${s.name} · ${s.count} photo${s.count > 1 ? 's' : ''}`),
-      h('span', { class: 'small' }, s.expires_at ? `jusqu'au ${fmtDate(s.expires_at)}` : ''), icon('chevron', 16, '#575656'))));
+      h('span', { class: 'small' }, s.expires_at ? `jusqu'au ${fmtDate(s.expires_at)}` : ''), icon('chevron', 16, '#5c6085'))));
   } else if (p.albums.count) {
     albums = h('div', { class: 'card bordered row pad' }, icon('lock', 20),
       h('div', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, `${p.albums.count} album${p.albums.count > 1 ? 's' : ''} privé${p.albums.count > 1 ? 's' : ''}`),
@@ -306,9 +306,9 @@ export async function screenAround() {
   const map = L.map(mapBox, { zoomControl: true, attributionControl: true }).setView(center, 13);
   onLeave(() => map.remove());
   L.tileLayer(state.meta.map.url, { maxZoom: 16, minZoom: 9, attribution: state.meta.map.attribution }).addTo(map);
-  if (d.me) L.circleMarker(center, { radius: 7, color: '#ffffff', weight: 3, fillColor: '#202020', fillOpacity: 1 }).addTo(map).bindTooltip(tr('Toi (position arrondie)'));
+  if (d.me) L.circleMarker(center, { radius: 7, color: '#ffffff', weight: 3, fillColor: cssVar('--text'), fillOpacity: 1 }).addTo(map).bindTooltip(tr('Toi (position arrondie)'));
   for (const z of d.zones) {
-    L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: cssVar('--accent'), weight: 1.5, opacity: 0.6, dashArray: '3 7', fillColor: cssVar('--accent'), fillOpacity: z.size_km <= 2 ? 0.1 : 0 }).addTo(map);
+    L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: cssVar('--accent-mark'), weight: 1.5, opacity: 0.6, dashArray: '3 7', fillColor: cssVar('--accent-mark'), fillOpacity: z.size_km <= 2 ? 0.1 : 0 }).addTo(map);
     const el = h('button', { class: 'zone-count', 'aria-label': `${z.count} membres dans cette zone` }, String(z.count));
     const marker = L.marker([z.lat, z.lng], { icon: L.divIcon({ html: el, className: 'zone-icon', iconSize: [44, 44] }), keyboard: true }).addTo(map);
     marker.on('click', () => sheet((close) => [
@@ -373,7 +373,7 @@ async function conversationAside(activeId) {
       h('div', { class: 'list' }, received.shares.map((s) => h('a', { href: `#/shared/${s.share_id}`, class: 'text' }, icon('lock', 18),
         h('span', { class: 'grow' }, `${s.name} · ${s.owner.first_name}`), h('span', { class: 'small' }, s.expires_at ? `jusqu'au ${fmtDate(s.expires_at)}` : ''))))] : null,
     d.matches.length ? h('div', { class: 'list' }, d.matches.map((m) => h('a', { href: `#/chat/${m.id}`, class: 'text tall', 'aria-current': String(m.id) === String(activeId) ? 'page' : null,
-      style: String(m.id) === String(activeId) ? { background: '#f3f3f3' } : null },
+      style: String(m.id) === String(activeId) ? { background: 'var(--raised)' } : null },
       avatar(m.user.photo, m.user.first_name),
       h('div', { class: 'grow stack small-gap ellipsis-box' }, h('span', { class: 'strong' }, raw(m.user.first_name)),
         m.last ? h('span', { class: 'small ellipsis' }, m.last.mine ? 'Toi : ' : null, ['Photo', 'Photo retirée', 'Message retiré par la modération'].includes(m.last.body) ? m.last.body : raw(m.last.body))

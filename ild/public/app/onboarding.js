@@ -181,7 +181,7 @@ export function screenVerify() {
       h('li', null, h('span', { class: 'step-dot now' }, '1'), h('span', { class: 'grow' }, "Photo de ta pièce d'identité")),
       h('li', null, h('span', { class: 'step-dot todo' }, '2'), h('span', { class: 'grow' }, 'Selfie vidéo de quelques secondes')),
       h('li', null, h('span', { class: 'step-dot todo' }, '3'), h('span', { class: 'grow' }, 'Résultat immédiat'))),
-    h('div', { class: 'row top' }, icon('shield', 18, '#575656'),
+    h('div', { class: 'row top' }, icon('shield', 18, '#5c6085'),
       h('p', { class: 'small' }, `Le contrôle est fait par un prestataire certifié. Ta pièce n'est jamais montrée aux membres ni conservée par ${brand().name} : seul le résultat (vérifié, majeur) est gardé.`)),
     status === 'failed' ? h('div', { class: 'notice warn' }, "La vérification n'a pas abouti. Vérifie la lumière et que ta pièce est lisible, puis réessaie.") : null,
     status === 'submitted' ? h('div', { class: 'notice' }, icon('clock', 18), 'Vérification commencée. Si tu as quitté le parcours, relance-la.') : null,
@@ -196,7 +196,7 @@ export function screenWaitlist() {
   const c = me.checks;
   const step = (label, st, extra, href) => h(href ? 'a' : 'div', { href, class: href ? 'link-row' : null },
     h('span', { class: `step-dot ${st}` }, st === 'done' ? icon('check', 13) : ''), h('span', { class: 'grow' }, label),
-    extra ? h('span', { class: 'small' }, extra) : null, href ? icon('chevron', 16, '#575656') : null);
+    extra ? h('span', { class: 'small' }, extra) : null, href ? icon('chevron', 16, '#5c6085') : null);
   const share = async () => {
     const text = `Parraine-moi sur ILD avec mon code : ${me.referral_code}`;
     try {
