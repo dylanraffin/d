@@ -146,7 +146,7 @@ writeFileSync(join(OUT, 'carte.html'), `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffdb5b">
+<meta name="theme-color" content="#1a35e0">
 <meta name="robots" content="noindex">
 <meta name="site-home" content="index.html">
 <title>${meta.brand.name} · démo</title>

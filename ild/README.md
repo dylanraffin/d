@@ -2,7 +2,7 @@
 
 La carte du cruising entre mecs : qui est dispo autour de toi, maintenant. **Site d'abord** (pas de magasin d'applications), installable depuis le navigateur, en français et en anglais, avec son back office.
 
-**Style « miel »** : pages blanches, encre presque noire (`#202020`) pour le texte, les bordures et les actions, un seul jaune (`#ffdb5b`) en grands aplats et pour l'état « dispo », une seule police (DM Sans), coins doux (16 à 24 px), une seule ombre légère. Aucune autre couleur dans l'interface : ce sont les photos qui portent la couleur. Les jetons sont en tête de `public/app/app.css` (app) et de `public/live/site.css` (site). Le back office garde son thème sombre.
+**Style « outremer »** : pages blanches, encre presque noire (`#202020`) pour le texte, les bordures et les actions, un seul bleu (`#1a35e0`) en grands aplats, pour l'état « dispo » et pour ce qui est à soi (ses messages, ses non-lus) ; sur le bleu, le texte et le bouton plein sont blancs. Une seule police (DM Sans), coins doux (16 à 24 px), une seule ombre légère. Aucune autre couleur dans l'interface : ce sont les photos qui la portent. Pour changer d'accent, deux valeurs suffisent, `--accent` et `--accent-soft`, en tête de `public/app/app.css` (app) et de `public/live/site.css` (site) ; il reste alors à refaire les icônes et les captures de l'accueil. Le back office garde son thème sombre.
 
 Le même code fait tourner **deux produits** :
 

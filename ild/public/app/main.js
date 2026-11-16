@@ -2,7 +2,7 @@
 import { api, h, icon, toast, fmtDate, ago, fileToJpeg, raw } from '/shared/lib.js';
 import { tr } from '/shared/i18n.js';
 import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, chips, select, sheet, nav, reportSheet, label, isLive, isWide, brand,
-  personSummary, presenceText, statusLine, cruiseRows, veil } from './ui.js';
+  personSummary, presenceText, statusLine, cruiseRows, veil, cssVar } from './ui.js';
 
 const DURATION_LABEL = { '1h': '1 heure', '24h': '24 heures', '7d': '7 jours', forever: "Jusqu'à ce que je retire" };
 const DISTANCES = { '': 'Toutes', 1: 'Moins de 1 km', 2: 'Moins de 2 km', 5: 'Moins de 5 km', 10: 'Moins de 10 km', 25: 'Moins de 25 km' };
@@ -79,7 +79,7 @@ export async function screenDiscover() {
             p.position ? h('span', { class: 'mini-chip' }, label('positions', p.position)) : null,
             p.seeking.slice(0, 2).map((s) => h('span', { class: 'mini-chip' }, label('seeking', s))),
             p.vouched_by.length ? h('span', { class: 'tag-blue' }, `Parrainé par ${p.vouched_by[0]}${p.vouched_by.length > 1 ? ` +${p.vouched_by.length - 1}` : ''}`) : null,
-            p.travel ? h('span', { class: 'tag-yellow' }, `De passage ${fmtDate(Date.parse(p.travel.from), false)} – ${fmtDate(Date.parse(p.travel.to), false)}`) : null)));
+            p.travel ? h('span', { class: 'tag-accent' }, `De passage ${fmtDate(Date.parse(p.travel.from), false)} – ${fmtDate(Date.parse(p.travel.to), false)}`) : null)));
     }
     const decide = async (value) => {
       const r = await run(() => api('POST', '/api/likes', { to_id: p.id, value }));
@@ -181,7 +181,7 @@ export async function screenProfile(id) {
     p.presence ? h('div', { class: 'notice live-presence' }, h('span', { class: 'live-dot', 'aria-hidden': 'true' }), h('span', { class: 'grow' }, presenceText(p.presence))) : null,
     summary ? h('p', { class: 'lead text' }, summary) : null,
     p.vouched_by.length ? h('p', { class: 'small text2' }, h('span', { class: 'tag-blue' }, 'Parrainé'), ` par ${p.vouched_by.join(', ')}`) : null,
-    p.travel ? h('p', { class: 'small tag-yellow' }, `De passage à ${p.travel.city} du ${fmtDate(Date.parse(p.travel.from), false)} au ${fmtDate(Date.parse(p.travel.to), false)}`) : null,
+    p.travel ? h('p', { class: 'small tag-accent' }, `De passage à ${p.travel.city} du ${fmtDate(Date.parse(p.travel.from), false)} au ${fmtDate(Date.parse(p.travel.to), false)}`) : null,
     p.bio ? h('p', { class: 'lead' }, raw(p.bio)) : null,
     p.prompt_answer ? h('div', { class: 'card pad stack small-gap' }, h('span', { class: 'small' }, 'Un dimanche parfait…'), h('span', null, raw(p.prompt_answer))) : null,
     isLive() ? cruiseRows(p) : null,
@@ -308,7 +308,7 @@ export async function screenAround() {
   L.tileLayer(state.meta.map.url, { maxZoom: 16, minZoom: 9, attribution: state.meta.map.attribution }).addTo(map);
   if (d.me) L.circleMarker(center, { radius: 7, color: '#ffffff', weight: 3, fillColor: '#202020', fillOpacity: 1 }).addTo(map).bindTooltip(tr('Toi (position arrondie)'));
   for (const z of d.zones) {
-    L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: '#202020', weight: 1, opacity: 0.55, dashArray: '3 7', fillColor: '#ffdb5b', fillOpacity: z.size_km <= 2 ? 0.22 : 0 }).addTo(map);
+    L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: cssVar('--accent'), weight: 1.5, opacity: 0.6, dashArray: '3 7', fillColor: cssVar('--accent'), fillOpacity: z.size_km <= 2 ? 0.1 : 0 }).addTo(map);
     const el = h('button', { class: 'zone-count', 'aria-label': `${z.count} membres dans cette zone` }, String(z.count));
     const marker = L.marker([z.lat, z.lng], { icon: L.divIcon({ html: el, className: 'zone-icon', iconSize: [44, 44] }), keyboard: true }).addTo(map);
     marker.on('click', () => sheet((close) => [

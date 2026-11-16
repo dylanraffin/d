@@ -8,6 +8,8 @@ export const state = { me: null, meta: null, mode: 'dating', filters: {}, around
 export function setNav(items, extra) { state.navItems = items; state.navExtra = extra || null; }
 export const brand = () => state.meta?.brand || { name: 'ILD', plus: 'ILD+' };
 export const isLive = () => state.meta?.edition === 'cruise';
+// Couleur du thème lue dans la feuille de style : la carte dessine avec les mêmes jetons que le reste de l'interface.
+export const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 // Écran large (ordinateur, tablette en paysage) : navigation en haut, panneaux latéraux.
 export const isWide = () => window.matchMedia('(min-width: 900px)').matches;
 export const root = document.getElementById('app');

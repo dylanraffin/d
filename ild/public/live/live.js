@@ -3,7 +3,7 @@
 import { api, h, icon, toast, fmtDate, raw } from '/shared/lib.js';
 import { tr } from '/shared/i18n.js';
 import { state, mount, go, run, refreshMe, runCleanup, onLeave, sheet, chips, select, nav, reportSheet, setNav, label, brand, avatar, backBtn, clean,
-  isWide, hhmm, personSummary, presenceText, statusLine, cruiseRows, placeSelect, veil } from '/app/ui.js';
+  isWide, hhmm, personSummary, presenceText, statusLine, cruiseRows, placeSelect, veil, cssVar } from '/app/ui.js';
 import { screenLogin, screenSignup, screenVerify, screenNotices, screenConsentUpdate } from '/app/onboarding.js';
 import { screenProfile, screenSharedAlbum, screenMessages, screenChat, filterQuery, filterButton } from '/app/main.js';
 import { screenMe, screenEditProfile, screenMyAlbums, screenAlbumDetail, screenPlus, screenLocation, adminHint } from '/app/me.js';
@@ -54,7 +54,7 @@ function presenceSheet(after) {
       h('span', { class: 'section-label' }, 'Pendant'), dur.el,
       h('span', { class: 'section-label' }, 'Comment'), place.el,
       note,
-      h('p', { class: 'small' }, 'Ta photo se cercle de jaune sur la carte et tu passes en tête de liste. Ça s’éteint tout seul.'),
+      h('p', { class: 'small' }, 'Ta photo s’allume sur la carte et tu passes en tête de liste. Ça s’éteint tout seul.'),
       h('button', { class: 'btn primary block', onclick: async () => {
         await run(() => api('PUT', '/api/me/presence', { minutes: Number(dur.value() || 60), place: place.value(), note: note.value }), 'Tu es dispo.');
         await refreshMe(); close(); after?.();
@@ -445,7 +445,7 @@ async function screenMap() {
           h('span', { class: 'who' }, h('b', null, `${x.first_name}, ${x.age}`), h('span', null, rowSub(x))), x.presence ? h('span', { class: 'live-dot', 'aria-label': 'Dispo' }) : null))),
         h('button', { class: 'btn ghost', onclick: close }, 'Fermer')]);
       for (const z of d.zones) {
-        L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: '#202020', weight: 1, opacity: 0.55, dashArray: '3 7', fillColor: '#ffdb5b', fillOpacity: z.size_km <= 2 ? 0.22 : 0 }).addTo(layer);
+        L.circle([z.lat, z.lng], { radius: z.size_km * 450, color: cssVar('--accent'), weight: 1.5, opacity: 0.6, dashArray: '3 7', fillColor: cssVar('--accent'), fillOpacity: z.size_km <= 2 ? 0.1 : 0 }).addTo(layer);
         L.marker([z.lat, z.lng], { icon: divIcon(h('button', { class: 'zone-count', 'aria-label': `${z.count} membres dans cette zone` }, String(z.count)), 44) }).addTo(layer).on('click', () => zoneSheet(z));
       }
       for (const s of d.spots) L.marker([s.lat, s.lng], { icon: divIcon(spotEl(s), 40) }).addTo(layer).on('click', () => spotSheet(s, load));

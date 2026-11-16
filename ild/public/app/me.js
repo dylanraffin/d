@@ -293,7 +293,7 @@ export async function screenPlus() {
     const from = h('input', { class: 'input', type: 'date', value: me.travel_from || '', 'aria-label': 'Arrivée' });
     const to = h('input', { class: 'input', type: 'date', value: me.travel_to || '', 'aria-label': 'Départ' });
     return h('div', { class: 'card pad stack' },
-      h('div', { class: 'row between' }, h('h2', null, 'Mode voyage'), h('span', { class: 'tag-yellow small' }, 'Voyage')),
+      h('div', { class: 'row between' }, h('h2', null, 'Mode voyage'), h('span', { class: 'tag-accent small' }, 'Voyage')),
       city, h('div', { class: 'grid2' }, from, to),
       h('p', { class: 'small' }, 'Les membres de cette ville te voient quelques jours avant ton arrivée.'),
       h('div', { class: 'row' },

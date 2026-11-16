@@ -47,7 +47,7 @@ export function webManifest(config) {
     display: 'standalone',
     orientation: 'any',
     background_color: '#ffffff',
-    theme_color: '#ffdb5b',
+    theme_color: '#1a35e0',
     categories: ['social', 'lifestyle'],
     icons: cruise ? [
       { src: `${dir}/icon.svg`, sizes: 'any', type: 'image/svg+xml' },

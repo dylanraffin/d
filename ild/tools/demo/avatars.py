@@ -1,13 +1,13 @@
 # Photos de démonstration : portraits dessinés, sans visage (aucune personne réelle).
-# Style « miel » : aplats clairs et chauds, lumière de jour, quelques fonds miel. Elles tiennent la place des vraies photos.
+# Aplats clairs, lumière de jour : neutres chauds, gris et quelques bleus pâles. Elles tiennent la place des vraies photos.
 #   python3 tools/demo/avatars.py server/seed-assets
 import random, sys
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
 S = 2                      # dessin à double taille, réduit ensuite : bords nets
 W, H = 600 * S, 800 * S
-BACKGROUNDS = [(255, 219, 91), (243, 243, 243), (246, 239, 224), (234, 217, 189), (255, 243, 134), (220, 214, 204), (237, 201, 172), (59, 59, 59),
-               (232, 232, 232), (250, 232, 180), (226, 205, 178), (255, 219, 91)]
+BACKGROUNDS = [(229, 233, 255), (243, 243, 243), (246, 239, 224), (234, 217, 189), (207, 216, 250), (220, 214, 204), (237, 201, 172), (59, 59, 59),
+               (232, 232, 232), (240, 228, 210), (226, 205, 178), (214, 221, 245)]
 SKINS = [(241, 201, 165), (224, 172, 134), (198, 142, 99), (168, 115, 74), (138, 90, 56), (107, 66, 38), (246, 215, 189), (212, 154, 106)]
 HAIRS = [(32, 32, 32), (59, 42, 32), (90, 61, 40), (42, 42, 42), (122, 90, 58), (176, 138, 90), (138, 138, 138)]
 SHIRTS = [(32, 32, 32), (255, 255, 255), (207, 207, 207), (59, 59, 59), (246, 239, 224), (87, 86, 86)]

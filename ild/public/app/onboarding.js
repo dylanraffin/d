@@ -7,7 +7,7 @@ export function screenWelcome() {
   mount(h('main', { class: 'screen' },
     h('div', { class: 'media', style: { height: '40vh', minHeight: '240px' } },
       h('div', { class: 'grid2', style: { position: 'absolute', inset: '8px', gridTemplateRows: '1fr 1fr' } },
-        ['#ffdb5b', '#f3f3f3', '#e8e8e8', '#fff386'].map((c) => h('div', { style: { borderRadius: '20px', background: c } })))),
+        ['var(--accent)', 'var(--raised)', 'var(--raised-2)', 'var(--accent-soft)'].map((c) => h('div', { style: { borderRadius: '20px', background: c } })))),
     h('div', { class: 'stack', style: { padding: '0 4px', flex: '1' } },
       h('span', { class: 'muted brand' }, 'ILD'),
       h('h1', { class: 'big' }, 'Paris.', h('br'), 'Sur invitation.'),
