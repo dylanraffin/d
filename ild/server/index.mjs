@@ -18,6 +18,7 @@ import { registerAdminRoutes } from './admin.mjs';
 import { registerLiveRoutes } from './live.mjs';
 import { registerCruiseRoutes } from './cruise.mjs';
 import { registerPlanRoutes } from './plans.mjs';
+import { registerLivePlayRoutes } from './liveplay.mjs';
 import { renderLanding, webManifest, preferredLang, blockedPage } from './site.mjs';
 import { getSetting } from './db.mjs';
 
@@ -34,7 +35,13 @@ export function createApp(options = {}) {
     rateLimit: options.rateLimit ?? true,
     // « cruise » (par défaut) : Nuit, la carte du cruising, ouverte à tous les adultes vérifiés. Site d'abord.
     // « club » : ILD, rencontre sur invitation (liste d'attente, parrainages, comité).
-    edition: (options.edition || process.env.ILD_EDITION) === 'club' ? 'club' : 'cruise'
+    edition: (options.edition || process.env.ILD_EDITION) === 'club' ? 'club' : 'cruise',
+    // LivePlay : serveur STUN (découverte d'adresse) et relais TURN facultatif. Avec le relais, les adresses IP restent cachées.
+    ice: {
+      stun: options.stunUrls ?? process.env.ILD_STUN_URLS ?? 'stun:stun.cloudflare.com:3478',
+      turnUrls: options.turnUrls ?? process.env.ILD_TURN_URLS ?? '',
+      turnSecret: options.turnSecret ?? process.env.ILD_TURN_SECRET ?? ''
+    }
   };
   const brandName = options.brand || process.env.ILD_BRAND || (config.edition === 'cruise' ? 'Nuit' : 'ILD');
   config.brand = { name: brandName, plus: `${brandName}+` };
@@ -45,7 +52,7 @@ export function createApp(options = {}) {
   const router = new Router();
   for (const register of [registerMemberRoutes, registerAlbumRoutes, registerNearbyRoutes, registerBillingRoutes,
     registerVerificationRoutes, registerNoticeRoutes, registerLegalRoutes, registerAdminRoutes, registerLiveRoutes,
-    registerCruiseRoutes, registerPlanRoutes]) register(router);
+    registerCruiseRoutes, registerPlanRoutes, registerLivePlayRoutes]) register(router);
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');

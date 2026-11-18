@@ -1,6 +1,7 @@
 // Écrans principaux : Découvrir, profil, Autour (grille et carte), Ce soir, messages, albums reçus.
 import { api, h, icon, toast, fmtDate, ago, fileToJpeg, raw } from '/shared/lib.js';
 import { tr } from '/shared/i18n.js';
+import { startCall } from './liveplay.js';
 import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, avatarOf, chips, select, sheet, nav, reportSheet, label, isLive, isWide, brand,
   personSummary, presenceText, statusLine, cruiseRows, veil, cssVar, distText } from './ui.js';
 
@@ -513,6 +514,9 @@ export async function screenChat(matchId) {
         h('span', { class: 'only-narrow' }, backBtn('#/messages')), avatarOf({ first_name: other.first_name, photo: other.photos[0], photo_explicit: (other.explicit_photos || []).includes(other.photos[0]), photo_alt: other.photo_alt }),
         h('a', { class: 'grow stack text', style: { gap: '0' }, href: `#/u/${other.id}` }, h('span', { class: 'strong' }, raw(other.first_name)),
           h('span', { class: 'small' }, [other.online === 'now' ? 'En ligne' : null, distText(other.distance), other.vouched_by.length ? 'Parrainé' : other.neighborhood].filter(Boolean).join(' · '))),
+        first.can_call ? h('button', { class: 'icon-btn call-start', 'aria-label': 'Appel vidéo LivePlay', title: 'Appel vidéo LivePlay',
+          onclick: () => startCall({ id: other.id, first_name: other.first_name, photo: other.photos[0], photo_explicit: (other.explicit_photos || []).includes(other.photos[0]), photo_alt: other.photo_alt }) },
+        icon('video', 20)) : null,
         h('button', { class: 'btn small', onclick: reportConv }, 'Signaler')),
       box,
       h('p', { class: 'small center' }, 'Appui long ou clic droit sur un message ou une photo pour le signaler. Le signalement garde une copie sécurisée : pas besoin de captures.'),

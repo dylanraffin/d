@@ -112,7 +112,7 @@
   // ---------- routes ----------
   const CRUISE_KEYS = ['height_cm', 'weight_kg', 'body_type', 'identity', 'tribes', 'can', 'vibes', 'endowment_cm', 'cut', 'safer', 'health_visibility',
     'bio', 'job', 'neighborhood', 'position', 'position_visibility', 'intimate_visibility', 'map_precision', 'messages_from', 'hide_from_map', 'show_distance',
-    'album_matches_only', 'blur_explicit', 'discreet_icon', 'vanilla'];
+    'album_matches_only', 'blur_explicit', 'discreet_icon', 'vanilla', 'units', 'auto_checkin', 'liveplay'];
   const listOf = (v) => (Array.isArray(v) ? v : String(v || '').split(',').filter(Boolean));
   // Demande d'adhésion jouée dans la démo : un candidat fictif, rien n'est envoyé. Âge vérifié d'un clic, puis l'attente.
   const applicantFrom = (b) => Object.assign(JSON.parse(JSON.stringify(member)), {
@@ -126,6 +126,7 @@
     ['GET', /^\/api\/me$/, () => (logged ? me : fail(401, 'Connecte-toi pour continuer.'))],
     ['PATCH', /^\/api\/me$/, (m, b) => {
       for (const k of CRUISE_KEYS) if (k in b) me[k] = b[k];
+      if ('marketing_emails' in b) me.marketing_emails = !!b.marketing_emails;
       for (const k of ['seeking', 'tastes', 'intimate']) if (k in b) me[k] = listOf(b[k]);
       if (b.health_consent === false) Object.assign(me, { hiv_status: null, last_test: null, health_consent: false });
       else if (b.health_consent === true) Object.assign(me, { health_consent: true, hiv_status: b.hiv_status ?? me.hiv_status, last_test: b.last_test ?? me.last_test });
@@ -186,7 +187,9 @@
       const after = Number(q.get('after') || 0);
       const match = D.matches.find((x) => String(x.id) === m[1]);
       if (match) match.unread = false;
-      return { ...t, messages: t.messages.filter((x) => x.id > after) };
+      // LivePlay : le bouton d'appel apparaît dans les conversations où les deux ont écrit (et si je suis dispo).
+      const canCall = !!me.liveplay && t.messages.some((x) => x.mine) && t.messages.some((x) => !x.mine);
+      return { ...t, can_call: canCall, messages: t.messages.filter((x) => x.id > after) };
     }],
     ['POST', /^\/api\/matches\/(\d+)\/messages$/, (m, b) => {
       const body = String(b.body || '').trim() || fail(400, 'Message vide.');
@@ -220,6 +223,34 @@
     ['POST', /^\/api\/spots$/, () => ({ id: nextId++, status: 'pending' })],
     ['POST', /^\/api\/spots\/(\d+)\/checkin$/, (m) => { checkins[m[1]] = true; return { until: now() + 120 * MIN }; }],
     ['DELETE', /^\/api\/spots\/(\d+)\/checkin$/, (m) => { delete checkins[m[1]]; }],
+    // Réglages du compte : rien n'est envoyé, la démo fait comme si.
+    ['POST', /^\/api\/me\/email$/, (m, b) => {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(b.email || ''))) fail(400, 'E-mail invalide.');
+      if (!b.password) fail(401, 'Mot de passe incorrect.');
+      me.email = String(b.email).toLowerCase();
+      return { ok: true, email: me.email };
+    }],
+    ['POST', /^\/api\/me\/password$/, (m, b) => {
+      if (!b.current) fail(401, 'Mot de passe actuel incorrect.');
+      if (String(b.password || '').length < 10) fail(400, 'Mot de passe : 10 caractères minimum.');
+      return { ok: true, other_sessions_closed: 0 };
+    }],
+    // LivePlay relie deux vrais appareils : la démo ne fait pas semblant d'appeler quelqu'un.
+    ['GET', /^\/api\/calls\/current$/, () => ({ call: null })],
+    ['GET', /^\/api\/calls\/ice$/, () => fail(403, 'Démo : LivePlay relie deux vrais appareils (caméra et micro) ; l’appel n’est pas simulé ici.')],
+    ['GET', /^\/api\/plans\/nearby$/, () => {
+      const o = offset();
+      return { located: true, center: moved({ ...HOME }, o),
+        plans: Object.values(D.plans).filter((p) => p.status === 'open' && p.ends_at > now()).map((p) => moved(planList(p), o)).sort((a, b) => a.starts_at - b.starts_at) };
+    }],
+    ['POST', /^\/api\/plans\/(\d+)\/cover$/, (m, b) => {
+      const p = plan(m[1]);
+      const id = nextId++;
+      uploaded[id] = b.data;
+      p.cover = { id, status: 'pending' };
+      return { id, status: 'pending' };
+    }],
+    ['DELETE', /^\/api\/plans\/(\d+)\/cover$/, (m) => { plan(m[1]).cover = null; }],
     ['GET', /^\/api\/plans\/mine$/, () => ({ plans: Object.values(D.plans).filter((p) => p.status === 'open' && ['host', 'accepted', 'requested'].includes(p.my_status)).map(planList) })],
     ['POST', /^\/api\/plans$/, (m, b) => {
       if (!b.rules) fail(400, "Confirme les règles : adultes consentants, pas d'argent, pas de drogue.");
@@ -227,7 +258,7 @@
       if (/(€|\beuros?\b|\btarif|\bpayant|\bescort)/i.test(`${title} ${b.description || ''}`)) fail(400, "Pas d'argent : un plan à plusieurs ne peut demander ni paiement ni participation.");
       if (Object.values(D.plans).some((p) => p.my_status === 'host' && p.status === 'open' && p.ends_at > now())) fail(409, 'Tu organises déjà un plan. Termine-le ou annule-le avant d’en créer un autre.');
       const id = nextId++;
-      const starts = now() + Number(b.starts_in || 0) * MIN;
+      const starts = b.starts_at ? Math.max(Number(b.starts_at), now()) : now() + Number(b.starts_in || 0) * MIN;
       const cell = (v) => Math.floor(v / 0.01) * 0.01 + 0.005;
       const o = offset();
       D.plans[id] = { id, title, description: b.description || null, place_kind: b.place_kind, starts_at: starts, ends_at: starts + Number(b.duration || 120) * MIN, status: 'open',

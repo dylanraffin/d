@@ -1171,11 +1171,58 @@ export default {
     'Arnaques : personne de l’équipe ne te demandera ton mot de passe ni un code reçu par SMS. Ne paie jamais pour « débloquer » une rencontre, une photo ou un plan.':
       'Scams: nobody from the team will ever ask for your password or a code sent by text. Never pay to “unlock” a meetup, a photo or a group.',
     'Chantage aux images : ne paie pas, garde les preuves, bloque et signale. Tu peux aussi le signaler sur internet-signalement.gouv.fr (PHAROS).':
-      'Sextortion: don’t pay, keep the evidence, block and report. You can also report it on internet-signalement.gouv.fr (PHAROS, France).'
+      'Sextortion: don’t pay, keep the evidence, block and report. You can also report it on internet-signalement.gouv.fr (PHAROS, France).',
+    // ---------- LivePlay ----------
+    'Signaler ce membre': 'Report this member',
+    'Refuser': 'Decline',
+    'Appel refusé.': 'Call declined.',
+    'Pas de réponse.': 'No answer.',
+    'Appel annulé.': 'Call cancelled.',
+    'Appel terminé.': 'Call ended.',
+    'Avant ton premier appel vidéo': 'Before your first video call',
+    'La vidéo va directement de ton appareil à l’autre. Elle ne passe pas par nos serveurs et n’est jamais enregistrée.':
+      'The video goes straight from your device to theirs. It never goes through our servers and is never recorded.',
+    'Comme pour tout appel vidéo direct, l’autre appareil peut connaître ton adresse IP. Elle indique une zone approximative, pas ton adresse.':
+      'As with any direct video call, the other device can learn your IP address. It points to a rough area, not your address.',
+    'Rien n’empêche techniquement l’autre de filmer son écran : ne montre que ce que tu acceptes de voir circuler.':
+      'Nothing technically stops the other person from recording their screen: only show what you’re OK with being shared.',
+    'Tu peux couper ta caméra, flouter l’image reçue, raccrocher, bloquer et signaler à tout moment.':
+      'You can turn off your camera, blur the incoming video, hang up, block and report at any time.',
+    'J’ai compris, appeler': 'Got it, call',
+    'Image floutée': 'Video blurred',
+    'Touche pour voir': 'Tap to see',
+    'Couper le micro': 'Mute',
+    'Couper ma caméra': 'Turn off my camera',
+    'Flouter l’image reçue': 'Blur the incoming video',
+    'Raccrocher': 'Hang up',
+    'Tu pourras couper ta caméra et flouter l’image reçue. Rien n’est enregistré.': 'You can turn off your camera and blur the incoming video. Nothing is recorded.',
+    'Appel vidéo LivePlay': 'LivePlay video call',
+    'Appel en cours…': 'Calling…',
+    'Connexion…': 'Connecting…',
+    'Connexion instable…': 'Unstable connection…',
+    'La connexion a échoué. Réessaie, ou passe en wifi.': 'The connection failed. Try again, or switch to wifi.',
+    'Appel vidéo entrant': 'Incoming video call',
+    'Caméra ou micro refusés : autorise-les dans le navigateur pour répondre.': 'Camera or microphone blocked: allow them in your browser to answer.',
+    'Caméra ou micro refusés : autorise-les dans le navigateur pour appeler.': 'Camera or microphone blocked: allow them in your browser to call.',
+    'Ce navigateur ne permet pas les appels vidéo.': 'This browser doesn’t support video calls.',
+    'LivePlay n’est pas disponible.': 'LivePlay isn’t available.',
+    'Active « Je suis dispo pour LivePlay » dans tes réglages pour appeler.': 'Turn on “I’m available for LivePlay” in your settings to call.',
+    'Un appel vidéo est possible une fois que vous vous êtes écrit tous les deux.': 'A video call is possible once you’ve both written to each other.',
+    'Tu as déjà un appel en cours.': 'You’re already on a call.',
+    'Seule la personne appelée peut décrocher.': 'Only the person being called can answer.',
+    'L’appel a cessé de sonner.': 'The call stopped ringing.',
+    'Cet appel est terminé.': 'This call has ended.',
+    'Appel introuvable.': 'Call not found.',
+    'Signal inconnu.': 'Unknown signal.',
+    'Signal trop long.': 'Signal too long.',
+    'Trop de signaux pour cet appel.': 'Too many signals for this call.'
   },
 
   // Tried in order, on the whole text: the more specific patterns come first.
   patterns: [
+    // ---------- LivePlay ----------
+    ['^(.+) n’est pas dispo pour LivePlay\\.$', '$1 isn’t available for LivePlay.'],
+    ['^(.+) est déjà en appel\\.$', '$1 is already on a call.'],
     // ---------- plans list ----------
     ['^(\\d+) demandes$', '$1 requests'],
     ['^(\\d+) confirmés, hôte compris$', '$1 confirmed, including the host'],

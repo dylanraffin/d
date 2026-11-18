@@ -294,6 +294,33 @@ CREATE TABLE IF NOT EXISTS plan_members (
   PRIMARY KEY (plan_id, user_id)
 );
 
+-- LivePlay : appels vidéo d'appareil à appareil. La vidéo ne passe jamais par le serveur.
+-- Les signaux (données de connexion, adresses IP comprises) sont effacés à la fin de l'appel ;
+-- l'historique est gardé 30 jours pour traiter un signalement.
+CREATE TABLE IF NOT EXISTS calls (
+  id INTEGER PRIMARY KEY,
+  caller_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  callee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'ringing',         -- ringing | active | ended | declined | missed | cancelled
+  created_at INTEGER NOT NULL,
+  answered_at INTEGER,
+  ended_at INTEGER,
+  ended_by INTEGER,
+  caller_seen_at INTEGER,
+  callee_seen_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_calls_open ON calls(status, caller_id, callee_id);
+
+CREATE TABLE IF NOT EXISTS call_signals (
+  id INTEGER PRIMARY KEY,
+  call_id INTEGER NOT NULL REFERENCES calls(id) ON DELETE CASCADE,
+  sender_id INTEGER NOT NULL,
+  kind TEXT NOT NULL,                             -- offer | answer | ice
+  payload TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_call_signals ON call_signals(call_id, id);
+
 CREATE TABLE IF NOT EXISTS plan_messages (
   id INTEGER PRIMARY KEY,
   plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
@@ -390,6 +417,7 @@ export const SETTINGS_SPEC = {
   plus_price_cents: { type: 'int', min: 0, max: 100000, def: '1499', label: 'Prix mensuel ILD+ (centimes, TTC)' },
   plus_features: { type: 'list', def: 'who_liked_me,travel_mode,advanced_filters,incognito,unlimited_likes,extended_map,read_receipts', label: 'Fonctions réservées à la version payante' },
   plan_max_guests: { type: 'int', min: 2, max: 50, def: '12', label: 'Plans à plusieurs : nombre maximal de participants' },
+  liveplay_enabled: { type: 'bool', def: '1', label: 'LivePlay : appels vidéo entre membres qui se sont écrit (relais TURN conseillé, voir le README)' },
   chat_photos_per_day: { type: 'int', min: 1, max: 500, def: '60', label: 'Photos envoyées dans le chat par jour et par membre' },
   // Nuit : photos de profil explicites. Possible parce que chaque membre est un adulte dont l'âge a été vérifié ;
   // à désactiver si l'hébergeur ou le prestataire de paiement l'interdit.

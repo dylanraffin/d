@@ -36,7 +36,7 @@ export function chime(notes = [[660, 0], [880, 0.13]]) {
   } catch { /* son indisponible sur cet appareil */ }
 }
 document.addEventListener('pointerdown', () => {
-  if (prefs.sounds()) { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch { /* rien */ } }
+  if (prefs.sounds() || state.me?.liveplay) { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch { /* rien */ } }
 }, { passive: true });
 
 // Android n'affiche une notification qu'à travers un service worker ; ailleurs, l'API simple suffit.

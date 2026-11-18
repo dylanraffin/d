@@ -85,7 +85,8 @@ export const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'no-referrer',
   'X-Frame-Options': 'DENY',
-  'Permissions-Policy': 'geolocation=(self), camera=(), microphone=()',
+  // Caméra et micro : seulement pour LivePlay, sur ce site (le navigateur demande toujours l'accord).
+  'Permissions-Policy': 'geolocation=(self), camera=(self), microphone=(self)',
   'Content-Security-Policy': csp([])
 };
 

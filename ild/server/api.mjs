@@ -12,6 +12,7 @@ import { DAY, str, bool, isoDay, ageOf, parseBirthDate, hiddenBetween, matchBetw
   alternatePhoto, explicitRestricted, shownProfilePhoto } from './core.mjs';
 import { hasFeature, requireFeature, entitlements, likesToday, dailyLikeLimit, paymentsEnabled } from './billing.mjs';
 import { distanceBetween } from './geo.mjs';
+import { canCall } from './liveplay.mjs';
 import { readFilters, passesFilters } from './nearby.mjs';
 import { shareState, DURATIONS } from './albums.mjs';
 import { cruiseFields, cruiseProfile, cruiseOwn, markRead } from './cruise.mjs';
@@ -545,7 +546,8 @@ export function registerMemberRoutes(r) {
     });
     // Photos : pas avant une réponse pour celui qui a lancé la conversation.
     const canSendPhoto = !(m.origin === 'chat' && !m.replied_at && m.opened_by === u.id);
-    return { match_id: m.id, user: publicProfile(db, u, other), messages, can_send_photo: canSendPhoto, other_read_at: markRead(db, m, u) };
+    return { match_id: m.id, user: publicProfile(db, u, other), messages, can_send_photo: canSendPhoto, other_read_at: markRead(db, m, u),
+      can_call: canCall(db, u, other, ctx.config.edition) };
   });
 
   r.post('/api/matches/:id/messages', (ctx) => {

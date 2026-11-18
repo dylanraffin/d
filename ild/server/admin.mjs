@@ -86,6 +86,7 @@ export function registerAdminRoutes(r) {
       spots_pending: one("SELECT COUNT(*) AS n FROM spots WHERE status = 'pending'"),
       plans_live: one("SELECT COUNT(*) AS n FROM plans WHERE status = 'open' AND ends_at > ?", Date.now()),
       online_now: one("SELECT COUNT(*) AS n FROM users WHERE status = 'member' AND last_seen_at > ?", Date.now() - 5 * 60e3),
+      calls_24h: one("SELECT COUNT(*) AS n FROM calls WHERE answered_at > ?", Date.now() - DAY),
       marketing_optins: one("SELECT COUNT(*) AS n FROM users WHERE status = 'member' AND marketing_consent_at IS NOT NULL"),
       edition: ctx.config.edition,
       suspended: one("SELECT COUNT(*) AS n FROM users WHERE status IN ('suspended', 'banned')"),
@@ -207,6 +208,10 @@ export function registerAdminRoutes(r) {
         album_photos: db.prepare("SELECT COUNT(*) AS n FROM photos WHERE user_id = ? AND kind = 'album'").get(u.id).n
       },
       history: db.prepare('SELECT action, details, created_at FROM audit WHERE target = ? ORDER BY id DESC LIMIT 50').all(`user:${u.id}`),
+      // LivePlay (30 derniers jours) : pour vérifier un signalement. Jamais de contenu, seulement qui, quand, combien de temps.
+      calls: db.prepare(`SELECT c.id, c.status, c.created_at, c.answered_at, c.ended_at, c.caller_id = ? AS outgoing, x.id AS other_id, x.first_name AS other_name
+        FROM calls c JOIN users x ON x.id = CASE WHEN c.caller_id = ? THEN c.callee_id ELSE c.caller_id END
+        WHERE c.caller_id = ? OR c.callee_id = ? ORDER BY c.id DESC LIMIT 30`).all(u.id, u.id, u.id, u.id).map((c) => ({ ...c, outgoing: !!c.outgoing })),
       grounds: GROUNDS
     };
   });
@@ -491,6 +496,8 @@ export function purge(ctx) {
       return old.length;
     })(),
     plans_deleted: db.prepare('DELETE FROM plans WHERE ends_at < ?').run(now - 30 * DAY).changes,
+    // LivePlay : l'historique des appels (qui, quand, combien de temps) est gardé 30 jours pour les signalements.
+    calls_deleted: db.prepare("DELETE FROM calls WHERE created_at < ? AND status NOT IN ('ringing', 'active')").run(now - 30 * DAY).changes,
     trips_cleared: db.prepare('UPDATE users SET trip_lat = NULL, trip_lng = NULL, trip_label = NULL, trip_until = NULL WHERE trip_until < ?').run(now).changes,
     subscriptions: settleSubscriptions(db)
   };

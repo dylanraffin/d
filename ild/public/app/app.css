@@ -418,3 +418,39 @@ div.menu-row { cursor: default; }
 .range-row { display: flex; align-items: center; gap: 12px; }
 .range-row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .switch, .switch::after { transition: none; } }
+
+/* ---------- LivePlay : écran d'appel vidéo ---------- */
+.call-screen { position: fixed; inset: 0; z-index: 200; background: #000; color: #f1efe9; display: flex; flex-direction: column; overflow: hidden; }
+.call-remote { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; transition: filter 0.2s ease; }
+.call-screen.blurred .call-remote { filter: blur(28px) brightness(0.7); }
+.call-veil { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); flex-direction: column; align-items: center; gap: 6px;
+  padding: 18px 22px; border: 1px solid rgba(241, 239, 233, 0.25); border-radius: 18px; background: rgba(13, 13, 15, 0.55); color: inherit; font: inherit; cursor: pointer; }
+.call-screen.blurred.live .call-veil { display: flex; }
+.call-local { position: absolute; right: 16px; bottom: calc(120px + env(safe-area-inset-bottom)); width: 104px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 14px;
+  border: 1px solid rgba(241, 239, 233, 0.35); background: #1d1d21; transform: scaleX(-1); z-index: 2; }
+.call-screen.cam-off .call-local { opacity: 0.35; }
+.call-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; padding: calc(16px + env(safe-area-inset-top)) 16px 28px;
+  background: linear-gradient(rgba(0, 0, 0, 0.65), transparent); }
+.call-top .strong { font-family: var(--serif); font-size: 24px; font-weight: 500; }
+.call-status, .call-clock { color: rgba(241, 239, 233, 0.75); }
+.call-clock:empty { display: none; }
+.call-actions { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; display: flex; justify-content: center; gap: 14px;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(0, 0, 0, 0.7)); }
+.call-btn { width: 56px; height: 56px; border-radius: 50%; border: 1px solid rgba(241, 239, 233, 0.25); background: rgba(39, 39, 44, 0.85); color: inherit;
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.call-btn.off, .call-btn[aria-pressed="true"] { background: #f1efe9; color: #0d0d0f; }
+.call-btn.end { background: #c0392b; border-color: #c0392b; color: #fff; }
+.call-ring { display: none; }
+.call-screen.ringing-in { background: radial-gradient(circle at 50% 35%, #27272c, #0d0d0f 70%); }
+.call-screen.ringing-in .call-actions, .call-screen.ringing-in .call-local, .call-screen.ringing-in .call-remote { display: none; }
+.call-screen.ringing-in .call-top { flex-direction: column; text-align: center; margin-top: 18vh; background: none; }
+.call-screen.ringing-in .call-top .avatar { width: 112px; height: 112px; border-radius: 50%; font-size: 40px; }
+.call-screen.ringing-in .call-ring { display: flex; flex-direction: column; align-items: center; gap: 18px; margin-top: auto;
+  padding: 24px 16px calc(36px + env(safe-area-inset-bottom)); text-align: center; }
+.call-ring .row { gap: 14px; }
+.call-ring .btn { min-width: 140px; }
+.call-start { color: var(--accent); }
+@media (min-width: 900px) {
+  .call-local { width: 180px; bottom: 120px; right: 28px; }
+}
+@media (prefers-reduced-motion: reduce) { .call-remote { transition: none; } }

@@ -236,3 +236,81 @@ test('détecter les lieux où je suis : check-in automatique à moins de 100 m, 
   const spot = (await owner.c.get('/api/live/map')).data.spots.find((s) => s.id === id);
   assert.equal(spot.here, 1);
 });
+
+test('LivePlay : dispo des deux côtés, conversation où les deux ont écrit, appel accepté, signaux effacés à la fin', async () => {
+  const a = await member({ first_name: 'Appelant' });
+  const b = await member({ first_name: 'Appelé' });
+  const other = await member();
+  // Pas dispo : impossible d'appeler, et personne ne peut l'appeler.
+  let r = await a.c.post('/api/calls', { user_id: b.me.id });
+  assert.equal(r.status, 403);
+  assert.match(r.data.error, /LivePlay/);
+  await a.c.patch('/api/me', { liveplay: true });
+  assert.match((await a.c.post('/api/calls', { user_id: b.me.id })).data.error, /pas dispo/);
+  await b.c.patch('/api/me', { liveplay: true });
+  // Jamais d'appel à froid : il faut que les deux se soient écrit.
+  assert.match((await a.c.post('/api/calls', { user_id: b.me.id })).data.error, /écrit tous les deux/);
+  const { id: matchId } = (await a.c.post('/api/conversations', { user_id: b.me.id })).data;
+  await a.c.post(`/api/matches/${matchId}/messages`, { body: 'Salut' });
+  assert.equal((await a.c.get(`/api/matches/${matchId}/messages`)).data.can_call, false);
+  await b.c.post(`/api/matches/${matchId}/messages`, { body: 'Salut toi' });
+  assert.equal((await a.c.get(`/api/matches/${matchId}/messages`)).data.can_call, true);
+  // L'appel sonne chez b ; un tiers ne le voit pas.
+  r = await a.c.post('/api/calls', { user_id: b.me.id });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  const callId = r.data.id;
+  assert.ok(Array.isArray(r.data.iceServers));
+  assert.equal(r.data.relay, false); // pas de relais TURN configuré dans les tests
+  const ringing = (await b.c.get('/api/calls/current')).data.call;
+  assert.equal(ringing.id, callId);
+  assert.equal(ringing.role, 'callee');
+  assert.equal(ringing.other.first_name, 'Appelant');
+  assert.equal((await other.c.get('/api/calls/current')).data.call, null);
+  assert.equal((await other.c.get(`/api/calls/${callId}/signals`)).status, 404);
+  assert.equal((await a.c.post(`/api/calls/${callId}/accept`)).status, 403); // seul l'appelé décroche
+  assert.equal((await a.c.post('/api/calls', { user_id: b.me.id })).status, 409); // un appel à la fois
+  // b décroche ; les signaux passent d'un appareil à l'autre, jamais renvoyés à leur auteur.
+  assert.equal((await b.c.post(`/api/calls/${callId}/accept`)).status, 200);
+  assert.equal((await a.c.post(`/api/calls/${callId}/signal`, { kind: 'offer', payload: { type: 'offer', sdp: 'v=0' } })).status, 200);
+  assert.equal((await a.c.post(`/api/calls/${callId}/signal`, { kind: 'hack', payload: {} })).status, 400);
+  const got = (await b.c.get(`/api/calls/${callId}/signals`)).data;
+  assert.equal(got.status, 'active');
+  assert.deepEqual(got.signals.map((s) => s.kind), ['offer']);
+  assert.equal((await a.c.get(`/api/calls/${callId}/signals`)).data.signals.length, 0);
+  await b.c.post(`/api/calls/${callId}/signal`, { kind: 'answer', payload: { type: 'answer', sdp: 'v=0' } });
+  // Fin : statut « ended » des deux côtés, signaux (adresses IP) effacés, historique visible de la modération.
+  assert.equal((await b.c.post(`/api/calls/${callId}/end`)).status, 200);
+  assert.equal((await a.c.get(`/api/calls/${callId}/signals`)).data.status, 'ended');
+  assert.equal(app.db.prepare('SELECT COUNT(*) AS n FROM call_signals WHERE call_id = ?').get(callId).n, 0);
+  assert.equal((await a.c.get('/api/calls/current')).data.call, null);
+  const history = (await admin.get(`/api/admin/members/${a.me.id}`)).data.calls;
+  assert.equal(history[0].status, 'ended');
+  assert.equal(history[0].outgoing, true);
+  // Refus, puis sonnerie sans réponse (40 s) ; bloquer coupe tout.
+  const second = (await a.c.post('/api/calls', { user_id: b.me.id })).data.id;
+  await b.c.post(`/api/calls/${second}/decline`);
+  assert.equal((await a.c.get(`/api/calls/${second}/signals`)).data.status, 'declined');
+  const third = (await a.c.post('/api/calls', { user_id: b.me.id })).data.id;
+  app.db.prepare('UPDATE calls SET created_at = created_at - 41000 WHERE id = ?').run(third);
+  assert.equal((await b.c.get('/api/calls/current')).data.call, null);
+  assert.equal((await a.c.get(`/api/calls/${third}/signals`)).data.status, 'missed');
+  await b.c.post('/api/blocks', { user_id: a.me.id });
+  assert.equal((await a.c.post('/api/calls', { user_id: b.me.id })).status, 403);
+});
+
+test('LivePlay avec relais TURN : identifiants éphémères (1 h) et passage obligé par le relais', async () => {
+  const { iceConfig } = await import('../server/liveplay.mjs');
+  const { createHmac } = await import('node:crypto');
+  const open = iceConfig({ ice: { stun: 'stun:stun.exemple.fr:3478', turnUrls: '', turnSecret: '' } }, 7);
+  assert.equal(open.relay, false);
+  assert.deepEqual(open.iceServers, [{ urls: ['stun:stun.exemple.fr:3478'] }]);
+  const relay = iceConfig({ ice: { stun: '', turnUrls: 'turn:turn.exemple.fr:3478,turns:turn.exemple.fr:5349', turnSecret: 'secret-partage' } }, 7);
+  assert.equal(relay.relay, true);
+  assert.equal(relay.iceTransportPolicy, 'relay');
+  const turn = relay.iceServers[0];
+  assert.deepEqual(turn.urls, ['turn:turn.exemple.fr:3478', 'turns:turn.exemple.fr:5349']);
+  const [expiry, user] = turn.username.split(':');
+  assert.equal(user, '7');
+  assert.ok(Number(expiry) - Date.now() / 1000 > 3500 && Number(expiry) - Date.now() / 1000 <= 3600);
+  assert.equal(turn.credential, createHmac('sha1', 'secret-partage').update(turn.username).digest('base64'));
+});

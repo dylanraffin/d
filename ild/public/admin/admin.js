@@ -114,6 +114,7 @@ function pageDashboard() {
       kpi('En ligne maintenant', s.online_now),
       kpi('Lieux à valider', s.spots_pending, '#/spots'),
       kpi('Plans à plusieurs en cours', s.plans_live, '#/plans'),
+      kpi('Appels LivePlay (24 h)', s.calls_24h),
       kpi(s.payments_enabled ? 'Abonnés' : 'Abonnés (payant désactivé)', s.subscribers, '#/subscriptions'),
       kpi('Suspendus ou bannis', s.suspended, '#/members?status=banned'),
       h('div', { class: 'kpi' }, h('span', { class: 'muted' }, 'Accord e-mails promo'), h('b', null, String(s.marketing_optins)),
@@ -265,9 +266,15 @@ async function pageMember(id) {
           : h('span', { class: 'small' }, 'Aucun.'),
         h('span', { class: 'small' }, `Signalements faits par ce membre : ${d.reports_made}`),
         d.notices.length ? [h('h2', null, 'Décisions envoyées'), d.notices.map((n) => h('div', { class: 'small' }, `${fmtDate(n.created_at)} · ${NOTICE_LABEL[n.kind]} · recours : ${n.appeal_status}`))] : null,
+        (d.calls || []).length ? [h('h2', null, `LivePlay, 30 derniers jours (${d.calls.length})`),
+          d.calls.map((c) => h('div', { class: 'small' }, `${fmtDate(c.created_at)} · ${c.outgoing ? 'appel vers' : 'appel de'} `,
+            h('a', { href: `#/member/${c.other_id}` }, c.other_name),
+            ` · ${CALL_LABEL[c.status] || c.status}${c.answered_at && c.ended_at ? ` · ${Math.max(1, Math.round((c.ended_at - c.answered_at) / 60e3))} min` : ''}`))] : null,
         h('h2', null, 'Historique admin'),
         d.history.length ? d.history.map((x) => h('div', { class: 'small' }, `${fmtDate(x.created_at)} · ${x.action}`)) : h('span', { class: 'small' }, 'Aucune action.'))));
 }
+
+const CALL_LABEL = { ringing: 'sonne', active: 'en cours', ended: 'terminé', declined: 'refusé', missed: 'sans réponse', cancelled: 'annulé' };
 
 async function pagePhotos() {
   const d = await api('GET', '/api/admin/photos');

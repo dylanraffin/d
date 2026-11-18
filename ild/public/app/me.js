@@ -415,7 +415,7 @@ export async function screenSettings() {
       switchRow('mail', 'Recevoir les e-mails promotionnels', 'Nouveautés et soirées, jamais ton activité. Tu peux retirer ton accord à tout moment.', me.marketing_emails,
         () => patch({ marketing_emails: !me.marketing_emails }, me.marketing_emails ? 'Tu ne recevras plus ces e-mails.' : 'Accord enregistré.')),
       isLive() ? switchRow('video', 'Je suis dispo pour LivePlay', 'Appels vidéo avec les membres avec qui tu as une conversation. Tu acceptes chaque appel.', me.liveplay,
-        () => patch({ liveplay: !me.liveplay }, me.liveplay ? 'LivePlay désactivé.' : 'Tu es dispo pour LivePlay.')) : null,
+        async () => { await patch({ liveplay: !me.liveplay }, me.liveplay ? 'LivePlay désactivé.' : 'Tu es dispo pour LivePlay.'); window.dispatchEvent(new Event('nuit-prefs')); }) : null,
       isLive() ? switchRow('pin', 'Détecter les lieux où je suis', me.location.source === 'gps'
         ? 'Avec le GPS : check-in de 2 h dans un lieu à moins de 100 m, quand la carte est ouverte.'
         : 'Demande le GPS : active ta position sur la carte.', me.auto_checkin,

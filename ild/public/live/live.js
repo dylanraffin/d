@@ -8,6 +8,7 @@ import { screenLogin, screenSignup, screenVerify, screenWaitlist, screenNotices,
 import { screenProfile, screenSharedAlbum, screenMessages, screenChat, filterQuery, filterButton } from '/app/main.js';
 import { screenMe, screenEditProfile, screenMyAlbums, screenAlbumDetail, screenPlus, screenLocation, screenSettings, adminHint } from '/app/me.js';
 import { prefs, chime, alerts } from '/app/alerts.js';
+import { liveplay } from '/app/liveplay.js';
 
 const DURATIONS = { 30: '30 min', 60: '1 h', 120: '2 h', 240: '4 h' };
 const PLACE_ICON = { host: 'home', travel: 'arrow', venue: 'pin', out: 'chat' };
@@ -753,6 +754,7 @@ async function render() {
       return screenWaitlist();
     }
     alerts.start();
+    liveplay.start();
     switch (path) {
       case 'list': return await screenList();
       case 'u': return await screenProfile(arg);

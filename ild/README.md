@@ -59,7 +59,9 @@ L'interface est écrite en français. Les autres langues sont des dictionnaires 
 | Menu rapide | Depuis la carte : ma fiche, réglages du compte, mode vanille, regrouper les profils proches, sons (un carillon à chaque nouveau message, si l'appareil le permet), Nuit+, organiser un plan à plusieurs, proposer un lieu, brouillage de ma position (500 m, 1 km ou zone seule), se déconnecter, actualiser l'app. |
 | Fiche | Taille, poids, morphologie, rôle ; lieu (peut recevoir, peut se déplacer), ambiance, style, pratiques, santé ; en ligne, distance par tranche, badge « Nouveau profil » ; favori ; **premier message écrit depuis la fiche**. |
 | Chat | Sans match. **Photos envoyées dans la conversation**, floutées à l'arrivée si on le souhaite, retirables à tout moment ; albums privés à durée limitée ; réponses rapides ; « non lu » ; accusé de lecture. |
-| Plans à plusieurs | Un membre reçoit ou organise, les autres demandent à venir, l'hôte accepte. Discussion de groupe. |
+| Plans à plusieurs | Onglet « Plans » : « Mes plans » et « Autour de moi ». Chaque carte : hôte, heure (« Demain à 18:00 », jusqu'à 7 jours à l'avance), distance, confirmés hôte compris, places libres, titre, couverture, description, bouton pour le voir sur la carte. Un membre reçoit ou organise, les autres demandent à venir, l'hôte accepte. Discussion de groupe. Bouton « Organiser un plan » et lien « Se protéger : sécurité en ligne et arnaques ». |
+| LivePlay | Appel vidéo en direct entre deux membres, depuis la conversation : sonnerie, accepter ou refuser, couper micro ou caméra, flouter l'image reçue, signaler, raccrocher. |
+| Réglages du compte | Compte : adresse e-mail, mot de passe (les autres appareils sont déconnectés), abonnement et achats. Préférences : unités métriques ou impériales, e-mails promotionnels, « Je suis dispo pour LivePlay », « Détecter les lieux où je suis », bloquer les messages des profils sans photo, notifications du navigateur. Réinitialiser : débloquer des membres, cookies et réglages de l'appareil, supprimer le compte. |
 | Lieux | Bars, clubs, saunas, soirées, proposés par les membres et publiés après validation. « J'y suis » pendant 2 h : seul le nombre s'affiche. |
 | Mode voyage | Apparaître dans une autre ville (liste de villes ou centre de la carte) pendant 1 à 14 jours. |
 | Liste | Les dispos d'abord, puis les personnes en ligne ; filtre Favoris. |
@@ -74,6 +76,10 @@ L'interface est écrite en français. Les autres langues sont des dictionnaires 
 - **Photo alternative sans nudité.** Reliée à la photo principale quand elle est explicite, validée par la modération (jamais explicite). Elle s'affiche à la place de la photo explicite pour les membres en mode vanille et, côté serveur, dans les pays listés au back office (réglage « pays où les photos de profil explicites sont masquées ») ; là, la photo explicite n'est même pas servie.
 - **Santé : accord séparé.** Statut VIH et date de dépistage ne sont enregistrés qu'avec un accord explicite, montrés aux personnes choisies, jamais transmis ; retirer l'accord les efface. Pratiques et taille suivent la visibilité « intime ».
 - **Plans à plusieurs : adresse réservée.** Le plan est placé au centre d'une case d'environ 1 km. L'adresse et la liste des participants ne sont visibles que de l'hôte et des personnes acceptées. Aucune contrepartie d'argent (Code pénal, art. 225-5 et suivants), aucune drogue : engagement de l'hôte, filtre sur les annonces, signalement, retrait motivé avec recours.
+- **LivePlay : jamais d'appel à froid.** Il faut être soi-même dispo pour LivePlay, et les deux doivent s'être écrit dans la conversation. Chaque appel est accepté ou refusé, sonne 40 s au plus, un seul à la fois, 10 lancés par heure au plus. L'image reçue est floutée d'emblée pour qui floute les photos explicites ou est en mode vanille. La vidéo va d'appareil à appareil (WebRTC) et n'est jamais enregistrée ; les données de connexion (adresses IP) sont effacées à la fin de l'appel, l'historique (qui, quand, combien de temps) est gardé 30 jours pour la modération. **Sans relais TURN, chacun peut voir l'adresse IP de l'autre** : configurer `ILD_TURN_URLS` et `ILD_TURN_SECRET` avant d'ouvrir (voir plus bas).
+- **Couvertures de plans sans nudité**, relues par la modération avant d'être montrées, effacées avec le plan.
+- **Notifications discrètes.** Jamais de prénom ni de contenu (un écran verrouillé peut être vu par d'autres) ; titre neutre en mode discret.
+- **E-mails promotionnels : accord explicite et daté**, jamais coché par défaut, retirable à tout moment ; l'équipe exporte la liste des accords en CSV depuis le tableau de bord.
 - **Lieux = établissements et événements seulement.** Pas de parcs, aires ou plages : les relations sexuelles dans un lieu exposé au public sont un délit (Code pénal, art. 222-32) et ces lieux servent aussi aux guet-apens.
 - **Tous les comptes sont des adultes vérifiés**, ce qui limite aussi les faux profils et les robots. Badge « Nouveau profil » pendant 7 jours, conseils de sécurité à la première ouverture, signalement qui garde une copie de la conversation.
 - **Ce qui protège la vie privée reste gratuit** : bloquer, débloquer, retirer une photo, masquer sa position, supprimer son compte.
@@ -128,6 +134,8 @@ Tant que « Abonnement payant activé » est décoché (back office › Abonneme
 | `ILD_BLOCKLIST_PEPPER` | Clé secrète des empreintes d'e-mails bannis |
 | `ILD_CSAM_SCANNER` | À définir quand la détection de contenus pédocriminels est branchée (`scanImage` dans `server/core.mjs`) |
 | `ILD_MAP_TILES`, `ILD_MAP_ATTRIBUTION` | Fournisseur de tuiles de carte. Par défaut OpenStreetMap, dont les serveurs ne sont pas faits pour un service en production : prendre un fournisseur hébergé dans l'UE ou ses propres tuiles (chaque requête de tuile indique au fournisseur la zone regardée). |
+| `ILD_STUN_URLS` | LivePlay : serveurs STUN, séparés par des virgules (défaut `stun:stun.cloudflare.com:3478` ; vide pour aucun) |
+| `ILD_TURN_URLS`, `ILD_TURN_SECRET` | LivePlay : relais TURN (par exemple coturn en Europe, `turn:turn.exemple.fr:3478?transport=udp,turns:turn.exemple.fr:5349`) et secret partagé (`use-auth-secret` / `static-auth-secret` de coturn). Avec le relais, tout passe par lui : les membres ne voient pas l'adresse IP l'un de l'autre. Identifiants éphémères d'une heure. |
 | `ILD_ADMIN_PASSWORD`, `ILD_DEMO_PASSWORD` | Mots de passe de la base de démo |
 
 ## À faire avant un vrai lancement
@@ -135,7 +143,7 @@ Tant que « Abonnement payant activé » est décoché (back office › Abonneme
 1. Prestataire de vérification d'âge conforme au référentiel de l'Arcom (double anonymat), branché sur le webhook.
 2. Détection des contenus pédocriminels connus sur chaque photo (profil, album, chat), signalement à PHAROS.
 3. Hébergement dans l'UE, HTTPS, sauvegardes chiffrées, purge planifiée chaque jour, fournisseur de tuiles.
-4. Notifications (web push) et e-mails transactionnels ; vidéo en direct seulement avec un serveur relais (TURN) en Europe, pour ne pas exposer l'adresse IP des membres.
+4. Notifications quand l'app est fermée (web push : les notifications actuelles marchent quand la page est ouverte, même en arrière-plan) et e-mails transactionnels ; outil d'envoi des e-mails promotionnels (import du CSV des accords). LivePlay : relais TURN en Europe (`ILD_TURN_URLS`, `ILD_TURN_SECRET`) avant d'ouvrir, pour ne pas exposer l'adresse IP des membres ; ou désactiver LivePlay au back office.
 5. Juridique : AIPD avec un DPO (données de santé et de localisation), registre des traitements, relecture des CGU, de la politique de confidentialité et de la charte, contrats de sous-traitance, dépôt de la marque.
 6. Liste des pays fermés, textes légaux et prestataires par pays avant chaque ouverture internationale.
 
