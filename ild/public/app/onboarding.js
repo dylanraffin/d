@@ -1,6 +1,7 @@
 // Entrée dans ILD : accueil, connexion, inscription en 5 étapes, vérification d'âge, liste d'attente,
 // décisions de modération et recours, nouvelles conditions.
 import { api, h, icon, toast, fmtDate } from '/shared/lib.js';
+import { tr } from '/shared/i18n.js';
 import { state, mount, go, run, refreshMe, backBtn, chips, select, logout, deleteAccount, legalLinks, langSwitch, isLive, brand } from './ui.js';
 
 export function screenWelcome() {
@@ -37,7 +38,7 @@ export function screenLogin() {
 
 // ---------- inscription en 5 étapes ----------
 const wizard = { step: 0, data: { city: 'Paris', looking_for: ['dating'], seeking: [], tastes: [], intimate: [], position: null, position_visibility: 'members', intimate_visibility: 'matches' } };
-const STEP_TITLES = ['Ton compte', 'Toi', 'Ce que tu cherches', 'Tes goûts', 'Tes accords'];
+const STEP_TITLES = ['Ton compte', 'Toi', 'Ce que tu cherches', 'Tes goûts', 'Tes accords', 'Ta demande'];
 
 function maxBirthDate() {
   const d = new Date();
@@ -49,8 +50,8 @@ export function screenSignup() {
   const meta = state.meta;
   const w = wizard;
   const d = w.data;
-  // Carte en direct : inscription en 3 étapes, la fiche se complète ensuite. Club : 5 étapes.
-  const steps = isLive() ? [0, 1, 4] : [0, 1, 2, 3, 4];
+  // Carte en direct : demande d'adhésion en 4 étapes (compte, toi, ta demande, accords). Club : 5 étapes.
+  const steps = isLive() ? [0, 1, 5, 4] : [0, 1, 2, 3, 4];
   if (w.step >= steps.length) w.step = 0;
   const step = steps[w.step];
   const last = w.step === steps.length - 1;
@@ -76,19 +77,41 @@ export function screenSignup() {
   } else if (step === 1) {
     const first = h('input', { autocomplete: 'given-name', maxlength: 40, value: d.first_name || '' });
     const birth = h('input', { type: 'date', max: maxBirthDate(), value: d.birth_date || '' });
-    const city = h('input', { maxlength: 60, value: d.city || 'Paris' });
+    // Carte en direct : la ville vient de la liste des villes ouvertes (la liste d'attente se tient ville par ville).
+    const city = isLive() && meta.cities?.length
+      ? select(Object.fromEntries(meta.cities.map((c) => [c, c])), meta.cities.includes(d.city) ? d.city : 'Paris', { 'aria-label': 'Ville' })
+      : h('input', { maxlength: 60, value: d.city || 'Paris' });
     const code = h('input', { maxlength: 20, placeholder: 'Facultatif', value: d.invite_code || '', autocapitalize: 'characters' });
     body = [h('div', { class: 'list' },
       h('label', { class: 'field' }, h('span', null, isLive() ? 'Pseudo' : 'Prénom'), first),
       h('label', { class: 'field' }, h('span', null, 'Naissance'), birth),
       h('label', { class: 'field' }, h('span', null, 'Ville'), city),
       isLive() ? null : h('label', { class: 'field' }, h('span', null, 'Code'), code)),
-    h('p', { class: 'small' }, isLive() ? 'Un pseudo suffit : pas besoin de ton vrai prénom. Ton âge est affiché, jamais ta date de naissance.' : "Ton âge est affiché, jamais ta date de naissance. Le code est celui d'un membre qui peut te parrainer.")];
+    h('p', { class: 'small' }, isLive() ? 'Un pseudo suffit : pas besoin de ton vrai prénom. Ton âge est affiché, jamais ta date de naissance. Ta ville n’est pas dans la liste ? Choisis la plus proche.' : "Ton âge est affiché, jamais ta date de naissance. Le code est celui d'un membre qui peut te parrainer.")];
     validate = () => {
       if (!first.value.trim()) return isLive() ? 'Choisis un pseudo.' : 'Indique ton prénom.';
       if (!birth.value) return 'Indique ta date de naissance.';
       if (birth.value > maxBirthDate()) return `${name} est réservé aux personnes majeures.`;
       Object.assign(d, { first_name: first.value.trim(), birth_date: birth.value, city: city.value.trim() || 'Paris', invite_code: code.value.trim() });
+      return true;
+    };
+  } else if (step === 5) {
+    // La demande d'adhésion : lue par l'équipe, qui vérifie qu'il s'agit d'une vraie personne. Jamais sur l'apparence.
+    const bio = h('textarea', { class: 'input', maxlength: 300, rows: 4, placeholder: 'Qui tu es, ce que tu aimes, ce que tu viens chercher ici.', 'aria-label': 'Quelques mots sur toi' });
+    bio.value = d.bio || ''; // texte du membre : jamais traduit
+    const seeking = chips(meta.seeking, d.seeking, { ariaLabel: 'Je cherche' });
+    const code = h('input', { class: 'input', maxlength: 20, placeholder: 'Facultatif', value: d.invite_code || '', autocapitalize: 'characters', 'aria-label': 'Code de recommandation' });
+    body = [
+      h('p', { class: 'lead' }, `${name} fonctionne sur demande d'adhésion. Chaque demande est relue par une personne de l'équipe.`),
+      h('span', { class: 'section-label' }, 'Quelques mots sur toi'), bio,
+      h('p', { class: 'small' }, 'Ils apparaîtront sur ta fiche. 300 caractères au plus.'),
+      h('span', { class: 'section-label' }, 'Je cherche'), seeking.el,
+      h('span', { class: 'section-label' }, 'Un membre te recommande ?'), code,
+      h('p', { class: 'small' }, 'Avec le code d’un membre qui te connaît, ta demande passe en priorité.')];
+    validate = () => {
+      if (bio.value.trim().length < 20) return 'Écris au moins quelques mots sur toi (20 caractères).';
+      if (!seeking.values().length) return 'Dis ce que tu cherches.';
+      Object.assign(d, { bio: bio.value.trim(), seeking: seeking.values(), invite_code: code.value.trim() });
       return true;
     };
   } else if (step === 2) {
@@ -129,13 +152,13 @@ export function screenSignup() {
       h('label', { class: 'check' }, c.charter, h('span', null, "J'accepte les ", link('cgu', "conditions d'utilisation"), ' et la ', link('charte', 'charte'), ` : respect, consentement, rien ne sort de ${name}.`))),
     h('p', { class: 'small' }, "Tu peux retirer ton accord à tout moment en effaçant ces informations ou en supprimant ton compte.")];
     validate = async () => {
-      if (!c.age.checked || !c.orientation.checked || !c.charter.checked) return isLive() ? 'Les trois accords sont nécessaires pour créer ton compte.' : 'Les trois accords sont nécessaires pour candidater.';
+      if (!c.age.checked || !c.orientation.checked || !c.charter.checked) return isLive() ? 'Les trois accords sont nécessaires pour envoyer ta demande.' : 'Les trois accords sont nécessaires pour candidater.';
       await run(() => api('POST', '/api/auth/register', {
         ...d, looking_for: d.looking_for.join(','), seeking: d.seeking.join(','), tastes: d.tastes.join(','), intimate: d.intimate.join(','),
         consent_age: true, consent_orientation: true, charter: true
       }));
       wizard.step = 0;
-      wizard.data = { city: 'Paris', looking_for: ['dating'], seeking: [], tastes: [], intimate: [], position: null, position_visibility: 'members', intimate_visibility: 'matches' };
+      wizard.data = { city: 'Paris', looking_for: ['dating'], seeking: [], tastes: [], intimate: [], position: null, position_visibility: 'members', intimate_visibility: 'matches', bio: '' };
       await refreshMe();
       go('#/verify');
       return null;
@@ -158,7 +181,7 @@ export function screenSignup() {
     h('h1', null, STEP_TITLES[step]),
     h('form', { class: 'stack', onsubmit: (e) => { e.preventDefault(); next(); } }, ...body,
       h('div', { class: 'grow' }),
-      h('button', { class: 'btn primary block', type: 'submit' }, !last ? 'Continuer' : isLive() ? 'Créer mon compte' : 'Envoyer ma candidature')),
+      h('button', { class: 'btn primary block', type: 'submit' }, !last ? 'Continuer' : isLive() ? 'Envoyer ma demande' : 'Envoyer ma candidature')),
     w.step === 0 ? langSwitch() : null));
 }
 
@@ -174,7 +197,7 @@ export function screenVerify() {
   mount(h('main', { class: 'screen' },
     h('div', { class: 'row between' }, h('span'), h('span', { class: 'small' }, 'Vérification')),
     h('h1', null, 'Vérifie ton âge'),
-    h('p', { class: 'lead' }, 'Chaque membre est une vraie personne majeure. Ça prend 2 minutes.'),
+    h('p', { class: 'lead' }, isLive() ? 'Chaque membre est une vraie personne majeure. Ça prend 2 minutes, puis ta demande part à l’équipe.' : 'Chaque membre est une vraie personne majeure. Ça prend 2 minutes.'),
     h('div', { class: 'media', style: { height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
       h('div', { class: 'face-frame' }, icon('user', 64))),
     h('ol', { class: 'list steps plain' },
@@ -196,7 +219,8 @@ export function screenWaitlist() {
   const c = me.checks;
   const step = (label, st, extra, href) => h(href ? 'a' : 'div', { href, class: href ? 'link-row' : null },
     h('span', { class: `step-dot ${st}` }, st === 'done' ? icon('check', 13) : ''), h('span', { class: 'grow' }, label),
-    extra ? h('span', { class: 'small' }, extra) : null, href ? icon('chevron', 16, '#5c6085') : null);
+    extra ? h('span', { class: 'small' }, extra) : null, href ? icon('chevron', 16) : null);
+  if (isLive()) return screenRequest(me, c, step);
   const share = async () => {
     const text = `Parraine-moi sur ILD avec mon code : ${me.referral_code}`;
     try {
@@ -223,6 +247,40 @@ export function screenWaitlist() {
     h('p', { class: 'small' }, 'Critères publiés : âge vérifié, photo validée, accords donnés, charte respectée, parrainages. Jamais ton apparence.'),
     h('div', { class: 'row' },
       h('a', { class: 'btn small grow', href: '/api/me/export', download: 'ild-mes-donnees.json' }, 'Mes données'),
+      h('button', { class: 'btn small grow', onclick: logout }, 'Se déconnecter')),
+    legalLinks()));
+}
+
+// Carte en direct : la demande d'adhésion, relue par l'équipe. Critères publiés, jamais l'apparence.
+function screenRequest(me, c, step) {
+  const name = brand().name;
+  const share = async () => {
+    const text = tr(`Recommande-moi sur ${name} avec mon code : ${me.referral_code}`);
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else { await navigator.clipboard.writeText(me.referral_code); toast('Code copié.'); }
+    } catch { /* partage annulé */ }
+  };
+  mount(h('main', { class: 'screen' },
+    h('div', { class: 'stack', style: { gap: '12px', padding: '12px 4px 0' } },
+      h('span', { class: 'section-label', style: { padding: '0' } }, `Demande d'adhésion · ${me.city}`),
+      h('h1', null, 'Ta demande est en cours d’examen'),
+      h('p', { class: 'lead' }, `Une personne de l'équipe la relit, en général sous ${me.review_delay_hours} h. La réponse s'affichera ici.`)),
+    h('div', { class: 'list steps' },
+      step('Âge vérifié', 'done'),
+      step('Photo de toi', c.photo_approved ? 'done' : 'now', c.photo_approved ? null : c.photo_pending ? 'En validation' : 'À ajouter', c.photo_approved ? null : '#/me/edit'),
+      step('Quelques mots sur toi', c.profile_complete ? 'done' : 'now', c.profile_complete ? null : 'À compléter', c.profile_complete ? null : '#/me/edit'),
+      step('Relecture par l’équipe', 'todo', `#${me.waitlist_position} à ${me.city}`)),
+    c.photo_approved ? null : h('div', { class: 'notice' }, icon('camera', 18),
+      h('span', { class: 'grow' }, 'Ajoute une photo de toi : l’équipe vérifie qu’elle ressemble à la personne dont l’âge a été vérifié.')),
+    h('div', { class: 'card pad stack' },
+      h('h2', null, 'Un membre te connaît ?'),
+      h('p', { class: 'small text2' }, 'Donne-lui ton code. Sa recommandation fait passer ta demande en priorité.'),
+      h('div', { class: 'row' }, h('span', { class: 'code-box' }, me.referral_code), h('button', { class: 'btn primary small', onclick: share }, 'Partager'))),
+    h('div', { class: 'grow' }),
+    h('p', { class: 'small' }, 'Critères publiés : une vraie personne, majeure, avec une photo qui lui ressemble, qui accepte la charte. Jamais ton apparence, ton âge ou tes origines. Un refus est toujours motivé et peut être contesté.'),
+    h('div', { class: 'row' },
+      h('a', { class: 'btn small grow', href: '/api/me/export', download: 'mes-donnees.json' }, 'Mes données'),
       h('button', { class: 'btn small grow', onclick: logout }, 'Se déconnecter')),
     legalLinks()));
 }

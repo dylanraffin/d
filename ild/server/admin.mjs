@@ -8,7 +8,7 @@ import { DAY, ageOf, str, vouchCount, waitlistPosition, deletePhotoFiles, delete
   unblockEmail, notify, explicitProfilesAllowed } from './core.mjs';
 import { publicProfile, applicationChecks } from './api.mjs';
 import { FEATURES, paymentsEnabled, settleSubscriptions, provider as paymentProvider } from './billing.mjs';
-import { provider as verificationProvider } from './verification.mjs';
+import { provider as verificationProvider, directAccess } from './verification.mjs';
 
 const PHOTO_TEMPLATES = {
   explicit_public: 'Ta photo de profil contient de la nudité, ce qui n’est pas permis ici. Les photos explicites se partagent en privé : dans le chat ou dans un album.',
@@ -24,8 +24,9 @@ function getUser(db, id) {
 }
 
 // Liste de vérification d'une candidature. Les points obligatoires conditionnent l'acceptation.
-export function dossierChecks(db, u) {
-  const c = applicationChecks(db, u);
+export function dossierChecks(db, u, edition = 'club') {
+  const c = applicationChecks(db, u, edition);
+  const cruise = edition === 'cruise';
   const openReports = db.prepare("SELECT COUNT(*) AS n FROM reports WHERE target_user_id = ? AND status = 'open'").get(u.id).n;
   return [
     { key: 'age_verified', label: "Âge vérifié (pièce d'identité + selfie)", mandatory: true, ok: c.age_verified,
@@ -37,15 +38,15 @@ export function dossierChecks(db, u) {
     { key: 'photo', label: 'Au moins une photo de profil validée', mandatory: true, ok: c.photo_approved,
       detail: c.photo_approved ? '' : c.photo_pending ? 'Photo à valider dans « Photos »' : 'Aucune photo envoyée' },
     { key: 'blocklist', label: "E-mail absent de la liste des comptes bannis", mandatory: true, ok: !isBlocklisted(db, u.email), detail: '' },
-    { key: 'vouches', label: `Parrainages (${c.vouches} sur ${c.vouches_required})`, mandatory: getSetting(db, 'vouches_mandatory') === '1',
+    { key: 'vouches', label: cruise ? `Recommandations de membres (${c.vouches})` : `Parrainages (${c.vouches} sur ${c.vouches_required})`, mandatory: getSetting(db, 'vouches_mandatory') === '1',
       ok: c.vouches >= c.vouches_required, detail: '' },
-    { key: 'profile', label: 'Profil complet (recherche, 3 goûts, métier ou bio)', mandatory: false, ok: c.profile_complete, detail: '' },
+    { key: 'profile', label: cruise ? 'Quelques mots sur lui et ce qu’il cherche' : 'Profil complet (recherche, 3 goûts, métier ou bio)', mandatory: false, ok: c.profile_complete, detail: '' },
     { key: 'reports', label: 'Aucun signalement ouvert', mandatory: false, ok: openReports === 0, detail: openReports ? `${openReports} ouvert(s)` : '' }
   ];
 }
 
-function applicantRow(db, u) {
-  const checks = dossierChecks(db, u);
+function applicantRow(db, u, edition = 'club') {
+  const checks = dossierChecks(db, u, edition);
   return {
     id: u.id, first_name: u.first_name, email: u.email, age: ageOf(u), city: u.city, status: u.status,
     id_check_status: u.id_check_status, created_at: u.created_at, vouches: vouchCount(db, u.id),
@@ -71,7 +72,7 @@ export function registerAdminRoutes(r) {
       subscribers: one("SELECT COUNT(DISTINCT user_id) AS n FROM subscriptions WHERE status = 'active' AND current_period_end > ?", Date.now()),
       pending_id: one("SELECT COUNT(*) AS n FROM users WHERE status = 'pending'"),
       waitlist: waitlist.length,
-      ready_for_committee: waitlist.filter((u) => dossierChecks(db, u).filter((c) => c.mandatory).every((c) => c.ok)).length,
+      ready_for_committee: waitlist.filter((u) => dossierChecks(db, u, ctx.config.edition).filter((c) => c.mandatory).every((c) => c.ok)).length,
       photos_to_review: one("SELECT COUNT(*) AS n FROM photos WHERE status = 'pending' AND kind = 'profile'"),
       reports_open: one("SELECT COUNT(*) AS n FROM reports WHERE status = 'open'"),
       reports_urgent: one("SELECT COUNT(*) AS n FROM reports WHERE status = 'open' AND reason IN ('minor', 'non_consensual', 'illegal')"),
@@ -95,7 +96,7 @@ export function registerAdminRoutes(r) {
   r.get('/api/admin/applications', (ctx) => {
     requireAdmin(ctx);
     const status = ['pending', 'waitlist', 'refused'].includes(ctx.query.get('status')) ? ctx.query.get('status') : 'waitlist';
-    const list = ctx.db.prepare("SELECT * FROM users WHERE status = ? AND role = 'member' ORDER BY created_at").all(status).map((u) => applicantRow(ctx.db, u));
+    const list = ctx.db.prepare("SELECT * FROM users WHERE status = ? AND role = 'member' ORDER BY created_at").all(status).map((u) => applicantRow(ctx.db, u, ctx.config.edition));
     if (status === 'waitlist') list.sort((a, b) => a.waitlist_position - b.waitlist_position);
     return { status, grounds: GROUNDS, applications: list };
   });
@@ -105,8 +106,8 @@ export function registerAdminRoutes(r) {
     const db = ctx.db;
     const u = getUser(db, ctx.params.id);
     return {
-      user: applicantRow(db, u),
-      checks: dossierChecks(db, u),
+      user: applicantRow(db, u, ctx.config.edition),
+      checks: dossierChecks(db, u, ctx.config.edition),
       profile: publicProfile(db, { role: 'admin' }, u),
       consents: { age: u.consent_age_at, orientation: u.consent_orientation_at, charter: u.charter_at, legal_version: u.legal_version, legal_accepted_at: u.legal_accepted_at },
       verifications: db.prepare('SELECT id, provider, status, created_at, completed_at FROM verifications WHERE user_id = ? ORDER BY created_at DESC').all(u.id),
@@ -123,10 +124,11 @@ export function registerAdminRoutes(r) {
     const ok = ctx.body.result !== 'failed';
     const note = str(ctx.body.note, 500, { required: true, label: 'Justification' });
     const now = Date.now();
-    const next = ctx.config.edition === 'cruise' ? 'member' : 'waitlist';
+    const next = directAccess(ctx.db, ctx.config.edition) ? 'member' : 'waitlist';
     ctx.db.prepare(`UPDATE users SET id_check_status = ?, id_verified_at = ?, age_verified_at = ?,
+      accepted_at = CASE WHEN status = 'pending' AND ? AND ? = 'member' THEN ? ELSE accepted_at END,
       status = CASE WHEN status = 'pending' AND ? THEN ? ELSE status END WHERE id = ?`)
-      .run(ok ? 'verified' : 'failed', ok ? now : null, ok ? now : null, ok ? 1 : 0, next, u.id);
+      .run(ok ? 'verified' : 'failed', ok ? now : null, ok ? now : null, ok ? 1 : 0, next, now, ok ? 1 : 0, next, u.id);
     audit(ctx.db, admin.id, ok ? 'age_verified_manually' : 'age_check_failed', `user:${u.id}`, { note });
     return { ok: true };
   });
@@ -136,7 +138,7 @@ export function registerAdminRoutes(r) {
     const db = ctx.db;
     const u = getUser(db, ctx.params.id);
     if (u.status !== 'waitlist') fail(400, "Seule une candidature en liste d'attente (âge vérifié) peut être acceptée.");
-    const missing = dossierChecks(db, u).filter((c) => c.mandatory && !c.ok).map((c) => c.label);
+    const missing = dossierChecks(db, u, ctx.config.edition).filter((c) => c.mandatory && !c.ok).map((c) => c.label);
     if (missing.length) fail(400, `Vérifications obligatoires manquantes : ${missing.join(' ; ')}.`);
     db.prepare("UPDATE users SET status = 'member', accepted_at = ?, decided_at = ?, refusal_reason = NULL WHERE id = ?").run(Date.now(), Date.now(), u.id);
     audit(db, admin.id, 'application_accepted', `user:${u.id}`, { vouches: vouchCount(db, u.id) });
@@ -182,7 +184,7 @@ export function registerAdminRoutes(r) {
     const db = ctx.db;
     const u = getUser(db, ctx.params.id);
     return {
-      user: { ...applicantRow(db, u), premium: !!u.premium, neighborhood: u.neighborhood, accepted_at: u.accepted_at,
+      user: { ...applicantRow(db, u, ctx.config.edition), premium: !!u.premium, neighborhood: u.neighborhood, accepted_at: u.accepted_at,
         position: u.position ? POSITIONS[u.position] : null, location: u.lat != null ? { source: u.location_source, updated_at: u.location_updated_at } : null,
         consents: { age: u.consent_age_at, orientation: u.consent_orientation_at, legal_version: u.legal_version, geo: u.geo_consent_at } },
       profile: publicProfile(db, { role: 'admin' }, u),

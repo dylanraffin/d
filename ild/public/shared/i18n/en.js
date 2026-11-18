@@ -690,6 +690,29 @@ export default {
     "Ton âge est affiché, jamais ta date de naissance. Le code est celui d'un membre qui peut te parrainer.":
       'Your age is shown, never your date of birth. The code comes from a member who can vouch for you.',
     'Choisis un pseudo.': 'Pick a nickname.',
+    'Un pseudo suffit : pas besoin de ton vrai prénom. Ton âge est affiché, jamais ta date de naissance. Ta ville n’est pas dans la liste ? Choisis la plus proche.':
+      'A nickname is enough: no need for your real name. Your age is shown, never your date of birth. Your city isn’t listed? Pick the closest one.',
+    // ---------- membership request (Nuit) ----------
+    'Ta demande': 'Your request',
+    'Qui tu es, ce que tu aimes, ce que tu viens chercher ici.': 'Who you are, what you like, what you’re here for.',
+    'Quelques mots sur toi': 'A few words about you',
+    'Ils apparaîtront sur ta fiche. 300 caractères au plus.': 'They’ll appear on your profile. 300 characters max.',
+    'Un membre te recommande ?': 'Does a member recommend you?',
+    'Code de recommandation': 'Recommendation code',
+    'Avec le code d’un membre qui te connaît, ta demande passe en priorité.': 'With the code of a member who knows you, your request moves to the front.',
+    'Écris au moins quelques mots sur toi (20 caractères).': 'Write at least a few words about yourself (20 characters).',
+    'Dis ce que tu cherches.': 'Say what you’re looking for.',
+    'Les trois accords sont nécessaires pour envoyer ta demande.': 'All three consents are needed to send your request.',
+    'Envoyer ma demande': 'Send my request',
+    'Chaque membre est une vraie personne majeure. Ça prend 2 minutes, puis ta demande part à l’équipe.': 'Every member is a real adult. It takes 2 minutes, then your request goes to the team.',
+    'Ta demande est en cours d’examen': 'Your request is under review',
+    'Photo de toi': 'A photo of you',
+    'Relecture par l’équipe': 'Review by the team',
+    'Ajoute une photo de toi : l’équipe vérifie qu’elle ressemble à la personne dont l’âge a été vérifié.': 'Add a photo of yourself: the team checks that it looks like the person whose age was verified.',
+    'Un membre te connaît ?': 'Does a member know you?',
+    'Donne-lui ton code. Sa recommandation fait passer ta demande en priorité.': 'Give them your code. Their recommendation moves your request to the front.',
+    'Critères publiés : une vraie personne, majeure, avec une photo qui lui ressemble, qui accepte la charte. Jamais ton apparence, ton âge ou tes origines. Un refus est toujours motivé et peut être contesté.':
+      'Published criteria: a real person, an adult, with a photo that looks like him, who accepts the charter. Never your looks, your age or your background. A refusal always comes with reasons and can be appealed.',
     'Indique ton prénom.': 'Enter your first name.',
     'Indique ta date de naissance.': 'Enter your date of birth.',
     'Tu peux en choisir plusieurs.': 'You can pick more than one.',
@@ -1159,6 +1182,11 @@ export default {
     ['^(\\d+) membres? y vont$', '$1 members going'],
     ['^(\\d+) y vont$', '$1 going'],
     ['^Tu es sur la liste de (.+)$', 'You’re on the $1 list'],
+    ["^Demande d'adhésion · (.+)$", 'Membership request · $1'],
+    ["^Une personne de l'équipe la relit, en général sous (\\d+) h\\. La réponse s'affichera ici\\.$", 'A person on the team reads it, usually within $1 hours. The answer will show up here.'],
+    ['^#(\\d+) à (.+)$', '#$1 in $2'],
+    ['^(.+) fonctionne sur demande d\'adhésion\\. Chaque demande est relue par une personne de l\'équipe\\.$', '$1 works by membership request. Every request is read by a person on the team.'],
+    ['^Recommande-moi sur (.+) avec mon code : (.+)$', 'Recommend me on $1 with my code: $2'],
     ['^(.+) ouvre par vagues\\. Complète ton dossier : le comité examine les dossiers complets en premier\\.$', '$1 opens in waves. Complete your application: the committee reviews complete applications first.'],
 
     // ---------- messages returned by the server ----------

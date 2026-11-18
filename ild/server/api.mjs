@@ -90,19 +90,20 @@ export function publicProfile(db, viewer, u) {
 }
 
 // Où en est la candidature : ce qui est fait et ce qui manque.
-export function applicationChecks(db, u) {
+export function applicationChecks(db, u, edition = 'club') {
   const photos = db.prepare("SELECT status FROM photos WHERE user_id = ? AND kind = 'profile'").all(u.id);
   return {
     age_verified: !!u.age_verified_at,
     photo_approved: photos.some((p) => p.status === 'approved'),
     photo_pending: photos.some((p) => p.status === 'pending'),
-    profile_complete: !!(u.seeking && list(u.tastes).length >= 3 && (u.job || u.bio)),
+    // Carte en direct : quelques mots et ce qu'il cherche. Club : recherche, 3 goûts, métier ou bio.
+    profile_complete: edition === 'cruise' ? !!(u.seeking && u.bio) : !!(u.seeking && list(u.tastes).length >= 3 && (u.job || u.bio)),
     vouches: vouchCount(db, u.id),
     vouches_required: Number(getSetting(db, 'vouches_required'))
   };
 }
 
-function meView(db, u) {
+function meView(db, u, edition = 'club') {
   const view = {
     id: u.id, email: u.email, role: u.role, status: u.status, refusal_reason: u.refusal_reason,
     first_name: u.first_name, birth_date: u.birth_date, age: ageOf(u), city: u.city, neighborhood: u.neighborhood,
@@ -126,7 +127,10 @@ function meView(db, u) {
     entitlements: entitlements(db, u),
     ...cruiseOwn(u)
   };
-  if (['pending', 'waitlist'].includes(u.status)) view.checks = applicationChecks(db, u);
+  if (['pending', 'waitlist'].includes(u.status)) {
+    view.checks = applicationChecks(db, u, edition);
+    view.review_delay_hours = Number(getSetting(db, 'review_delay_hours'));
+  }
   if (u.status === 'waitlist') view.waitlist_position = waitlistPosition(db, u);
   if (u.status === 'member') {
     view.vouch_requests = db.prepare(`SELECT id, first_name, created_at FROM users
@@ -195,22 +199,24 @@ export function registerMemberRoutes(r) {
     if (password.length < 10) fail(400, 'Mot de passe : 10 caractères minimum.');
     const firstName = str(b.first_name, 40, { required: true, label: 'Prénom' });
     const birth = parseBirthDate(b.birth_date);
-    if (birth.age < 18) fail(403, 'ILD est réservé aux personnes majeures.');
+    if (birth.age < 18) fail(403, `${ctx.config.brand.name} est réservé aux personnes majeures.`);
     if (!b.consent_age || !b.consent_orientation || !b.charter) fail(400, 'Les trois consentements sont nécessaires pour candidater.');
     if (isBlocklisted(db, email)) fail(403, "L'inscription n'est pas possible avec cet e-mail.");
     if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) fail(409, 'Un compte existe déjà avec cet e-mail.');
     const fields = profileFields({ looking_for: 'dating', ...b }, { partial: false });
     const city = str(b.city, 60, { label: 'Ville' }) || 'Paris';
     const inviteCode = str(b.invite_code, 20, { label: 'Code' });
+    // Demande d'adhésion : quelques mots sur soi, lus par l'équipe et affichés ensuite sur la fiche.
+    const bio = str(b.bio, 300, { label: 'Présentation' });
     const now = Date.now();
     const info = db.prepare(`INSERT INTO users (email, pass_hash, first_name, birth_year, birth_date, city, referral_code,
       invited_by_code, consent_age_at, consent_orientation_at, charter_at, legal_version, legal_accepted_at, created_at,
-      looking_for, seeking, tastes, intimate, position, position_visibility, intimate_visibility)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      looking_for, seeking, tastes, intimate, position, position_visibility, intimate_visibility, bio)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(email, hashPassword(password), firstName, birth.birth_year, birth.birth_date, city, newReferralCode(db, firstName),
         inviteCode ? inviteCode.toUpperCase() : null, now, now, now, LEGAL_VERSION, now, now,
         fields.looking_for, fields.seeking, fields.tastes, fields.intimate, fields.position,
-        fields.position_visibility || 'members', fields.intimate_visibility || 'matches');
+        fields.position_visibility || 'members', fields.intimate_visibility || 'matches', bio || null);
     ctx.setCookie(sessionCookie(createSession(db, Number(info.lastInsertRowid)), ctx.config.secureCookies));
     return { ok: true };
   });
@@ -232,7 +238,7 @@ export function registerMemberRoutes(r) {
   });
 
   // --- moi ---
-  r.get('/api/me', (ctx) => meView(ctx.db, requireAccount(ctx)));
+  r.get('/api/me', (ctx) => meView(ctx.db, requireAccount(ctx), ctx.config.edition));
 
   r.patch('/api/me', (ctx) => {
     const u = requireUser(ctx);
@@ -277,7 +283,7 @@ export function registerMemberRoutes(r) {
     }
     const keys = Object.keys(set);
     if (keys.length) db.prepare(`UPDATE users SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => set[k]), u.id);
-    return meView(db, db.prepare('SELECT * FROM users WHERE id = ?').get(u.id));
+    return meView(db, db.prepare('SELECT * FROM users WHERE id = ?').get(u.id), ctx.config.edition);
   });
 
   r.post('/api/vouch', (ctx) => {

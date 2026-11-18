@@ -31,7 +31,8 @@ class Client {
 }
 
 let n = 0;
-async function member(extra = {}, where = PARIS) {
+// admit : l'équipe accepte la demande d'adhésion (ici directement en base ; le parcours complet a son propre test).
+async function member(extra = {}, where = PARIS, admit = true) {
   const c = new Client();
   n += 1;
   const email = `cruise${n}@test.local`;
@@ -42,6 +43,7 @@ async function member(extra = {}, where = PARIS) {
   assert.equal(r.status, 200, JSON.stringify(r.data));
   const session = (await c.post('/api/me/id-check')).data.url.split('#')[1];
   await c.post(`/api/dev/verification/${session}`, { result: 'verified' });
+  if (admit) app.db.prepare("UPDATE users SET status = 'member', accepted_at = ? WHERE email = ? AND status = 'waitlist'").run(Date.now(), email);
   const me = (await c.get('/api/me')).data;
   if (where) await c.put('/api/me/location', { ...where, consent: true });
   return { c, email, me };

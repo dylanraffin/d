@@ -18,8 +18,10 @@
   const MIN = 60e3;
   const DAY = 86400e3;
   let nextId = 900000;
-  let logged = true;
-  const me = D.me;
+  // Ouverte sur « Demander à rejoindre » ou « Se connecter », la démo commence déconnectée ; sinon on est Léo, membre de démonstration.
+  let logged = !/^#\/(apply|login)/.test(location.hash);
+  const member = D.me; // Léo, le membre de démonstration
+  let me = member;    // ou le candidat fictif d'une demande d'adhésion jouée dans la démo
   const uploaded = {}; // photos ajoutées pendant la démo : gardées en mémoire
   const favorites = new Set(D.favorites);
   const checkins = {};
@@ -112,6 +114,13 @@
     'bio', 'job', 'neighborhood', 'position', 'position_visibility', 'intimate_visibility', 'map_precision', 'messages_from', 'hide_from_map', 'show_distance',
     'album_matches_only', 'blur_explicit', 'discreet_icon', 'vanilla'];
   const listOf = (v) => (Array.isArray(v) ? v : String(v || '').split(',').filter(Boolean));
+  // Demande d'adhésion jouée dans la démo : un candidat fictif, rien n'est envoyé. Âge vérifié d'un clic, puis l'attente.
+  const applicantFrom = (b) => Object.assign(JSON.parse(JSON.stringify(member)), {
+    id: 990001, first_name: String(b.first_name || 'Toi').slice(0, 40), city: b.city || 'Paris', bio: b.bio || '', seeking: listOf(b.seeking),
+    photos: [], status: 'pending', id_check_status: 'none', presence: null, trip: null, referral_code: 'TOI-4F2A',
+    waitlist_position: 37, review_delay_hours: 48,
+    checks: { age_verified: false, photo_approved: false, photo_pending: false, profile_complete: !!(b.bio && listOf(b.seeking).length), vouches: 0, vouches_required: 2 }
+  });
   const routes = [
     ['GET', /^\/api\/meta$/, () => D.meta],
     ['GET', /^\/api\/me$/, () => (logged ? me : fail(401, 'Connecte-toi pour continuer.'))],
@@ -127,8 +136,19 @@
       photo.explicit = !!b.explicit;
       return { id: photo.id, explicit: photo.explicit };
     }],
-    ['POST', /^\/api\/auth\/(login|register)$/, () => { logged = true; return { role: 'member' }; }],
-    ['POST', /^\/api\/auth\/logout$/, () => { logged = false; return { ok: true }; }],
+    ['POST', /^\/api\/auth\/(login|register)$/, (m, b) => { logged = true; me = m[1] === 'register' ? applicantFrom(b) : member; return { role: 'member', status: me.status }; }],
+    ['POST', /^\/api\/auth\/logout$/, () => { logged = false; me = member; return { ok: true }; }],
+    ['POST', /^\/api\/me\/id-check$/, () => {
+      if (me !== member) Object.assign(me, { status: 'waitlist', id_check_status: 'verified', checks: { ...me.checks, age_verified: true } });
+      return { status: 'verified' };
+    }],
+    ['POST', /^\/api\/me\/photos$/, (m, b) => {
+      const id = nextId++;
+      uploaded[id] = b.data;
+      me.photos.push({ id, status: 'pending', explicit: !!b.explicit });
+      if (me.checks) me.checks.photo_pending = true;
+      return { id, status: 'pending', explicit: !!b.explicit };
+    }],
     ['GET', /^\/api\/live\/map$/, (m, b, q) => mapView(q)],
     ['GET', /^\/api\/live\/people$/, (m, b, q) => peopleView(q)],
     ['GET', /^\/api\/users\/(\d+)$/, (m) => ({ ...userOf(Number(m[1])), favorite: favorites.has(Number(m[1])) })],
@@ -305,5 +325,14 @@
     tag.className = 'demo-tag';
     tag.textContent = 'Démo · profils fictifs';
     document.body.appendChild(tag);
+    // Pendant une demande d'adhésion jouée dans la démo : un bouton pour voir ensuite l'app comme un membre accepté.
+    const accept = document.createElement('button');
+    accept.className = 'demo-accept';
+    accept.type = 'button';
+    accept.textContent = 'Démo : voir l’app comme un membre accepté';
+    accept.hidden = true;
+    accept.addEventListener('click', () => { location.hash = '#/map'; location.reload(); });
+    document.body.appendChild(accept);
+    setInterval(() => { accept.hidden = !(logged && me !== member && me.status === 'waitlist'); }, 400);
   });
 })();

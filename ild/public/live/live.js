@@ -4,7 +4,7 @@ import { api, h, icon, toast, fmtDate, raw } from '/shared/lib.js';
 import { tr } from '/shared/i18n.js';
 import { state, mount, go, run, refreshMe, runCleanup, onLeave, sheet, chips, select, nav, reportSheet, setNav, label, brand, avatar, backBtn, clean,
   isWide, hhmm, personSummary, presenceText, statusLine, cruiseRows, placeSelect, veil, cssVar } from '/app/ui.js';
-import { screenLogin, screenSignup, screenVerify, screenNotices, screenConsentUpdate } from '/app/onboarding.js';
+import { screenLogin, screenSignup, screenVerify, screenWaitlist, screenNotices, screenConsentUpdate } from '/app/onboarding.js';
 import { screenProfile, screenSharedAlbum, screenMessages, screenChat, filterQuery, filterButton } from '/app/main.js';
 import { screenMe, screenEditProfile, screenMyAlbums, screenAlbumDetail, screenPlus, screenLocation, adminHint } from '/app/me.js';
 
@@ -538,6 +538,11 @@ async function render() {
     if (['suspended', 'banned', 'refused'].includes(me.status)) return await screenNotices({ standalone: true });
     if (me.legal.needs_consent) return screenConsentUpdate();
     if (me.status === 'pending') return screenVerify();
+    // Demande d'adhésion en cours d'examen : on peut seulement compléter sa fiche (photo, quelques mots).
+    if (me.status === 'waitlist') {
+      if (path === 'me' && arg === 'edit') return await screenEditProfile();
+      return screenWaitlist();
+    }
     switch (path) {
       case 'list': return await screenList();
       case 'u': return await screenProfile(arg);

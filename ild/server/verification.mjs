@@ -9,12 +9,15 @@
 import { randomBytes } from 'node:crypto';
 import { fail } from './http.mjs';
 import { requireAccount } from './auth.mjs';
-import { audit, tx } from './db.mjs';
+import { audit, getSetting, tx } from './db.mjs';
 import { blockEmail, notify, verifySignature } from './core.mjs';
 
 export const provider = () => process.env.ILD_VERIFICATION_PROVIDER || 'mock';
 
-// edition « cruise » (carte en direct, ouverte à tous les adultes) : l'âge vérifié donne directement accès.
+// Après l'âge vérifié : le club passe toujours par la liste d'attente et le comité. La carte en direct aussi,
+// tant que l'adhésion se fait sur demande (réglage « membership_review », actif par défaut) ; sinon accès direct.
+export const directAccess = (db, edition) => edition === 'cruise' && getSetting(db, 'membership_review') !== '1';
+
 export function completeVerification(db, sessionId, result, edition = 'club') {
   if (!['verified', 'failed', 'minor'].includes(result)) fail(400, 'Résultat inconnu.');
   const session = db.prepare('SELECT * FROM verifications WHERE id = ?').get(String(sessionId));
@@ -28,7 +31,7 @@ export function completeVerification(db, sessionId, result, edition = 'club') {
       db.prepare(`UPDATE users SET id_check_status = 'verified', id_verified_at = ?, age_verified_at = ?,
         accepted_at = CASE WHEN status = 'pending' AND ? THEN ? ELSE accepted_at END,
         status = CASE WHEN status = 'pending' THEN ? ELSE status END WHERE id = ?`)
-        .run(now, now, edition === 'cruise' ? 1 : 0, now, edition === 'cruise' ? 'member' : 'waitlist', user.id);
+        .run(now, now, directAccess(db, edition) ? 1 : 0, now, directAccess(db, edition) ? 'member' : 'waitlist', user.id);
     } else if (result === 'failed') {
       db.prepare("UPDATE users SET id_check_status = 'failed' WHERE id = ?").run(user.id);
     } else {
@@ -37,7 +40,7 @@ export function completeVerification(db, sessionId, result, edition = 'club') {
         WHERE id = ? AND role = 'member'`).run(now, user.id);
       blockEmail(db, user.email, 'minor');
       notify(db, user.id, 'application_refused', 'minor',
-        "La vérification d'âge indique que tu n'as pas 18 ans. ILD est réservé aux personnes majeures.", null, true);
+        "La vérification d'âge indique que tu n'as pas 18 ans. Ce service est réservé aux personnes majeures.", null, true);
     }
   });
   audit(db, null, `verification_${result}`, `user:${user.id}`, { provider: session.provider });

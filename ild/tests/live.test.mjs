@@ -30,7 +30,8 @@ class Client {
 }
 
 let n = 0;
-async function member(extra = {}, where = PARIS) {
+// admit : l'équipe accepte la demande d'adhésion (ici directement en base ; le parcours complet a son propre test).
+async function member(extra = {}, where = PARIS, admit = true) {
   const c = new Client();
   n += 1;
   const email = `live${n}@test.local`;
@@ -41,6 +42,7 @@ async function member(extra = {}, where = PARIS) {
   assert.equal(r.status, 200, JSON.stringify(r.data));
   const session = (await c.post('/api/me/id-check')).data.url.split('#')[1];
   await c.post(`/api/dev/verification/${session}`, { result: 'verified' });
+  if (admit) app.db.prepare("UPDATE users SET status = 'member', accepted_at = ? WHERE email = ? AND status = 'waitlist'").run(Date.now(), email);
   const me = (await c.get('/api/me')).data;
   if (where) await c.put('/api/me/location', { ...where, consent: true });
   return { c, email, me };
@@ -62,11 +64,38 @@ before(async () => {
 
 after(() => { app.server.close(); rmSync(dir, { recursive: true, force: true }); });
 
-test("accès direct après vérification de l'âge, sans liste d'attente", async () => {
-  const u = await member({}, null);
-  assert.equal(u.me.status, 'member');
+test("adhésion sur demande : liste d'attente après l'âge vérifié, refus motivé ou acceptation par l'équipe", async () => {
+  const u = await member({ bio: 'Nouveau à Paris, plutôt du soir, je cherche des mecs simples.', seeking: 'now', city: 'Paris' }, null, false);
+  assert.equal(u.me.status, 'waitlist');
+  assert.equal(u.me.checks.age_verified, true);
+  assert.equal(u.me.checks.profile_complete, true); // quelques mots et ce qu'il cherche suffisent sur la carte
+  assert.equal(u.me.review_delay_hours, 48);
+  assert.ok(u.me.waitlist_position >= 1);
+  assert.equal((await u.c.get('/api/live/map')).status, 403); // rien de la carte avant l'acceptation
+  // Sans photo validée qui ressemble à la personne, l'équipe ne peut pas accepter.
+  const early = await admin.post(`/api/admin/applications/${u.me.id}/accept`);
+  assert.equal(early.status, 400);
+  assert.match(early.data.error, /photo/);
+  const up = await u.c.post('/api/me/photos', { data: JPEG });
+  assert.equal(up.status, 200, JSON.stringify(up.data));
+  assert.equal((await admin.post(`/api/admin/photos/${up.data.id}/review`, { decision: 'approve' })).status, 200);
+  assert.equal((await admin.post(`/api/admin/applications/${u.me.id}/accept`)).status, 200);
+  assert.equal((await u.c.get('/api/me')).data.status, 'member');
+  assert.equal((await u.c.get('/api/live/map')).status, 200);
+  // Refus : un motif documenté, une décision lisible et contestable.
+  const v = await member({}, null, false);
+  assert.equal((await admin.post(`/api/admin/applications/${v.me.id}/refuse`, { ground: 'fake_profile', explanation: 'La photo ne correspond pas à la personne vérifiée.' })).status, 200);
+  const notice = (await v.c.get('/api/notices')).data.notices[0];
+  assert.equal(notice.kind, 'application_refused');
+  assert.equal(notice.can_appeal, true);
+  // Réglage coupé dans le back office : accès direct dès l'âge vérifié.
+  assert.equal((await admin.put('/api/admin/settings', { membership_review: false })).status, 200);
+  assert.equal((await member({}, null, false)).me.status, 'member');
+  assert.equal((await admin.put('/api/admin/settings', { membership_review: true })).status, 200);
   assert.equal((await new Client().get('/api/meta')).data.brand.name, 'Nuit');
-  assert.match((await new Client().get('/legal/cgu')).data, /géolocalisé/);
+  const cgu = (await new Client().get('/legal/cgu')).data;
+  assert.match(cgu, /géolocalisé/);
+  assert.match(cgu, /adhésion se fait sur demande/);
 });
 
 test('carte : points décalés, jamais la position réelle ; mode « zone » sans point', async () => {

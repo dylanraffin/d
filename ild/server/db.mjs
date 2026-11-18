@@ -371,6 +371,8 @@ export const SETTINGS_SPEC = {
   // Validation des candidatures
   vouches_required: { type: 'int', min: 0, max: 10, def: '2', label: 'Parrainages conseillés avant examen' },
   vouches_mandatory: { type: 'bool', def: '0', label: 'Parrainages obligatoires pour accepter' },
+  membership_review: { type: 'bool', def: '1', label: "Carte en direct : adhésion sur demande, validée par l'équipe (décoché : accès dès l'âge vérifié)" },
+  review_delay_hours: { type: 'int', min: 1, max: 336, def: '48', label: 'Délai de réponse annoncé aux candidats (heures)' },
   // Albums, voyage, carte
   travel_visible_days: { type: 'int', min: 0, max: 30, def: '3', label: 'Visibilité avant un voyage (jours)' },
   map_min_cluster: { type: 'int', min: 2, max: 20, def: '3', label: 'Minimum de membres par zone affichée sur la carte' },

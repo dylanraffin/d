@@ -8,7 +8,7 @@ Le même code fait tourner **deux produits** :
 
 | Édition | Lancement | Principe |
 |---|---|---|
-| **Nuit** (`cruise`, par défaut) | `npm start` | Carte en direct, ouverte à tous les adultes dont l'âge est vérifié : statut « dispo », fiche cruising, chat sans match avec photos, plans à plusieurs, lieux, mode voyage. Nom changeable avec `ILD_BRAND`. |
+| **Nuit** (`cruise`, par défaut) | `npm start` | Carte en direct, sur demande d'adhésion (façon Raya) relue par l'équipe, pour adultes à l'âge vérifié : statut « dispo », fiche cruising, chat sans match avec photos, plans à plusieurs, lieux, mode voyage. Nom changeable avec `ILD_BRAND`. |
 | **ILD** (`club`) | `ILD_EDITION=club npm start` | Club de rencontre sur invitation, façon Raya : liste d'attente, parrainages, comité, Découvrir un profil à la fois. |
 
 C'est un **prototype qui fonctionne** : vraie base de données, vraie API, vrais comptes. Il n'est **pas prêt pour un lancement public** tant que les prestataires et les étapes juridiques listés plus bas ne sont pas faits.
@@ -53,7 +53,7 @@ L'interface est écrite en français. Les autres langues sont des dictionnaires 
 
 | Écran | Contenu |
 |---|---|
-| Inscription (3 étapes) | Compte ; pseudo et date de naissance (18 ans révolus à la date près) ; trois accords explicites et horodatés. La fiche se complète ensuite. |
+| Demande d'adhésion (4 étapes) | Compte ; pseudo, date de naissance (18 ans révolus à la date près) et ville ; « ta demande » : quelques mots sur soi, ce qu'on cherche, code facultatif d'un membre qui recommande ; trois accords explicites et horodatés. Puis l'âge vérifié par le prestataire, et la demande attend en liste d'attente, ville par ville. Une personne de l'équipe la relit (délai annoncé réglable, 48 h par défaut) selon des critères publiés : âge vérifié, photo validée qui ressemble à la personne, accords donnés, charte, pas d'exclusion antérieure ; jamais l'apparence, l'âge ou les origines (Code pénal, art. 225-1). Une recommandation fait passer en priorité. Refus motivé et contestable. Réglage « adhésion sur demande » dans le back office : décoché, l'âge vérifié donne l'accès direct. |
 | Vérification de l'âge | Parcours chez un prestataire (pièce d'identité + selfie). Nuit ne reçoit que le résultat. Dès que l'âge est vérifié, la personne entre. En développement, une page simule le prestataire. |
 | Carte | Membres (anneau vert s'ils sont dispo, pastille s'ils sont en ligne), zones, lieux, plans à plusieurs. « Je suis dispo » pour 30 min à 4 h : je reçois, je me déplace, sur place, verre d'abord. Filtres, conseils de sécurité. |
 | Fiche | Taille, poids, morphologie, rôle ; lieu (peut recevoir, peut se déplacer), ambiance, style, pratiques, santé ; en ligne, distance par tranche, badge « Nouveau profil » ; favori ; **premier message écrit depuis la fiche**. |
