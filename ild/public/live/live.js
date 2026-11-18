@@ -1,7 +1,7 @@
 // Nuit, la carte du cruising : qui est dispo autour de toi, maintenant.
 // Téléphone : carte plein écran. Grand écran : liste à gauche, carte à droite, fiches dans un volet.
-import { api, h, icon, toast, fmtDate, raw } from '/shared/lib.js';
-import { tr } from '/shared/i18n.js';
+import { api, h, icon, toast, fmtDate, raw, fileToJpeg } from '/shared/lib.js';
+import { tr, locale } from '/shared/i18n.js';
 import { state, mount, go, run, refreshMe, runCleanup, onLeave, sheet, chips, select, nav, reportSheet, setNav, label, logout, brand, avatar, backBtn, clean,
   isWide, hhmm, personSummary, presenceText, statusLine, cruiseRows, placeSelect, veil, cssVar, shownPhoto, avatarOf, distText, storage, switchRow, linkRow } from '/app/ui.js';
 import { screenLogin, screenSignup, screenVerify, screenWaitlist, screenNotices, screenConsentUpdate } from '/app/onboarding.js';
@@ -19,6 +19,7 @@ const rerender = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
 setNav([
   ['map', '#/map', 'map', 'Carte'],
   ['list', '#/list', 'card', 'Liste'],
+  ['plans', '#/plans', 'group', 'Plans'],
   ['messages', '#/messages', 'chat', 'Messages'],
   ['me', '#/me', 'user', 'Moi']
 ], () => (state.me?.status === 'member' ? presenceButton(rerender) : null));
@@ -34,6 +35,8 @@ function safetySheet() {
       h('li', null, 'Échange quelques messages et une photo avant de bouger. Une photo ne peut être envoyée qu’après une réponse.'),
       h('li', null, 'Tu peux bloquer et signaler à tout moment ; un signalement garde une copie de la conversation.'),
       h('li', null, 'Plans à plusieurs : jamais d’argent, jamais de drogue. Signale un plan qui en demande.'),
+      h('li', null, 'Arnaques : personne de l’équipe ne te demandera ton mot de passe ni un code reçu par SMS. Ne paie jamais pour « débloquer » une rencontre, une photo ou un plan.'),
+      h('li', null, 'Chantage aux images : ne paie pas, garde les preuves, bloque et signale. Tu peux aussi le signaler sur internet-signalement.gouv.fr (PHAROS).'),
       h('li', null, 'Drogues : informe-toi sur drogues-info-service.fr. Danger immédiat : 17 ou 112.')),
     h('button', { class: 'btn primary block', onclick: () => { storage.set('live-safety-seen', '1'); close(); } }, 'Compris')
   ]);
@@ -150,8 +153,35 @@ function proposeSpotSheet(center) {
 }
 
 // ---------- plans à plusieurs ----------
-const planWhen = (p) => (p.ended ? 'Terminé' : p.in_progress ? `En cours jusqu'à ${hhmm(p.ends_at)}` : `Commence à ${hhmm(p.starts_at)}, jusqu'à ${hhmm(p.ends_at)}`);
+// « Aujourd'hui à 18:00 », « Demain à 18:00 », « ven. 21 nov. à 18:00 »
+function dayAt(t) {
+  const d = new Date(t);
+  const midnight = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((midnight(d) - midnight(new Date())) / 864e5);
+  if (days === 0) return `Aujourd’hui à ${hhmm(t)}`;
+  if (days === 1) return `Demain à ${hhmm(t)}`;
+  return `${d.toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' })} à ${hhmm(t)}`;
+}
+const planStart = (p) => (p.ended ? 'Terminé' : p.in_progress ? `En cours jusqu'à ${hhmm(p.ends_at)}` : dayAt(p.starts_at));
+const planWhen = (p) => (p.ended || p.in_progress ? planStart(p) : `${dayAt(p.starts_at)}, jusqu'à ${hhmm(p.ends_at)}`);
 const planCount = (p) => `${p.going + 1} sur ${p.max_guests + 1} (hôte compris)`;
+const confirmedText = (p) => (p.going ? `${p.going + 1} confirmés, hôte compris` : 'Seul l’hôte pour l’instant');
+
+// Choix d'une photo de couverture : aperçu tout de suite, envoi avec le plan (puis relue par l'équipe).
+function coverPicker(id, onPick) {
+  let data = null;
+  const preview = h('span', { class: 'cover-preview' }, icon('image', 22), h('span', { class: 'small' }, 'Le lieu ou l’ambiance, sans nudité. Relue par l’équipe avant d’être montrée.'));
+  const input = h('input', { type: 'file', accept: 'image/*', id, class: 'visually-hidden', onchange: async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    try {
+      data = await fileToJpeg(f);
+      preview.replaceChildren(h('img', { src: data, alt: '' }));
+      onPick?.(data);
+    } catch { toast('Image illisible.', true); }
+  } });
+  return { el: h('div', null, input, h('label', { class: 'cover-pick', for: id }, preview)), data: () => data };
+}
 
 function createPlanSheet(center, after) {
   sheet((close) => {
@@ -164,20 +194,28 @@ function createPlanSheet(center, after) {
     const max = h('input', { class: 'input', type: 'number', min: 2, max: m.plan_max_guests, value: 4, 'aria-label': 'Nombre de participants' });
     const address = h('input', { class: 'input', maxlength: 200, placeholder: 'Adresse, code, étage (facultatif)', 'aria-label': 'Adresse' });
     const rules = h('input', { type: 'checkbox' });
+    // Ou une date et une heure précises, jusqu'à une semaine à l'avance.
+    const localInput = (t) => new Date(t - new Date(t).getTimezoneOffset() * 60e3).toISOString().slice(0, 16);
+    const when = h('input', { class: 'input', type: 'datetime-local', min: localInput(Date.now()), max: localInput(Date.now() + 7 * 864e5), 'aria-label': 'Date et heure précises' });
+    const cover = coverPicker('plan-cover-new');
     return [
       h('h2', null, 'Organiser un plan à plusieurs'),
       title, desc,
       h('span', { class: 'section-label' }, 'Où'), kind.el,
       h('span', { class: 'section-label' }, 'Quand'), start.el,
+      h('label', { class: 'stack small-gap' }, h('span', { class: 'small' }, 'Ou à une date et une heure précises (7 jours au plus)'), when),
       h('span', { class: 'section-label' }, 'Durée'), dur.el,
       h('label', { class: 'stack small-gap' }, h('span', { class: 'section-label' }, `Participants à accepter (2 à ${m.plan_max_guests})`), max),
       h('label', { class: 'stack small-gap' }, h('span', { class: 'section-label' }, 'Adresse, visible seulement des personnes que tu acceptes'), address),
+      h('span', { class: 'section-label' }, 'Photo de couverture (facultatif)'), cover.el,
       h('p', { class: 'small' }, 'Sur la carte, ton plan est placé au centre d’une case d’environ 1 km autour du centre de la carte, jamais à l’adresse.'),
       h('label', { class: 'check' }, rules, h('span', null, 'Tout le monde est majeur et consentant, personne ne paie ni n’est payé, pas de drogue. Chacun peut dire non et partir à tout moment.')),
       h('button', { class: 'btn primary block', onclick: async () => {
         if (!rules.checked) { toast('Confirme les règles pour publier ton plan.', true); return; }
         const r = await run(() => api('POST', '/api/plans', { title: title.value, description: desc.value, place_kind: kind.value(), starts_in: Number(start.value() || 0),
+          starts_at: when.value ? new Date(when.value).getTime() : null,
           duration: Number(dur.value() || 120), max_guests: Number(max.value), address: address.value, rules: true, lat: center.lat, lng: center.lng }), 'Plan publié. Tu reçois les demandes ici.');
+        if (cover.data()) await api('POST', `/api/plans/${r.id}/cover`, { data: cover.data() }).catch((e) => toast(e.message, true));
         close(); after?.(); planSheet(r.id, after);
       } }, 'Publier le plan'),
       h('button', { class: 'btn ghost', onclick: close }, 'Annuler')
@@ -205,6 +243,8 @@ function planSheet(id, after) {
               h('button', { class: 'btn small', 'aria-label': `Décliner ${r.first_name}`, onclick: () => act(() => api('POST', `/api/plans/${id}/requests/${r.id}`, { decision: 'decline' })) }, 'Non'))))]
             : h('p', { class: 'small' }, 'Pas de demande en attente.'),
           h('a', { class: 'btn primary block', href: `#/plan/${id}`, onclick: close }, 'Ouvrir la discussion du plan'),
+          h('span', { class: 'section-label' }, p.cover ? 'Changer la couverture' : 'Ajouter une couverture'),
+          coverPicker(`plan-cover-${id}`, (data) => act(() => api('POST', `/api/plans/${id}/cover`, { data }), 'Couverture envoyée. Elle sera visible une fois relue.')).el,
           h('button', { class: 'btn danger block', onclick: () => act(() => api('DELETE', `/api/plans/${id}`), 'Plan annulé.') }, 'Annuler le plan')];
       } else if (mine === 'accepted') {
         action = [h('a', { class: 'btn primary block', href: `#/plan/${id}`, onclick: close }, 'Ouvrir la discussion du plan'),
@@ -218,6 +258,8 @@ function planSheet(id, after) {
         action = [message, h('button', { class: 'btn primary block', onclick: () => act(() => api('POST', `/api/plans/${id}/join`, { message: message.value }), 'Demande envoyée.') }, 'Demander à venir')];
       }
       box.replaceChildren(...clean([
+        p.cover ? h('img', { class: 'plan-cover', src: `/photos/${p.cover.id}`, alt: '' }) : null,
+        p.cover?.status === 'pending' ? h('p', { class: 'small' }, 'Couverture en attente de relecture : les autres la verront une fois validée.') : null,
         h('div', { class: 'row wrap' }, h('span', { class: 'chip plan' }, 'Plan à plusieurs'), h('span', { class: 'chip' }, label('plan_kinds', p.place_kind)),
           p.in_progress ? h('span', { class: 'chip live-chip' }, 'En cours') : null),
         h('h2', null, raw(p.title)),
@@ -235,6 +277,61 @@ function planSheet(id, after) {
     api('GET', `/api/plans/${id}`).then(draw).catch((e) => box.replaceChildren(h('p', { class: 'notice warn' }, e.message)));
     return [box, h('button', { class: 'btn ghost', onclick: close }, 'Fermer')];
   });
+}
+
+// ---------- plans à plusieurs : mes plans et ceux autour de moi ----------
+const MY_STATUS = { host: 'Tu organises', accepted: 'Tu y vas', requested: 'Demande envoyée', declined: 'Demande déclinée' };
+
+function planCard(p, again) {
+  const open = () => planSheet(p.id, again);
+  const left = Math.max(0, p.max_guests - p.going);
+  return h('article', { class: 'plan-card' },
+    h('div', { class: 'plan-card-head' },
+      h('a', { href: `#/u/${p.host.id}`, 'aria-label': `Profil de ${p.host.first_name}` }, avatarOf(p.host)),
+      h('button', { class: 'grow stack small-gap plan-card-when', onclick: open },
+        h('span', { class: 'strong' }, planStart(p)),
+        h('span', { class: 'small text2' }, [distText(p.distance), label('plan_kinds', p.place_kind)].filter(Boolean).join(' · '))),
+      h('button', { class: 'icon-btn', 'aria-label': 'Voir sur la carte', title: 'Voir sur la carte', onclick: () => {
+        live.view = { center: { lat: p.lat, lng: p.lng }, zoom: 15 };
+        go('#/map');
+      } }, icon('locate', 20))),
+    h('div', { class: 'row wrap plan-card-tags' },
+      p.in_progress ? h('span', { class: 'chip live-chip' }, 'En cours') : null,
+      MY_STATUS[p.my_status] ? h('span', { class: 'chip' }, MY_STATUS[p.my_status]) : null,
+      p.my_status === 'host' && p.pending ? h('span', { class: 'chip blue' }, p.pending > 1 ? `${p.pending} demandes` : '1 demande') : null),
+    h('p', { class: 'small plan-count' }, icon('group', 16), h('span', null, confirmedText(p)), h('span', { class: 'text2', 'aria-hidden': 'true' }, '·'),
+      h('span', { class: 'text2' }, left ? (left > 1 ? `${left} places libres` : '1 place libre') : 'Complet')),
+    h('button', { class: 'plan-card-body', onclick: open },
+      h('h3', { class: 'plan-title' }, raw(p.title)),
+      p.cover ? h('img', { class: 'plan-cover', src: `/photos/${p.cover.id}`, alt: '', loading: 'lazy' }) : null,
+      p.description ? h('p', { class: 'body-text text2 clamp-3' }, raw(p.description)) : null));
+}
+
+async function screenPlans(tab) {
+  tab = tab === 'mine' ? 'mine' : 'nearby';
+  const [mine, near] = await Promise.all([api('GET', '/api/plans/mine'), api('GET', '/api/plans/nearby')]);
+  const again = () => { if (location.hash.startsWith('#/plans')) screenPlans(tab); };
+  const plans = tab === 'mine' ? mine.plans : near.plans;
+  const center = near.center || live.view?.center || null;
+  const host = () => {
+    if (!center) { toast('Active ta position ou choisis une ville pour placer ton plan.', true); go('#/map'); return; }
+    createPlanSheet(center, again);
+  };
+  const empty = tab === 'mine'
+    ? h('div', { class: 'empty-state' }, h('p', null, 'Tu n’as pas de plan en cours.'), h('p', { class: 'small' }, 'Organise le tien, ou demande à rejoindre un plan autour de toi.'),
+      h('a', { class: 'btn', href: '#/plans/nearby' }, 'Voir les plans autour de moi'))
+    : !near.located
+      ? h('div', { class: 'empty-state' }, h('p', null, 'Active ta position pour voir les plans autour de toi.'), h('a', { class: 'btn', href: '#/map' }, 'Aller sur la carte'))
+      : h('div', { class: 'empty-state' }, h('p', null, 'Pas de plan autour de toi pour l’instant.'), h('p', { class: 'small' }, 'Lance le premier : chez toi, à l’hôtel ou dans un établissement.'));
+  mount(h('main', { class: 'screen with-nav plans-screen' },
+    h('h1', { class: 'title' }, 'Plans à plusieurs'),
+    h('div', { class: 'seg', role: 'tablist', 'aria-label': 'Plans' },
+      [['mine', 'Mes plans', mine.plans.length], ['nearby', 'Autour de moi', near.plans.length]].map(([k, text, count]) =>
+        h('a', { href: `#/plans/${k}`, role: 'tab', class: tab === k ? 'on' : '', 'aria-selected': String(tab === k) }, text, count ? h('span', { class: 'seg-count' }, String(count)) : null))),
+    plans.length ? h('div', { class: 'plan-list' }, plans.map((p) => planCard(p, again))) : empty,
+    h('button', { class: 'safety-link', onclick: safetySheet }, icon('shield', 18), h('span', null, 'Se protéger : sécurité en ligne et arnaques')),
+    h('button', { class: 'fab', onclick: host }, h('span', null, 'Organiser un plan'), icon('plus', 20))),
+  nav('plans'));
 }
 
 // Discussion d'un plan : hôte et participants acceptés.
@@ -662,6 +759,7 @@ async function render() {
       case 'shared': return await screenSharedAlbum(arg);
       case 'messages': return await screenMessages();
       case 'chat': return await screenChat(arg);
+      case 'plans': return await screenPlans(arg);
       case 'plan': return await screenPlan(arg);
       case 'plus': return await screenPlus();
       case 'me':

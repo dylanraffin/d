@@ -282,9 +282,10 @@ async function pagePhotos() {
         h('div', { class: 'row' }, h('a', { href: `#/${p.user_status === 'member' ? 'member' : 'application'}/${p.user_id}` }, p.first_name), h('span', { class: 'small' }, ago(p.created_at))),
         h('div', { class: 'stack', style: { padding: '0 10px 10px' } },
           p.alternate ? h('span', { class: 'small' }, 'Photo alternative : elle doit être sans nudité') : null,
+          p.plan_cover ? h('span', { class: 'small' }, 'Couverture de plan à plusieurs : sans nudité') : null,
           d.explicit_allowed && p.explicit ? h('span', { class: 'small' }, 'Signalée explicite par le membre') : null,
           h('button', { class: 'btn ok', onclick: () => act(() => api('POST', `/api/admin/photos/${p.id}/review`, d.explicit_allowed ? { decision: 'approve', explicit: false } : { decision: 'approve' }), 'Photo validée.', pagePhotos) }, d.explicit_allowed ? 'Valider (non explicite)' : 'Valider'),
-          d.explicit_allowed && !p.alternate ? h('button', { class: 'btn', onclick: () => act(() => api('POST', `/api/admin/photos/${p.id}/review`, { decision: 'approve', explicit: true }), 'Photo validée comme explicite.', pagePhotos) }, 'Valider comme explicite') : null,
+          d.explicit_allowed && !p.alternate && !p.plan_cover ? h('button', { class: 'btn', onclick: () => act(() => api('POST', `/api/admin/photos/${p.id}/review`, { decision: 'approve', explicit: true }), 'Photo validée comme explicite.', pagePhotos) }, 'Valider comme explicite') : null,
           reason,
           h('button', { class: 'btn danger', onclick: () => act(() => api('POST', `/api/admin/photos/${p.id}/review`, { decision: 'reject', ground: reason.value }), 'Photo refusée, motif envoyé.', pagePhotos) }, 'Refuser')));
     })) : h('p', { class: 'empty' }, 'Aucune photo en attente.'));

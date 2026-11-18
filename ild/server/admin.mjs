@@ -73,7 +73,7 @@ export function registerAdminRoutes(r) {
       pending_id: one("SELECT COUNT(*) AS n FROM users WHERE status = 'pending'"),
       waitlist: waitlist.length,
       ready_for_committee: waitlist.filter((u) => dossierChecks(db, u, ctx.config.edition).filter((c) => c.mandatory).every((c) => c.ok)).length,
-      photos_to_review: one("SELECT COUNT(*) AS n FROM photos WHERE status = 'pending' AND kind IN ('profile', 'alternate')"),
+      photos_to_review: one("SELECT COUNT(*) AS n FROM photos WHERE status = 'pending' AND kind IN ('profile', 'alternate', 'plan')"),
       reports_open: one("SELECT COUNT(*) AS n FROM reports WHERE status = 'open'"),
       reports_urgent: one("SELECT COUNT(*) AS n FROM reports WHERE status = 'open' AND reason IN ('minor', 'non_consensual', 'illegal')"),
       reports_late: one("SELECT COUNT(*) AS n FROM reports WHERE status = 'open' AND created_at < ?", Date.now() - DAY),
@@ -247,9 +247,10 @@ export function registerAdminRoutes(r) {
     return {
       templates: Object.fromEntries(Object.keys(PHOTO_TEMPLATES).map((k) => [k, GROUNDS[k]])),
       explicit_allowed: explicitProfilesAllowed(ctx.db, ctx.config),
-      photos: ctx.db.prepare(`SELECT p.id, p.user_id, p.created_at, p.explicit, p.kind = 'alternate' AS alternate, x.first_name, x.status AS user_status FROM photos p JOIN users x ON x.id = p.user_id
-        WHERE p.status = 'pending' AND p.kind IN ('profile', 'alternate') ORDER BY p.created_at LIMIT 100`).all()
-        .map((p) => ({ ...p, alternate: !!p.alternate }))
+      photos: ctx.db.prepare(`SELECT p.id, p.user_id, p.created_at, p.explicit, p.kind = 'alternate' AS alternate, p.kind = 'plan' AS plan_cover,
+        x.first_name, x.status AS user_status FROM photos p JOIN users x ON x.id = p.user_id
+        WHERE p.status = 'pending' AND p.kind IN ('profile', 'alternate', 'plan') ORDER BY p.created_at LIMIT 100`).all()
+        .map((p) => ({ ...p, alternate: !!p.alternate, plan_cover: !!p.plan_cover }))
     };
   });
 
@@ -268,6 +269,7 @@ export function registerAdminRoutes(r) {
       // La modération peut corriger le marquage : une photo explicite non signalée est validée « comme explicite ».
       if (ok && 'explicit' in ctx.body) {
         if (ctx.body.explicit && p.kind === 'alternate') fail(400, "Une photo alternative doit être sans nudité : refuse-la avec le motif « nudité ».");
+        if (ctx.body.explicit && p.kind === 'plan') fail(400, "Une couverture de plan doit être sans nudité : refuse-la avec le motif « nudité ».");
         if (ctx.body.explicit && !explicitProfilesAllowed(db, ctx.config)) fail(400, "Les photos de profil explicites ne sont pas autorisées : refuse la photo avec le motif « nudité ».");
         db.prepare('UPDATE photos SET explicit = ? WHERE id = ?').run(ctx.body.explicit ? 1 : 0, p.id);
       }
@@ -482,7 +484,12 @@ export function purge(ctx) {
     blocklist_deleted: db.prepare('DELETE FROM blocklist WHERE created_at < ?').run(now - months('retention_months_blocklist')).changes,
     presences_cleared: db.prepare('UPDATE users SET presence_until = NULL, presence_note = NULL, presence_place = NULL WHERE presence_until < ?').run(now).changes,
     checkins_deleted: db.prepare('DELETE FROM spot_checkins WHERE until < ?').run(now).changes,
-    // Plans à plusieurs terminés depuis 30 jours : annonce, adresse, demandes et discussion.
+    // Plans à plusieurs terminés depuis 30 jours : annonce, adresse, demandes, discussion et couverture.
+    plan_covers_deleted: (() => {
+      const old = db.prepare("SELECT p.id, p.file FROM photos p JOIN plans x ON x.id = p.plan_id WHERE p.kind = 'plan' AND x.ends_at < ?").all(now - 30 * DAY);
+      deleteFiles(ctx, old.map((p) => p.file));
+      return old.length;
+    })(),
     plans_deleted: db.prepare('DELETE FROM plans WHERE ends_at < ?').run(now - 30 * DAY).changes,
     trips_cleared: db.prepare('UPDATE users SET trip_lat = NULL, trip_lng = NULL, trip_label = NULL, trip_until = NULL WHERE trip_until < ?').run(now).changes,
     subscriptions: settleSubscriptions(db)

@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS albums (
 CREATE TABLE IF NOT EXISTS photos (
   id INTEGER PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  kind TEXT NOT NULL,                             -- profile | alternate (sans nudité, à la place d'une photo explicite) | album | chat
+  kind TEXT NOT NULL,                             -- profile | alternate (sans nudité, à la place d'une photo explicite) | album | chat | plan (couverture, sans nudité)
   album_id INTEGER REFERENCES albums(id) ON DELETE CASCADE,
   file TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',         -- pending | approved | rejected
@@ -364,7 +364,8 @@ const ADDED_COLUMNS = {
     liveplay: 'INTEGER NOT NULL DEFAULT 0'
   },
   matches: { origin: "TEXT NOT NULL DEFAULT 'like'", opened_by: 'INTEGER', replied_at: 'INTEGER', a_read_at: 'INTEGER', b_read_at: 'INTEGER' },
-  photos: { album_id: 'INTEGER REFERENCES albums(id) ON DELETE CASCADE', match_id: 'INTEGER REFERENCES matches(id) ON DELETE CASCADE', explicit: 'INTEGER NOT NULL DEFAULT 0' },
+  photos: { album_id: 'INTEGER REFERENCES albums(id) ON DELETE CASCADE', match_id: 'INTEGER REFERENCES matches(id) ON DELETE CASCADE', explicit: 'INTEGER NOT NULL DEFAULT 0',
+    plan_id: 'INTEGER REFERENCES plans(id) ON DELETE CASCADE' },
   messages: { kind: "TEXT NOT NULL DEFAULT 'text'", share_id: 'INTEGER', photo_id: 'INTEGER' },
   reports: { reporter_contact: 'TEXT' }
 };

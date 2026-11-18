@@ -164,6 +164,11 @@ export function canSeePhoto(db, viewer, photo) {
   const owner = db.prepare('SELECT status FROM users WHERE id = ?').get(photo.user_id);
   if (!owner || owner.status !== 'member' || hiddenBetween(db, viewer.id, photo.user_id)) return false;
   if (photo.kind === 'profile' || photo.kind === 'alternate') return true;
+  if (photo.kind === 'plan') {
+    // Couverture d'un plan à plusieurs : visible des membres tant que le plan n'est pas retiré par la modération.
+    const plan = db.prepare('SELECT host_id, status FROM plans WHERE id = ?').get(photo.plan_id);
+    return !!plan && plan.host_id === photo.user_id && plan.status !== 'removed';
+  }
   if (photo.kind === 'chat') {
     // Photo envoyée dans une conversation : seulement ses deux participants.
     const m = db.prepare('SELECT a_id, b_id FROM matches WHERE id = ?').get(photo.match_id);

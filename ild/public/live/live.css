@@ -138,3 +138,40 @@
 .pin .count { position: absolute; top: -9px; right: -9px; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; background: var(--text); color: var(--on-text);
   border: 2px solid var(--bg); font: 700 12px/20px var(--font); text-align: center; }
 .pin.small .count { min-width: 20px; height: 20px; font-size: 11px; line-height: 16px; top: -7px; right: -7px; }
+
+/* ---------- plans à plusieurs : liste « Mes plans / Autour de moi » ---------- */
+.seg { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.seg a { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; border-radius: 999px; color: var(--text-2); font-weight: 500; font-size: 15px; }
+.seg a.on { background: var(--raised-2); color: var(--text); }
+.seg-count { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700; line-height: 22px; text-align: center; }
+.plan-list { display: flex; flex-direction: column; gap: 14px; }
+.plan-card { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); }
+.plan-card-head { display: flex; align-items: center; gap: 12px; }
+.plan-card-head .avatar { flex-shrink: 0; }
+.plan-card-when, .plan-card-body { min-width: 0; padding: 0; border: none; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.plan-card-body { display: flex; flex-direction: column; gap: 10px; }
+.plan-card-tags:empty { display: none; }
+.plan-count { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; color: var(--text); }
+.plan-count span { white-space: nowrap; }
+.plan-count svg { color: var(--accent); flex-shrink: 0; }
+.plan-title { margin: 0; font-family: var(--serif); font-size: 24px; font-weight: 500; line-height: 1.15; overflow-wrap: anywhere; }
+.plan-cover { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; background: var(--raised); }
+.clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 36px 16px; text-align: center; color: var(--text-2); }
+.empty-state p { margin: 0; }
+.safety-link { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: none; background: none; color: var(--text-2); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.safety-link svg { color: var(--accent); }
+.fab { position: fixed; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 20; display: inline-flex; align-items: center; gap: 8px;
+  min-height: 52px; padding: 0 20px; border: none; border-radius: 999px; background: var(--accent-btn); color: var(--on-text); font: 600 15px var(--font);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55); cursor: pointer; }
+.screen.plans-screen { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
+.cover-pick { display: block; cursor: pointer; }
+.cover-preview { display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 12px 14px; border: 1px dashed var(--field); border-radius: 12px; color: var(--text-2); }
+.cover-preview svg { flex-shrink: 0; }
+.cover-preview img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
+.cover-pick:focus-within .cover-preview, .cover-pick:hover .cover-preview { border-color: var(--text-2); }
+@media (min-width: 900px) {
+  .fab { right: max(24px, calc(50% - 360px)); bottom: 32px; }
+  .screen.plans-screen { padding-bottom: 110px; }
+  .plan-list { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+}

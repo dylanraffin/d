@@ -429,3 +429,51 @@ test('photo alternative sans nudité : jointe pour le mode vanille, à la place 
   assert.equal((await a.c.del(`/api/me/photos/${next.id}`)).status, 200);
   assert.equal((await a.c.get('/api/me')).data.alternate, null);
 });
+
+test('liste des plans : mes plans, autour de moi, heure précise, couverture sans nudité relue par la modération', async () => {
+  const host = await member({ first_name: 'Organisateur' });
+  const guest = await member({ first_name: 'Curieux' });
+  const blocked = await member({ first_name: 'Bloqué' });
+  const base = { title: 'Soirée détente', description: 'Ambiance calme, musique.', place_kind: 'home', max_guests: 3, rules: true, lat: 48.8601, lng: 2.3601 };
+  // Heure précise : demain 18 h, jamais plus d'une semaine à l'avance.
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(18, 0, 0, 0);
+  assert.equal((await host.c.post('/api/plans', { ...base, starts_at: Date.now() + 9 * 86400e3 })).status, 400);
+  const created = await host.c.post('/api/plans', { ...base, starts_at: tomorrow.getTime(), duration: 240 });
+  assert.equal(created.status, 200, JSON.stringify(created.data));
+  const id = created.data.id;
+  // Autour de moi : visible du voisin, avec la description, le nombre de confirmés et la case du membre pour en créer un.
+  const near = (await guest.c.get('/api/plans/nearby')).data;
+  const card = near.plans.find((p) => p.id === id);
+  assert.ok(card);
+  assert.equal(card.starts_at, tomorrow.getTime());
+  assert.equal(card.description, 'Ambiance calme, musique.');
+  assert.equal(card.going, 0);
+  assert.equal(card.cover, null);
+  assert.ok(near.center && Math.abs(near.center.lat - 48.865) < 0.02);
+  // Bloqué par l'hôte : le plan disparaît de sa liste.
+  await host.c.post('/api/blocks', { user_id: blocked.me.id });
+  assert.ok(!(await blocked.c.get('/api/plans/nearby')).data.plans.some((p) => p.id === id));
+  // Mes plans : l'hôte y voit le sien ; l'invité, une fois sa demande envoyée.
+  assert.ok((await host.c.get('/api/plans/mine')).data.plans.some((p) => p.id === id && p.my_status === 'host'));
+  assert.ok(!(await guest.c.get('/api/plans/mine')).data.plans.some((p) => p.id === id));
+  await guest.c.post(`/api/plans/${id}/join`, {});
+  assert.ok((await guest.c.get('/api/plans/mine')).data.plans.some((p) => p.id === id && p.my_status === 'requested'));
+  // Couverture : seul l'hôte ; en attente, visible de lui seul ; jamais validée comme explicite.
+  assert.equal((await guest.c.post(`/api/plans/${id}/cover`, { data: JPEG })).status, 403);
+  const up = await host.c.post(`/api/plans/${id}/cover`, { data: JPEG });
+  assert.equal(up.status, 200, JSON.stringify(up.data));
+  assert.deepEqual((await host.c.get(`/api/plans/${id}`)).data.cover, { id: up.data.id, status: 'pending' });
+  assert.equal((await guest.c.get(`/api/plans/${id}`)).data.cover, null);
+  assert.equal((await guest.c.get(`/photos/${up.data.id}`)).status, 404);
+  const queue = (await admin.get('/api/admin/photos')).data.photos.find((p) => p.id === up.data.id);
+  assert.equal(queue.plan_cover, true);
+  assert.equal((await admin.post(`/api/admin/photos/${up.data.id}/review`, { decision: 'approve', explicit: true })).status, 400);
+  await admin.post(`/api/admin/photos/${up.data.id}/review`, { decision: 'approve' });
+  assert.deepEqual((await guest.c.get('/api/plans/nearby')).data.plans.find((p) => p.id === id).cover, { id: up.data.id });
+  assert.equal((await guest.c.get(`/photos/${up.data.id}`)).status, 200);
+  assert.equal((await blocked.c.get(`/photos/${up.data.id}`)).status, 404);
+  // Retirée par l'hôte : plus servie.
+  await host.c.del(`/api/plans/${id}/cover`);
+  assert.equal((await guest.c.get(`/photos/${up.data.id}`)).status, 404);
+  await host.c.del(`/api/plans/${id}`);
+});

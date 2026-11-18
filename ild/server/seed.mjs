@@ -256,6 +256,26 @@ member.run(p2, samir, 'accepted', null, now - 2 * 3600e3, now - 1.8 * 3600e3);
 planMsg.run(p2, romain, 'On se retrouve au bar du fond. Dites-moi si vous êtes en retard.', now - 1.7 * 3600e3);
 planMsg.run(p2, samir, 'J’y serai vers 23 h 15.', now - 1.5 * 3600e3);
 
+// Couvertures (sans nudité, validées) et un plan prévu pour demain 18 h (Tiago, à l'hôtel).
+const cover = (planId, hostId, asset) => {
+  const file = `${randomBytes(16).toString('hex')}.jpg`;
+  copyFileSync(join(ASSETS, asset), join(uploads, file));
+  db.prepare("INSERT INTO photos (user_id, kind, plan_id, file, status, created_at) VALUES (?, 'plan', ?, ?, 'approved', ?)").run(hostId, planId, file, now);
+};
+cover(p1, bilal, 'plan-1.jpg');
+cover(p2, romain, 'plan-2.jpg');
+const tiago = db.prepare("SELECT id FROM users WHERE email = 'tiago@ild.local'").get()?.id;
+if (tiago) {
+  const tomorrow6 = new Date(); tomorrow6.setDate(tomorrow6.getDate() + 1); tomorrow6.setHours(18, 0, 0, 0);
+  const p3 = Number(plan.run(tiago, 'Apéro à l’hôtel, vue sur Paris', 'De passage pour le week-end. Chambre au 7e, on commence par un verre et on voit où ça mène. Respect et bonne humeur.', 'hotel',
+    cell(NEIGHBORHOODS.Bastille[0]), cell(NEIGHBORHOODS.Bastille[1]), 'Exemple : hôtel près de Bastille, chambre 712', tomorrow6.getTime(), tomorrow6.getTime() + 4 * 3600e3, 5, now - 3600e3).lastInsertRowid);
+  for (const email of ['omar@ild.local', 'noah@ild.local', 'samir@ild.local']) {
+    const id = db.prepare('SELECT id FROM users WHERE email = ?').get(email)?.id;
+    if (id) member.run(p3, id, 'accepted', null, now - 50 * 60e3, now - 45 * 60e3);
+  }
+  cover(p3, tiago, 'plan-3.jpg');
+}
+
 const tonight = new Date(); tonight.setHours(19, 0, 0, 0);
 db.prepare(`INSERT INTO posts (user_id, kind, title, body, place, starts_at, visibility, city, created_at)
   VALUES (NULL, 'event', ?, ?, ?, ?, 'members', 'Paris', ?)`)

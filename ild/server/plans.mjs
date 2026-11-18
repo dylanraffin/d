@@ -10,12 +10,14 @@ import { fail } from './http.mjs';
 import { requireMember, requireAdmin } from './auth.mjs';
 import { getSetting, audit, tx } from './db.mjs';
 import { PLAN_KINDS, PLAN_STARTS, PLAN_DURATIONS, GROUNDS } from './options.mjs';
-import { DAY, str, hiddenBetween, shownProfilePhoto, notify } from './core.mjs';
+import { DAY, str, hiddenBetween, shownProfilePhoto, notify, saveJpeg, scanImage, deleteFiles } from './core.mjs';
+import { effectiveLocation } from './cruise.mjs';
 import { requireFeature } from './billing.mjs';
 import { haversineKm, distanceBetween } from './geo.mjs';
 
 const CELL = 0.01;
 const VIEW_RADIUS_KM = 12;
+const SCHEDULE_MAX_DAYS = 7; // un plan se prévoit au plus une semaine à l'avance
 const cell = (v) => Math.floor(v / CELL) * CELL + CELL / 2;
 
 const MONEY = /(€|\beuros?\b|\btarifs?\b|\bpayant|\br[ée]mun[ée]r|\bescort|\bpaf\b|participation aux frais)/i;
@@ -30,6 +32,13 @@ function checkText(...texts) {
 const person = (db, x, viewer = null) => ({ id: x.id, first_name: x.first_name, ...shownProfilePhoto(db, viewer, x.id) });
 const accepted = (db, planId) => db.prepare("SELECT COUNT(*) AS n FROM plan_members WHERE plan_id = ? AND status = 'accepted'").get(planId).n;
 const isLive = (p) => p.status === 'open' && p.ends_at > Date.now();
+
+// Couverture du plan (sans nudité, relue par la modération) : l'hôte voit aussi celle en attente.
+function planCover(db, p, isHost) {
+  const c = db.prepare(`SELECT id, status FROM photos WHERE plan_id = ? AND kind = 'plan' AND status ${isHost ? "!= 'rejected'" : "= 'approved'"}
+    ORDER BY id DESC LIMIT 1`).get(p.id);
+  return c ? (isHost ? c : { id: c.id }) : null;
+}
 
 function myStatus(db, p, u) {
   if (p.host_id === u.id) return 'host';
@@ -46,7 +55,8 @@ export function planView(db, u, p, { detail = false } = {}) {
     id: p.id, title: p.title, place_kind: p.place_kind, starts_at: p.starts_at, ends_at: p.ends_at,
     in_progress: p.starts_at <= now && p.ends_at > now, ended: p.ends_at <= now, status: p.status,
     lat: p.lat, lng: p.lng, max_guests: p.max_guests, going: accepted(db, p.id),
-    host: person(db, host, u), my_status: mine, distance: d ? d.label : null
+    host: person(db, host, u), my_status: mine, distance: d ? d.label : null,
+    description: p.description, cover: planCover(db, p, mine === 'host')
   };
   if (mine === 'host') view.pending = db.prepare("SELECT COUNT(*) AS n FROM plan_members WHERE plan_id = ? AND status = 'requested'").get(p.id).n;
   if (!detail) return view;
@@ -113,6 +123,11 @@ export function registerPlanRoutes(r) {
     const startIn = Number(b.starts_in ?? 0);
     const duration = Number(b.duration ?? 120);
     if (!(startIn in PLAN_STARTS) || !(duration in PLAN_DURATIONS)) fail(400, 'Horaire inconnu.');
+    // Ou une heure précise, jusqu'à une semaine à l'avance (« Demain à 18:00 »).
+    const at = b.starts_at == null || b.starts_at === '' ? null : Number(b.starts_at);
+    if (at != null && (!Number.isFinite(at) || at < Date.now() - 5 * 60e3 || at > Date.now() + SCHEDULE_MAX_DAYS * DAY)) {
+      fail(400, `Choisis une heure entre maintenant et dans ${SCHEDULE_MAX_DAYS} jours.`);
+    }
     const max = Number(b.max_guests);
     const limit = Number(getSetting(db, 'plan_max_guests'));
     if (!Number.isInteger(max) || max < 2 || max > limit) fail(400, `Nombre de participants : entre 2 et ${limit}.`);
@@ -122,10 +137,45 @@ export function registerPlanRoutes(r) {
     if (db.prepare("SELECT 1 FROM plans WHERE host_id = ? AND status = 'open' AND ends_at > ?").get(u.id, Date.now())) {
       fail(409, 'Tu organises déjà un plan. Termine-le ou annule-le avant d’en créer un autre.');
     }
-    const starts = Date.now() + startIn * 60e3;
+    const starts = at != null ? Math.max(at, Date.now()) : Date.now() + startIn * 60e3;
     const info = db.prepare(`INSERT INTO plans (host_id, title, description, place_kind, lat, lng, address, starts_at, ends_at, max_guests, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(u.id, title, description, b.place_kind, cell(lat), cell(lng), address, starts, starts + duration * 60e3, max, Date.now());
     return { id: Number(info.lastInsertRowid) };
+  });
+
+  // « Plans autour de moi » : en cours ou à venir, autour de ma position (ou de ma ville de voyage), les plus proches dans le temps d'abord.
+  r.get('/api/plans/nearby', (ctx) => {
+    const u = requireMember(ctx);
+    const here = effectiveLocation(u);
+    if (here.lat == null) return { located: false, plans: [] };
+    // center : la case d'environ 1 km du membre, pour placer un nouveau plan depuis la liste (jamais sa position).
+    return { located: true, center: { lat: cell(here.lat), lng: cell(here.lng) }, plans: plansAround(ctx.db, u, here).sort((a, b) => a.starts_at - b.starts_at) };
+  });
+
+  // Couverture : une photo du lieu ou de l'ambiance, sans nudité, relue par la modération avant d'être montrée.
+  r.post('/api/plans/:id/cover', async (ctx) => {
+    const u = requireMember(ctx);
+    const p = visiblePlan(ctx, u);
+    if (p.host_id !== u.id) fail(403, "Seul l'hôte peut changer la couverture.");
+    const { file, buf } = saveJpeg(ctx, ctx.body.data);
+    const scan = await scanImage(buf);
+    if (!scan.ok) { deleteFiles(ctx, [file]); fail(400, 'Image refusée.'); }
+    const old = ctx.db.prepare("SELECT file FROM photos WHERE plan_id = ? AND kind = 'plan'").all(p.id);
+    deleteFiles(ctx, old.map((x) => x.file));
+    ctx.db.prepare("DELETE FROM photos WHERE plan_id = ? AND kind = 'plan'").run(p.id);
+    const info = ctx.db.prepare("INSERT INTO photos (user_id, kind, file, status, position, explicit, plan_id, created_at) VALUES (?, 'plan', ?, 'pending', 0, 0, ?, ?)")
+      .run(u.id, file, p.id, Date.now());
+    return { id: Number(info.lastInsertRowid), status: 'pending' };
+  });
+
+  r.delete('/api/plans/:id/cover', (ctx) => {
+    const u = requireMember(ctx);
+    const p = visiblePlan(ctx, u, { live: false });
+    if (p.host_id !== u.id) fail(403, "Seul l'hôte peut changer la couverture.");
+    const old = ctx.db.prepare("SELECT file FROM photos WHERE plan_id = ? AND kind = 'plan'").all(p.id);
+    deleteFiles(ctx, old.map((x) => x.file));
+    ctx.db.prepare("DELETE FROM photos WHERE plan_id = ? AND kind = 'plan'").run(p.id);
+    return { ok: true };
   });
 
   r.get('/api/plans/:id', (ctx) => {
