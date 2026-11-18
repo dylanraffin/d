@@ -83,6 +83,27 @@ export function explicitPhotoIds(db, userId) {
   return db.prepare("SELECT id FROM photos WHERE user_id = ? AND kind = 'profile' AND explicit = 1").all(userId).map((r) => r.id);
 }
 
+// Photo alternative sans nudité, validée : elle remplace la photo principale explicite pour qui ne doit pas la voir.
+export function alternatePhoto(db, userId) {
+  return db.prepare("SELECT id FROM photos WHERE user_id = ? AND kind = 'alternate' AND status = 'approved' ORDER BY id DESC LIMIT 1").get(userId)?.id || null;
+}
+
+// Pays où les photos de profil explicites sont masquées (réglage). Le pays vient de l'en-tête du proxy (viewer._country).
+export function explicitRestricted(db, viewer) {
+  const c = viewer?._country;
+  return !!c && getSetting(db, 'nsfw_restricted_countries').toUpperCase().split(/[\s,;]+/).includes(c);
+}
+
+// Photo de profil à montrer à `viewer` : la principale ; là où les photos explicites sont masquées, son alternative
+// sans nudité (ou rien). Ailleurs, l'alternative est jointe : l'app la montre aux membres en mode vanille.
+export function shownProfilePhoto(db, viewer, userId) {
+  const main = profilePhoto(db, userId);
+  if (!main || !main.explicit) return { photo: main ? main.id : null, photo_explicit: false, photo_alt: null };
+  const alt = alternatePhoto(db, userId);
+  if (viewer?.id !== userId && explicitRestricted(db, viewer)) return { photo: alt, photo_explicit: false, photo_alt: null };
+  return { photo: main.id, photo_explicit: true, photo_alt: alt };
+}
+
 export function profilePhotoIds(db, userId, includePending) {
   return db.prepare(`SELECT id FROM photos WHERE user_id = ? AND kind = 'profile'
     ${includePending ? "AND status != 'rejected'" : "AND status = 'approved'"} ORDER BY position, id`).all(userId).map((r) => r.id);
@@ -142,7 +163,7 @@ export function canSeePhoto(db, viewer, photo) {
   if (photo.status !== 'approved' || viewer.status !== 'member') return false;
   const owner = db.prepare('SELECT status FROM users WHERE id = ?').get(photo.user_id);
   if (!owner || owner.status !== 'member' || hiddenBetween(db, viewer.id, photo.user_id)) return false;
-  if (photo.kind === 'profile') return true;
+  if (photo.kind === 'profile' || photo.kind === 'alternate') return true;
   if (photo.kind === 'chat') {
     // Photo envoyée dans une conversation : seulement ses deux participants.
     const m = db.prepare('SELECT a_id, b_id FROM matches WHERE id = ?').get(photo.match_id);

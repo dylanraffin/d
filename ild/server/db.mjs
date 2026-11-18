@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS albums (
 CREATE TABLE IF NOT EXISTS photos (
   id INTEGER PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  kind TEXT NOT NULL,                             -- profile | album | chat
+  kind TEXT NOT NULL,                             -- profile | alternate (sans nudité, à la place d'une photo explicite) | album | chat
   album_id INTEGER REFERENCES albums(id) ON DELETE CASCADE,
   file TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',         -- pending | approved | rejected
@@ -392,6 +392,7 @@ export const SETTINGS_SPEC = {
   explicit_profiles: { type: 'bool', def: '1', label: 'Nuit : photos de profil explicites autorisées (signalées par le membre, floutées en mode vanille)' },
   // International : pays où le service est fermé (codes ISO à deux lettres), lus dans l'en-tête de pays posé par le proxy ou le CDN.
   blocked_countries: { type: 'text', max: 800, def: '', label: 'Pays où le service est fermé (codes ISO séparés par des virgules, ex. « AE, SA, IR »)' },
+  nsfw_restricted_countries: { type: 'text', def: '', label: "Pays où les photos de profil explicites sont masquées : l'alternative sans nudité s'affiche à la place (codes ISO séparés par des virgules)" },
   free_map_radius_km: { type: 'int', min: 1, max: 500, def: '15', label: 'Carte en direct : rayon gratuit autour de soi (km, si payant activé)' },
   daily_new_chats: { type: 'int', min: 1, max: 1000, def: '40', label: 'Carte en direct : nouvelles conversations par jour et par membre' },
   free_daily_likes: { type: 'int', min: 1, max: 1000, def: '50', label: 'Likes par jour en gratuit (quand le payant est activé)' },

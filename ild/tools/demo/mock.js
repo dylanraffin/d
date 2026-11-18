@@ -145,9 +145,17 @@
     ['POST', /^\/api\/me\/photos$/, (m, b) => {
       const id = nextId++;
       uploaded[id] = b.data;
+      if (b.alternate) { me.alternate = { id, status: 'pending' }; return { id, status: 'pending', alternate: true }; }
       me.photos.push({ id, status: 'pending', explicit: !!b.explicit });
       if (me.checks) me.checks.photo_pending = true;
       return { id, status: 'pending', explicit: !!b.explicit };
+    }],
+    ['DELETE', /^\/api\/me\/photos\/(\d+)$/, (m) => {
+      if (me.alternate && String(me.alternate.id) === m[1]) { me.alternate = null; return { ok: true }; }
+      const i = me.photos.findIndex((p) => String(p.id) === m[1]);
+      if (i < 0) fail(404, 'Photo introuvable.');
+      me.photos.splice(i, 1);
+      return { ok: true };
     }],
     ['GET', /^\/api\/live\/map$/, (m, b, q) => mapView(q)],
     ['GET', /^\/api\/live\/people$/, (m, b, q) => peopleView(q)],

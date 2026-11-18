@@ -195,7 +195,14 @@ EXTRA.forEach(([name, age, hood, dLat, dLng, height, weight, body, identity, pos
 // Quelques photos de profil signalées comme explicites : elles sont floutées pour qui active le mode vanille.
 // (Les images de démonstration sont des silhouettes : rien d'explicite n'est réellement montré.)
 db.prepare(`UPDATE photos SET explicit = 1 WHERE kind = 'profile' AND user_id IN (SELECT id FROM users WHERE email IN
-  ('karim@ild.local', 'romain@ild.local', 'bilal@ild.local', 'luca@ild.local', 'omar@ild.local', 'gabriel@ild.local', 'farid@ild.local', 'tiago@ild.local'))`).run();
+  ('karim@ild.local', 'romain@ild.local', 'bilal@ild.local', 'luca@ild.local', 'omar@ild.local', 'gabriel@ild.local', 'farid@ild.local', 'tiago@ild.local', 'leo@ild.local'))`).run();
+// Photo alternative sans nudité pour la moitié d'entre eux (et pour Léo) : elle remplace la photo explicite en mode vanille
+// et dans les pays où ces photos sont masquées. Les autres restent floutés.
+for (const [email, asset] of [['leo@ild.local', 'album-5.jpg'], ['karim@ild.local', 'album-1.jpg'], ['bilal@ild.local', 'album-3.jpg'],
+  ['omar@ild.local', 'album-2.jpg'], ['tiago@ild.local', 'album-6.jpg']]) {
+  const id = db.prepare('SELECT id FROM users WHERE email = ?').get(email)?.id;
+  if (id) photo(id, asset, 'alternate');
+}
 
 const testMonth = (monthsAgo) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - monthsAgo); return d.toISOString().slice(0, 7); };
 const health = db.prepare('UPDATE users SET hiv_status = ?, last_test = ?, health_visibility = ?, health_consent_at = ? WHERE email = ?');

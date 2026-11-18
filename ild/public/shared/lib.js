@@ -83,7 +83,15 @@ const ICONS = {
   arrow: 'M5 12h14M13 6l6 6-6 6',
   target: 'M12 3v3M12 18v3M3 12h3M18 12h3M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z',
   install: 'M12 4v11M7 11l5 5 5-5M5 20h14',
-  list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01'
+  list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+  swap: 'M4 9h13l-3-3M20 15H7l3 3',
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  refresh: 'M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7',
+  logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10',
+  sound: 'M4 10h4l5-4v12l-5-4H4zM16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11',
+  layers: 'M12 4l9 5-9 5-9-5zM3 14l9 5 9-5',
+  settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-1-3-2 .2-1.3-1.3L17 5l-3-1-1 2h-2l-1-2-3 1 .2 2L6 8.2 4 8l-1 3 2 1v0l-2 1 1 3 2-.2 1.3 1.3L7 19l3 1 1-2h2l1 2 3-1-.2-2 1.3-1.3 2 .2 1-3z',
+  shuffle: 'M4 7h3l10 10h3M4 17h3l3-3M14 10l3-3h3M18 5l2 2-2 2M18 15l2 2-2 2'
 };
 
 export function icon(name, size = 20, color) {

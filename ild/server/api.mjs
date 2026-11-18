@@ -8,7 +8,8 @@ import { LEGAL_VERSION, MODES, SEEKING, POSITIONS, VISIBILITY, TASTES, INTIMATE,
   SPOT_CATEGORIES, PRESENCE_PLACES, MAP_PRECISION, MESSAGES_FROM, BODY_TYPES, IDENTITIES, TRIBES, CAN, VIBES, CUT, SAFER,
   HIV_STATUS, TRIP_DAYS, CITIES, PLAN_KINDS, PLAN_STARTS, PLAN_DURATIONS } from './options.mjs';
 import { DAY, str, bool, isoDay, ageOf, parseBirthDate, hiddenBetween, matchBetween, visibleMember, profilePhotoIds,
-  vouchCount, waitlistPosition, saveJpeg, scanImage, deleteFiles, deletePhotoFiles, isBlocklisted, activeShare, canSeePhoto, explicitProfilesAllowed, explicitPhotoIds } from './core.mjs';
+  vouchCount, waitlistPosition, saveJpeg, scanImage, deleteFiles, deletePhotoFiles, isBlocklisted, activeShare, canSeePhoto, explicitProfilesAllowed, explicitPhotoIds,
+  alternatePhoto, explicitRestricted, shownProfilePhoto } from './core.mjs';
 import { hasFeature, requireFeature, entitlements, likesToday, dailyLikeLimit, paymentsEnabled } from './billing.mjs';
 import { distanceBetween } from './geo.mjs';
 import { readFilters, passesFilters } from './nearby.mjs';
@@ -39,6 +40,18 @@ function travelActive(db, u) {
   const days = Number(getSetting(db, 'travel_visible_days'));
   const today = isoDay(Date.now());
   return today >= isoDay(Date.parse(u.travel_from) - days * DAY) && today <= u.travel_to;
+}
+
+// Photos d'un profil vues par `viewer`. Là où les photos explicites sont masquées, elles sont retirées et l'alternative
+// sans nudité passe en premier. Ailleurs, l'alternative est jointe pour les membres en mode vanille.
+function profilePhotosFor(db, viewer, u, isSelf) {
+  const photos = profilePhotoIds(db, u.id, isSelf);
+  const explicit = explicitPhotoIds(db, u.id);
+  const alt = alternatePhoto(db, u.id);
+  if (!isSelf && viewer?.role !== 'admin' && explicitRestricted(db, viewer)) {
+    return { photos: [alt, ...photos.filter((id) => !explicit.includes(id))].filter(Boolean), explicit_photos: [], photo_alt: null };
+  }
+  return { photos, explicit_photos: explicit, photo_alt: explicit.includes(photos[0]) ? alt : null };
 }
 
 // Profil vu par `viewer`. La position et les goûts intimes respectent la visibilité choisie.
@@ -76,8 +89,7 @@ export function publicProfile(db, viewer, u) {
     intimate: canSee(u.intimate_visibility) ? list(u.intimate) : [],
     music_title: u.music_title,
     looking_for: list(u.looking_for),
-    photos: profilePhotoIds(db, u.id, isSelf),
-    explicit_photos: explicitPhotoIds(db, u.id),
+    ...profilePhotosFor(db, viewer, u, isSelf),
     vouched_by: vouchers,
     travel: travelActive(db, u) ? { city: u.travel_city, from: u.travel_from, to: u.travel_to } : null,
     distance: d ? (u.show_distance ? d.label : 'Distance masquée') : null,
@@ -120,6 +132,8 @@ function meView(db, u, edition = 'club') {
     location: { enabled: u.lat != null, source: u.location_source, consent: !!u.geo_consent_at, updated_at: u.location_updated_at },
     photos: db.prepare("SELECT id, status, explicit FROM photos WHERE user_id = ? AND kind = 'profile' ORDER BY position, id").all(u.id)
       .map((p) => ({ ...p, explicit: !!p.explicit })),
+    // Alternative sans nudité de la photo principale (montrée à la place d'une photo explicite quand il le faut).
+    alternate: db.prepare("SELECT id, status FROM photos WHERE user_id = ? AND kind = 'alternate' AND status != 'rejected' ORDER BY id DESC LIMIT 1").get(u.id) || null,
     vanilla: !!u.vanilla,
     legal: { accepted: u.legal_version, current: LEGAL_VERSION, needs_consent: u.role !== 'admin' && u.legal_version !== LEGAL_VERSION },
     notices_unread: db.prepare('SELECT COUNT(*) AS n FROM notices WHERE user_id = ? AND read_at IS NULL').get(u.id).n,
@@ -340,6 +354,19 @@ export function registerMemberRoutes(r) {
   // --- photos de profil (relues par la modération avant d'être visibles) ---
   r.post('/api/me/photos', async (ctx) => {
     const u = requireUser(ctx);
+    // Alternative sans nudité : une seule, elle remplace la précédente. Elle ne peut pas être explicite.
+    if (bool(ctx.body.alternate)) {
+      if (bool(ctx.body.explicit)) fail(400, 'Une photo alternative doit être sans nudité.');
+      const { file, buf } = saveJpeg(ctx, ctx.body.data);
+      const scan = await scanImage(buf);
+      if (!scan.ok) { deleteFiles(ctx, [file]); fail(400, 'Image refusée.'); }
+      const old = ctx.db.prepare("SELECT id, file FROM photos WHERE user_id = ? AND kind = 'alternate'").all(u.id);
+      deleteFiles(ctx, old.map((p) => p.file));
+      ctx.db.prepare("DELETE FROM photos WHERE user_id = ? AND kind = 'alternate'").run(u.id);
+      const info = ctx.db.prepare("INSERT INTO photos (user_id, kind, file, status, position, explicit, created_at) VALUES (?, 'alternate', ?, 'pending', 0, 0, ?)")
+        .run(u.id, file, Date.now());
+      return { id: Number(info.lastInsertRowid), status: 'pending', alternate: true };
+    }
     const n = ctx.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE user_id = ? AND kind = 'profile'").get(u.id).n;
     if (n >= MAX_PROFILE_PHOTOS) fail(400, `${MAX_PROFILE_PHOTOS} photos maximum.`);
     const explicit = bool(ctx.body.explicit);
@@ -447,7 +474,7 @@ export function registerMemberRoutes(r) {
       const preview = !last ? null : last.removed ? 'Message retiré par la modération' : last.kind === 'album' ? `Album « ${last.body} »` : last.body;
       out.push({
         id: m.id, created_at: m.created_at, waiting_reply: m.origin === 'chat' && !m.replied_at, opened_by_me: m.opened_by === u.id,
-        user: { id: other.id, first_name: other.first_name, photo: profilePhotoIds(db, other.id, false)[0] || null },
+        user: { id: other.id, first_name: other.first_name, ...shownProfilePhoto(db, u, other.id) },
         last: last ? { body: preview, mine: last.sender_id === u.id, created_at: last.created_at } : null,
         unread: !!last && last.sender_id !== u.id && last.created_at > readAt
       });

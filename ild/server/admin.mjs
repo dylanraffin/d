@@ -73,7 +73,7 @@ export function registerAdminRoutes(r) {
       pending_id: one("SELECT COUNT(*) AS n FROM users WHERE status = 'pending'"),
       waitlist: waitlist.length,
       ready_for_committee: waitlist.filter((u) => dossierChecks(db, u, ctx.config.edition).filter((c) => c.mandatory).every((c) => c.ok)).length,
-      photos_to_review: one("SELECT COUNT(*) AS n FROM photos WHERE status = 'pending' AND kind = 'profile'"),
+      photos_to_review: one("SELECT COUNT(*) AS n FROM photos WHERE status = 'pending' AND kind IN ('profile', 'alternate')"),
       reports_open: one("SELECT COUNT(*) AS n FROM reports WHERE status = 'open'"),
       reports_urgent: one("SELECT COUNT(*) AS n FROM reports WHERE status = 'open' AND reason IN ('minor', 'non_consensual', 'illegal')"),
       reports_late: one("SELECT COUNT(*) AS n FROM reports WHERE status = 'open' AND created_at < ?", Date.now() - DAY),
@@ -239,8 +239,9 @@ export function registerAdminRoutes(r) {
     return {
       templates: Object.fromEntries(Object.keys(PHOTO_TEMPLATES).map((k) => [k, GROUNDS[k]])),
       explicit_allowed: explicitProfilesAllowed(ctx.db, ctx.config),
-      photos: ctx.db.prepare(`SELECT p.id, p.user_id, p.created_at, p.explicit, x.first_name, x.status AS user_status FROM photos p JOIN users x ON x.id = p.user_id
-        WHERE p.status = 'pending' AND p.kind = 'profile' ORDER BY p.created_at LIMIT 100`).all()
+      photos: ctx.db.prepare(`SELECT p.id, p.user_id, p.created_at, p.explicit, p.kind = 'alternate' AS alternate, x.first_name, x.status AS user_status FROM photos p JOIN users x ON x.id = p.user_id
+        WHERE p.status = 'pending' AND p.kind IN ('profile', 'alternate') ORDER BY p.created_at LIMIT 100`).all()
+        .map((p) => ({ ...p, alternate: !!p.alternate }))
     };
   });
 
@@ -258,6 +259,7 @@ export function registerAdminRoutes(r) {
       db.prepare('UPDATE photos SET status = ? WHERE id = ?').run(ok ? 'approved' : 'rejected', p.id);
       // La modération peut corriger le marquage : une photo explicite non signalée est validée « comme explicite ».
       if (ok && 'explicit' in ctx.body) {
+        if (ctx.body.explicit && p.kind === 'alternate') fail(400, "Une photo alternative doit être sans nudité : refuse-la avec le motif « nudité ».");
         if (ctx.body.explicit && !explicitProfilesAllowed(db, ctx.config)) fail(400, "Les photos de profil explicites ne sont pas autorisées : refuse la photo avec le motif « nudité ».");
         db.prepare('UPDATE photos SET explicit = ? WHERE id = ?').run(ctx.body.explicit ? 1 : 0, p.id);
       }

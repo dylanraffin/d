@@ -106,6 +106,27 @@ export async function screenEditProfile() {
     } }, p.explicit ? 'Explicite' : 'Non explicite') : null,
     h('button', { class: 'remove', 'aria-label': 'Supprimer la photo', onclick: async () => { await run(() => api('DELETE', `/api/me/photos/${p.id}`)); screenEditProfile(); } }, '×'))));
   if (me.photos.length < 6) photosGrid.append(h('label', { class: 'add-tile', 'aria-label': 'Ajouter une photo' }, icon('plus', 22), fileInput));
+  // Photo alternative sans nudité, reliée à la photo principale quand elle est explicite : c'est elle qu'on voit sur la carte
+  // en mode vanille et dans les pays où les photos explicites sont masquées.
+  const main = me.photos[0];
+  const altInput = h('input', { type: 'file', accept: 'image/*', id: 'alt-photo', class: 'visually-hidden', onchange: async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await run(async () => api('POST', '/api/me/photos', { data: await fileToJpeg(file), alternate: true }), 'Photo alternative envoyée : visible après validation.');
+    screenEditProfile();
+  } });
+  const alternateBlock = explicitOk && (main?.explicit || me.alternate) ? h('section', { class: 'card pad stack alt-block' },
+    h('div', { class: 'alt-pair' },
+      main ? h('div', { class: 'alt-main' }, photoEl(main.id, me.first_name), main.explicit ? h('span', { class: 'alt-tag' }, 'Explicite') : null) : null,
+      h('span', { class: 'alt-link', 'aria-hidden': 'true' }, icon('swap', 16)),
+      me.alternate
+        ? h('div', { class: 'alt-slot photo-edit' }, photoEl(me.alternate.id, me.first_name), h('span', { class: 'status' }, STATUS[me.alternate.status]),
+          h('button', { class: 'remove', 'aria-label': 'Supprimer la photo alternative', onclick: async () => { await run(() => api('DELETE', `/api/me/photos/${me.alternate.id}`)); screenEditProfile(); } }, '×'))
+        : h('label', { class: 'alt-slot add-tile', for: 'alt-photo', 'aria-label': 'Ajouter une photo alternative' }, icon('plus', 22))),
+    h('h2', null, 'Photo alternative sans nudité'),
+    h('p', { class: 'small text2' }, 'Elle s’affiche à la place de ta photo explicite pour les membres en mode vanille et dans les pays où ces photos sont interdites. Sans elle, ta photo y est floutée ou masquée.'),
+    altInput,
+    h('label', { class: `btn small${me.alternate ? '' : ' primary'}`, for: 'alt-photo' }, me.alternate ? 'Remplacer' : 'Ajouter une photo')) : null;
   const f = {
     job: h('input', { value: me.job || '', maxlength: 60 }),
     neighborhood: select(Object.fromEntries([['', '—'], ...meta.neighborhoods.map((n) => [n, n])]), me.neighborhood || '', { class: '' }),
@@ -193,6 +214,7 @@ export async function screenEditProfile() {
     mount(h('main', { class: 'screen' },
       h('div', { class: 'row between' }, h('a', { href: back }, 'Annuler'), h('span', { class: 'strong' }, 'Ma fiche'), h('button', { class: 'btn ghost', onclick: save }, 'OK')),
       photosGrid,
+      alternateBlock,
       h('p', { class: 'small' }, explicitOk
         ? "Le visage n'est pas obligatoire et les photos explicites sont permises : ici, tout le monde est un adulte vérifié. Marque-les « Explicite » pour qu'elles soient floutées chez ceux qui ont choisi le mode vanille. Chaque photo est validée par la modération ; la position GPS en est retirée avant l'envoi."
         : "Photos de profil sans nudité (le visage n'est pas obligatoire), validées par la modération. Les photos explicites se partagent en privé : dans le chat ou dans un album. La position GPS est retirée de chaque photo avant l'envoi."),

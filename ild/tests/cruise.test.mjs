@@ -392,3 +392,40 @@ test('plan signalé : copie pour la modération, retrait motivé, recours possib
   assert.equal((await admin.post(`/api/admin/plans/${planId}/remove`, { ground: 'drugs', explanation: 'Annonce modifiée pour proposer des produits.' })).status, 200);
   assert.equal((await guest.c.get(`/api/plans/${planId}`)).status, 404);
 });
+
+test('photo alternative sans nudité : jointe pour le mode vanille, à la place de la photo explicite là où elle est masquée', async () => {
+  const a = await member({ first_name: 'Alterné' });
+  const viewer = await member({ first_name: 'Voisin' });
+  const main = (await a.c.post('/api/me/photos', { data: JPEG, explicit: true })).data;
+  assert.equal((await admin.post(`/api/admin/photos/${main.id}/review`, { decision: 'approve', explicit: true })).status, 200);
+  // L'alternative ne peut pas être explicite, ni à l'envoi ni à la validation.
+  assert.equal((await a.c.post('/api/me/photos', { data: JPEG, alternate: true, explicit: true })).status, 400);
+  const alt = (await a.c.post('/api/me/photos', { data: JPEG, alternate: true })).data;
+  assert.equal(alt.alternate, true);
+  assert.equal((await a.c.get('/api/me')).data.alternate.status, 'pending');
+  assert.ok((await admin.get('/api/admin/photos')).data.photos.some((p) => p.id === alt.id && p.alternate));
+  assert.equal((await admin.post(`/api/admin/photos/${alt.id}/review`, { decision: 'approve', explicit: true })).status, 400);
+  assert.equal((await admin.post(`/api/admin/photos/${alt.id}/review`, { decision: 'approve', explicit: false })).status, 200);
+  // Ailleurs : la photo explicite, avec son alternative jointe (l'app la montre aux membres en mode vanille).
+  const pin = (await viewer.c.get('/api/live/map')).data.pins.find((x) => x.id === a.me.id);
+  assert.deepEqual([pin.photo, pin.photo_explicit, pin.photo_alt], [main.id, true, alt.id]);
+  assert.equal((await viewer.c.get(`/api/users/${a.me.id}`)).data.photo_alt, alt.id);
+  // Pays où les photos de profil explicites sont masquées : l'alternative à la place, la photo explicite n'est pas servie.
+  assert.equal((await admin.put('/api/admin/settings', { nsfw_restricted_countries: 'AE, SG' })).status, 200);
+  const abroad = new Client({ 'cf-ipcountry': 'AE' });
+  abroad.cookie = viewer.c.cookie;
+  const there = (await abroad.get('/api/live/map')).data.pins.find((x) => x.id === a.me.id);
+  assert.deepEqual([there.photo, there.photo_explicit, there.photo_alt], [alt.id, false, null]);
+  const profile = (await abroad.get(`/api/users/${a.me.id}`)).data;
+  assert.equal(profile.photos[0], alt.id);
+  assert.ok(!profile.photos.includes(main.id));
+  assert.equal((await abroad.get(`/photos/${main.id}`)).status, 404);
+  assert.equal((await abroad.get(`/photos/${alt.id}`)).status, 200);
+  assert.equal((await viewer.c.get(`/photos/${main.id}`)).status, 200);
+  assert.equal((await admin.put('/api/admin/settings', { nsfw_restricted_countries: '' })).status, 200);
+  // Une seule alternative : la nouvelle remplace l'ancienne ; on peut aussi la retirer.
+  const next = (await a.c.post('/api/me/photos', { data: JPEG, alternate: true })).data;
+  assert.equal(app.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE user_id = ? AND kind = 'alternate'").get(a.me.id).n, 1);
+  assert.equal((await a.c.del(`/api/me/photos/${next.id}`)).status, 200);
+  assert.equal((await a.c.get('/api/me')).data.alternate, null);
+});

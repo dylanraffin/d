@@ -1,7 +1,7 @@
 // Écrans principaux : Découvrir, profil, Autour (grille et carte), Ce soir, messages, albums reçus.
 import { api, h, icon, toast, fmtDate, ago, fileToJpeg, raw } from '/shared/lib.js';
 import { tr } from '/shared/i18n.js';
-import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, chips, select, sheet, nav, reportSheet, label, isLive, isWide, brand,
+import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, avatarOf, chips, select, sheet, nav, reportSheet, label, isLive, isWide, brand,
   personSummary, presenceText, statusLine, cruiseRows, veil, cssVar } from './ui.js';
 
 const DURATION_LABEL = { '1h': '1 heure', '24h': '24 heures', '7d': '7 jours', forever: "Jusqu'à ce que je retire" };
@@ -119,7 +119,9 @@ export async function screenLikes() {
 // ---------- profil ----------
 export async function screenProfile(id) {
   const p = await api('GET', `/api/users/${id}`);
-  const photos = p.photos.length ? p.photos : [null];
+  // Mode vanille : l'alternative sans nudité passe en premier ; les photos explicites restent floutées (toucher pour voir).
+  const list = state.me?.vanilla && p.photo_alt ? [p.photo_alt, ...p.photos] : p.photos;
+  const photos = list.length ? list : [null];
   let idx = 0;
   const imgBox = h('div', { class: 'media profile-media' });
   const shown = new Set(); // photos explicites que le membre a choisi de voir malgré le mode vanille
@@ -374,7 +376,7 @@ async function conversationAside(activeId) {
         h('span', { class: 'grow' }, `${s.name} · ${s.owner.first_name}`), h('span', { class: 'small' }, s.expires_at ? `jusqu'au ${fmtDate(s.expires_at)}` : ''))))] : null,
     d.matches.length ? h('div', { class: 'list' }, d.matches.map((m) => h('a', { href: `#/chat/${m.id}`, class: 'text tall', 'aria-current': String(m.id) === String(activeId) ? 'page' : null,
       style: String(m.id) === String(activeId) ? { background: 'var(--raised)' } : null },
-      avatar(m.user.photo, m.user.first_name),
+      avatarOf(m.user),
       h('div', { class: 'grow stack small-gap ellipsis-box' }, h('span', { class: 'strong' }, raw(m.user.first_name)),
         m.last ? h('span', { class: 'small ellipsis' }, m.last.mine ? 'Toi : ' : null, ['Photo', 'Photo retirée', 'Message retiré par la modération'].includes(m.last.body) ? m.last.body : raw(m.last.body))
           : h('span', { class: 'small ellipsis' }, isLive() ? 'Nouvelle conversation' : 'Nouveau match : dis bonjour')),
@@ -508,7 +510,7 @@ export async function screenChat(matchId) {
     aside,
     h('div', { class: 'chat-pane' },
       h('div', { class: 'row chat-head' },
-        h('span', { class: 'only-narrow' }, backBtn('#/messages')), avatar(other.photos[0], other.first_name),
+        h('span', { class: 'only-narrow' }, backBtn('#/messages')), avatarOf({ first_name: other.first_name, photo: other.photos[0], photo_explicit: (other.explicit_photos || []).includes(other.photos[0]), photo_alt: other.photo_alt }),
         h('a', { class: 'grow stack text', style: { gap: '0' }, href: `#/u/${other.id}` }, h('span', { class: 'strong' }, raw(other.first_name)),
           h('span', { class: 'small' }, [other.online === 'now' ? 'En ligne' : null, other.distance, other.vouched_by.length ? 'Parrainé' : other.neighborhood].filter(Boolean).join(' · '))),
         h('button', { class: 'btn small', onclick: reportConv }, 'Signaler')),

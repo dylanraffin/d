@@ -67,6 +67,17 @@ export function photoEl(id, initial) {
       : h('span', { class: 'thumb-initial' }, (initial || '?')[0]));
 }
 
+// Photo à montrer d'un membre : son alternative sans nudité quand on a choisi le mode vanille et qu'il en a une.
+// (Là où les photos explicites sont masquées, le serveur l'a déjà mise à la place.)
+export function shownPhoto(x) {
+  if (x?.photo_explicit && x.photo_alt && state.me?.vanilla) return { id: x.photo_alt, explicit: false };
+  return { id: x?.photo ?? null, explicit: !!x?.photo_explicit };
+}
+export function avatarOf(x, size) {
+  const ph = shownPhoto(x);
+  return avatar(ph.id, x.first_name, size, ph.explicit);
+}
+
 export function avatar(id, name, size, explicit) {
   return h('span', { class: `avatar${veil(explicit)}`, style: size ? { width: `${size}px`, height: `${size}px`, borderRadius: `${size / 2}px` } : null },
     id ? h('img', { src: `/photos/${id}`, alt: '' }) : (name || '?')[0]);

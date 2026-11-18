@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Router, HttpError, readBody, parseJson, sendJson, serveStatic, SECURITY_HEADERS, allowImageOrigins } from './http.mjs';
 import { openDb } from './db.mjs';
 import { currentUser } from './auth.mjs';
-import { canSeePhoto } from './core.mjs';
+import { canSeePhoto, explicitRestricted } from './core.mjs';
 import { registerMemberRoutes, mapTiles } from './api.mjs';
 import { registerAlbumRoutes } from './albums.mjs';
 import { registerNearbyRoutes } from './nearby.mjs';
@@ -64,8 +64,11 @@ export function createApp(options = {}) {
       const photo = /^\/photos\/(\d+)$/.exec(path);
       if (photo && req.method === 'GET') {
         const user = currentUser(db, req);
+        if (user) user._country = country;
         const p = db.prepare('SELECT * FROM photos WHERE id = ?').get(Number(photo[1]));
         if (!p || !canSeePhoto(db, user, p)) throw new HttpError(404, 'Photo introuvable.');
+        // Là où les photos de profil explicites sont masquées, seule leur alternative sans nudité est servie.
+        if (p.kind === 'profile' && p.explicit && user && user.id !== p.user_id && user.role !== 'admin' && explicitRestricted(db, user)) throw new HttpError(404, 'Photo introuvable.');
         res.writeHead(200, { ...SECURITY_HEADERS, 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, no-store' });
         createReadStream(join(config.uploadsDir, p.file)).on('error', () => res.end()).pipe(res);
         return;
@@ -94,7 +97,7 @@ export function createApp(options = {}) {
           params: found.params,
           query: url.searchParams,
           body: parseJson(rawBody),
-          user: isWebhook ? null : currentUser(db, req),
+          user: isWebhook ? null : (() => { const u = currentUser(db, req); if (u) u._country = country; return u; })(),
           ip: req.socket.remoteAddress || 'unknown',
           setCookie: (c) => { cookie = c; }
         };

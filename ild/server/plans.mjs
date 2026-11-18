@@ -10,7 +10,7 @@ import { fail } from './http.mjs';
 import { requireMember, requireAdmin } from './auth.mjs';
 import { getSetting, audit, tx } from './db.mjs';
 import { PLAN_KINDS, PLAN_STARTS, PLAN_DURATIONS, GROUNDS } from './options.mjs';
-import { DAY, str, hiddenBetween, profilePhotoIds, notify } from './core.mjs';
+import { DAY, str, hiddenBetween, shownProfilePhoto, notify } from './core.mjs';
 import { requireFeature } from './billing.mjs';
 import { haversineKm, distanceBetween } from './geo.mjs';
 
@@ -27,7 +27,7 @@ function checkText(...texts) {
   if (DRUGS.test(all)) fail(400, 'Pas de drogue dans une annonce de plan à plusieurs.');
 }
 
-const person = (db, x) => ({ id: x.id, first_name: x.first_name, photo: profilePhotoIds(db, x.id, false)[0] || null });
+const person = (db, x, viewer = null) => ({ id: x.id, first_name: x.first_name, ...shownProfilePhoto(db, viewer, x.id) });
 const accepted = (db, planId) => db.prepare("SELECT COUNT(*) AS n FROM plan_members WHERE plan_id = ? AND status = 'accepted'").get(planId).n;
 const isLive = (p) => p.status === 'open' && p.ends_at > Date.now();
 
@@ -46,7 +46,7 @@ export function planView(db, u, p, { detail = false } = {}) {
     id: p.id, title: p.title, place_kind: p.place_kind, starts_at: p.starts_at, ends_at: p.ends_at,
     in_progress: p.starts_at <= now && p.ends_at > now, ended: p.ends_at <= now, status: p.status,
     lat: p.lat, lng: p.lng, max_guests: p.max_guests, going: accepted(db, p.id),
-    host: person(db, host), my_status: mine, distance: d ? d.label : null
+    host: person(db, host, u), my_status: mine, distance: d ? d.label : null
   };
   if (mine === 'host') view.pending = db.prepare("SELECT COUNT(*) AS n FROM plan_members WHERE plan_id = ? AND status = 'requested'").get(p.id).n;
   if (!detail) return view;
@@ -55,11 +55,11 @@ export function planView(db, u, p, { detail = false } = {}) {
   view.address = inside ? p.address : null;
   view.members = inside ? db.prepare(`SELECT x.* FROM plan_members m JOIN users x ON x.id = m.user_id
     WHERE m.plan_id = ? AND m.status = 'accepted' AND x.status = 'member' ORDER BY m.decided_at`).all(p.id)
-    .filter((x) => x.id === u.id || !hiddenBetween(db, u.id, x.id)).map((x) => person(db, x)) : [];
+    .filter((x) => x.id === u.id || !hiddenBetween(db, u.id, x.id)).map((x) => person(db, x, u)) : [];
   if (mine === 'host') {
     view.requests = db.prepare(`SELECT x.*, m.message, m.created_at AS asked_at FROM plan_members m JOIN users x ON x.id = m.user_id
       WHERE m.plan_id = ? AND m.status = 'requested' AND x.status = 'member' ORDER BY m.created_at`).all(p.id)
-      .filter((x) => !hiddenBetween(db, u.id, x.id)).map((x) => ({ ...person(db, x), message: x.message, asked_at: x.asked_at }));
+      .filter((x) => !hiddenBetween(db, u.id, x.id)).map((x) => ({ ...person(db, x, u), message: x.message, asked_at: x.asked_at }));
   }
   return view;
 }

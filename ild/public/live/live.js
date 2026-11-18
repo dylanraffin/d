@@ -2,8 +2,8 @@
 // Téléphone : carte plein écran. Grand écran : liste à gauche, carte à droite, fiches dans un volet.
 import { api, h, icon, toast, fmtDate, raw } from '/shared/lib.js';
 import { tr } from '/shared/i18n.js';
-import { state, mount, go, run, refreshMe, runCleanup, onLeave, sheet, chips, select, nav, reportSheet, setNav, label, brand, avatar, backBtn, clean,
-  isWide, hhmm, personSummary, presenceText, statusLine, cruiseRows, placeSelect, veil, cssVar } from '/app/ui.js';
+import { state, mount, go, run, refreshMe, runCleanup, onLeave, sheet, chips, select, nav, reportSheet, setNav, label, logout, brand, avatar, backBtn, clean,
+  isWide, hhmm, personSummary, presenceText, statusLine, cruiseRows, placeSelect, veil, cssVar, shownPhoto, avatarOf } from '/app/ui.js';
 import { screenLogin, screenSignup, screenVerify, screenWaitlist, screenNotices, screenConsentUpdate } from '/app/onboarding.js';
 import { screenProfile, screenSharedAlbum, screenMessages, screenChat, filterQuery, filterButton } from '/app/main.js';
 import { screenMe, screenEditProfile, screenMyAlbums, screenAlbumDetail, screenPlus, screenLocation, adminHint } from '/app/me.js';
@@ -102,9 +102,10 @@ function personSheet(x) {
       close(); go(`#/chat/${r.id}`);
     };
     const summary = personSummary(x);
+    const ph = shownPhoto(x);
     return [
-      h('div', { class: `person-cover${x.photo ? '' : ' empty'}${veil(x.photo_explicit)}`, onclick: (e) => e.currentTarget.classList.remove('veiled') },
-        x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : h('span', { class: 'initial', 'aria-hidden': 'true' }, x.first_name[0]),
+      h('div', { class: `person-cover${ph.id ? '' : ' empty'}${veil(ph.explicit)}`, onclick: (e) => e.currentTarget.classList.remove('veiled') },
+        ph.id ? h('img', { src: `/photos/${ph.id}`, alt: '' }) : h('span', { class: 'initial', 'aria-hidden': 'true' }, x.first_name[0]),
         h('div', { class: 'cover-text' }, h('span', { class: 'person-name' }, `${x.first_name}, ${x.age}`),
           summary ? h('span', { class: 'small text2' }, summary) : null),
         fav),
@@ -201,7 +202,7 @@ function planSheet(id, after) {
       else if (mine === 'host') {
         action = [
           p.requests.length ? [h('span', { class: 'section-label' }, `Demandes (${p.requests.length})`),
-            h('div', { class: 'list' }, p.requests.map((r) => h('div', { class: 'tall', style: { minHeight: '64px' } }, avatar(r.photo, r.first_name),
+            h('div', { class: 'list' }, p.requests.map((r) => h('div', { class: 'tall', style: { minHeight: '64px' } }, avatarOf(r),
               h('a', { class: 'grow stack small-gap text ellipsis-box', href: `#/u/${r.id}`, onclick: close }, h('span', { class: 'strong' }, raw(r.first_name)), r.message ? h('span', { class: 'small ellipsis' }, raw(`« ${r.message} »`)) : null),
               h('button', { class: 'btn primary small', onclick: () => act(() => api('POST', `/api/plans/${id}/requests/${r.id}`, { decision: 'accept' }), `${r.first_name} est accepté.`) }, 'Accepter'),
               h('button', { class: 'btn small', 'aria-label': `Décliner ${r.first_name}`, onclick: () => act(() => api('POST', `/api/plans/${id}/requests/${r.id}`, { decision: 'decline' })) }, 'Non'))))]
@@ -224,11 +225,11 @@ function planSheet(id, after) {
           p.in_progress ? h('span', { class: 'chip live-chip' }, 'En cours') : null),
         h('h2', null, raw(p.title)),
         h('p', { class: 'small text2' }, [planWhen(p), p.distance].filter(Boolean).join(' · ')),
-        h('a', { class: 'row text', href: `#/u/${p.host.id}`, onclick: close }, avatar(p.host.photo, p.host.first_name),
+        h('a', { class: 'row text', href: `#/u/${p.host.id}`, onclick: close }, avatarOf(p.host),
           h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, raw(p.host.first_name)), h('span', { class: 'small' }, 'Hôte'))),
         p.description ? h('p', { class: 'body-text text2' }, raw(p.description)) : null,
         h('p', { class: 'small' }, `Participants : ${planCount(p)}. ${inside ? '' : "L'adresse et la liste des participants sont visibles une fois ta demande acceptée."}`),
-        inside && p.members.length ? h('div', { class: 'avatars' }, p.members.map((x) => avatar(x.photo, x.first_name))) : null,
+        inside && p.members.length ? h('div', { class: 'avatars' }, p.members.map((x) => avatarOf(x))) : null,
         inside ? h('div', { class: 'addr' }, p.address ? raw(p.address) : "L'hôte donnera l'adresse dans la discussion.") : null,
         action,
         mine === 'host' ? null : h('button', { class: 'btn danger', onclick: () => { close(); reportSheet('plan', id, 'ce plan'); } }, 'Signaler ce plan')
@@ -270,7 +271,7 @@ async function screenPlan(id) {
         h('button', { class: 'grow stack cell-btn', style: { gap: '0' }, onclick: () => planSheet(id, rerender) }, h('span', { class: 'strong' }, raw(p.title)),
           h('span', { class: 'small' }, `${planWhen(p)} · ${planCount(p)}`)),
         h('button', { class: 'btn small', onclick: () => reportSheet('plan', id, 'ce plan') }, 'Signaler')),
-      h('div', { class: 'row' }, h('div', { class: 'avatars grow' }, [p.host, ...p.members.filter((x) => x.id !== p.host.id)].map((x) => avatar(x.photo, x.first_name))),
+      h('div', { class: 'row' }, h('div', { class: 'avatars grow' }, [p.host, ...p.members.filter((x) => x.id !== p.host.id)].map((x) => avatarOf(x))),
         h('span', { class: 'chip plan' }, label('plan_kinds', p.place_kind))),
       h('div', { class: 'addr' }, p.address ? raw(p.address) : "L'hôte donnera l'adresse ici."),
       box,
@@ -291,6 +292,121 @@ function addSheet(center, after) {
         h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, 'Proposer un lieu'), h('span', { class: 'small' }, 'Bar, club, sauna, soirée. Vérifié par l’équipe.')))),
     h('button', { class: 'btn ghost', onclick: close }, 'Fermer')
   ]);
+}
+
+// ---------- menu rapide : les réglages qu'on change en pleine soirée, à un geste de la carte ----------
+const prefs = {
+  cluster: () => storage.get('live-cluster') !== '0', // regrouper les photos qui se chevauchent (activé par défaut)
+  sounds: () => storage.get('live-sounds') === '1'
+};
+
+// Un petit carillon synthétisé (aucun fichier). Le navigateur ne joue un son qu'après un premier geste sur la page.
+let audio = null;
+function chime() {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    audio.resume?.();
+    const t = audio.currentTime;
+    for (const [freq, at] of [[660, 0], [880, 0.13]]) {
+      const o = audio.createOscillator();
+      const g = audio.createGain();
+      o.type = 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t + at);
+      g.gain.exponentialRampToValueAtTime(0.12, t + at + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + at + 0.35);
+      o.connect(g).connect(audio.destination);
+      o.start(t + at);
+      o.stop(t + at + 0.4);
+    }
+  } catch { /* son indisponible sur cet appareil */ }
+}
+document.addEventListener('pointerdown', () => { if (prefs.sounds()) { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch { /* rien */ } } }, { passive: true });
+
+// Sons : on regarde les conversations toutes les 20 s, page visible ; un message non lu de plus, un carillon.
+const sounds = {
+  timer: null,
+  last: null,
+  sync() {
+    clearInterval(this.timer);
+    this.timer = null;
+    this.last = null;
+    if (!prefs.sounds()) return;
+    const check = async () => {
+      if (document.visibilityState !== 'visible' || state.me?.status !== 'member') return;
+      try {
+        const n = (await api('GET', '/api/matches')).matches.filter((m) => m.unread).length;
+        if (this.last !== null && n > this.last) chime();
+        this.last = n;
+      } catch { /* hors ligne : on réessaie au prochain tour */ }
+    };
+    check();
+    this.timer = setInterval(check, 20000);
+  }
+};
+
+function switchRow(iconName, title, sub, on, onToggle) {
+  return h('div', { class: 'menu-row' }, icon(iconName, 20),
+    h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, title), sub ? h('span', { class: 'small' }, sub) : null),
+    h('button', { class: `switch${on ? ' on' : ''}`, role: 'switch', 'aria-checked': String(on), 'aria-label': title, onclick: onToggle }));
+}
+function linkRow(iconName, title, onclick, end) {
+  return h('button', { class: 'menu-row', onclick }, icon(iconName, 20), h('span', { class: 'grow strong' }, title), end === undefined ? icon('chevron', 16) : end);
+}
+
+function menuSheet(getCenter) {
+  sheet((close) => {
+    const me = state.me;
+    const name = brand().name;
+    const locked = (f) => me.payments_enabled && me.entitlements && !me.entitlements[f];
+    const order = ['500m', '1km', 'zone'];
+    const level = Math.max(0, order.indexOf(me.map_precision || '1km'));
+    const range = h('input', { type: 'range', min: 0, max: order.length - 1, step: 1, value: level, 'aria-label': 'Brouillage de ma position' });
+    const precision = h('span', { class: 'small' }, label('map_precision', order[level]));
+    range.oninput = () => { precision.textContent = tr(label('map_precision', order[Number(range.value)])); };
+    range.onchange = async () => { state.me = await run(() => api('PATCH', '/api/me', { map_precision: order[Number(range.value)] }), 'Brouillage enregistré.'); rerender(); };
+    const anyLocked = me.payments_enabled && Object.values(me.entitlements || {}).some((v) => !v);
+    return [
+      h('h2', null, 'Menu'),
+      h('div', { class: 'menu-list' },
+        linkRow('user', 'Ma fiche', () => { close(); go('#/me/edit'); }),
+        linkRow('settings', 'Réglages du compte', () => { close(); go('#/me'); })),
+      h('div', { class: 'menu-list' },
+        switchRow('eyeoff', 'Mode vanille', me.vanilla ? 'Photos explicites floutées ou remplacées' : 'Photos explicites affichées', !!me.vanilla, async () => {
+          state.me = await run(() => api('PATCH', '/api/me', { vanilla: !me.vanilla }), me.vanilla ? 'Mode vanille désactivé.' : 'Mode vanille activé.');
+          close();
+          rerender();
+        }),
+        switchRow('layers', 'Regrouper les profils proches', 'Une pastille avec le nombre quand les photos se chevauchent', prefs.cluster(), () => {
+          storage.set('live-cluster', prefs.cluster() ? '0' : '1');
+          close();
+          rerender();
+        }),
+        switchRow('sound', 'Sons', 'Un son à chaque nouveau message, si ton appareil le permet', prefs.sounds(), () => {
+          const on = !prefs.sounds();
+          storage.set('live-sounds', on ? '1' : '0');
+          if (on) chime();
+          sounds.sync();
+          close();
+          menuSheet(getCenter);
+        })),
+      anyLocked
+        ? h('div', { class: 'row' }, h('a', { class: 'btn primary grow', href: '#/plus', onclick: close }, icon('lock', 18), `Passer à ${name}+`),
+          h('a', { class: 'icon-btn', href: '#/plus', onclick: close, 'aria-label': `Ce que comprend ${name}+` }, '?'))
+        : h('p', { class: 'small menu-note' }, `${name}+ est offert pendant le lancement : tout est débloqué.`),
+      h('div', { class: 'menu-list' },
+        linkRow('group', 'Organiser un plan à plusieurs', () => { close(); createPlanSheet(getCenter(), rerender); },
+          h('span', { class: 'row' }, locked('host_plans') ? h('span', { class: 'plus-tag' }, `${name}+`) : null, icon('plus', 18))),
+        linkRow('pin', 'Proposer un lieu', () => { close(); proposeSpotSheet(getCenter()); }, icon('plus', 18))),
+      h('div', { class: 'menu-list' },
+        h('div', { class: 'menu-row column' },
+          h('div', { class: 'row' }, icon('shuffle', 20), h('span', { class: 'grow strong' }, 'Brouillage de ma position'), precision),
+          h('div', { class: 'range-row' }, h('span', { class: 'small' }, 'moins'), range, h('span', { class: 'small' }, 'plus')))),
+      h('div', { class: 'menu-list' },
+        linkRow('logout', 'Se déconnecter', () => { close(); logout(); }, null),
+        linkRow('refresh', 'Actualiser l’app', () => location.reload(), null))
+    ];
+  });
 }
 
 // ---------- mode voyage ----------
@@ -359,13 +475,21 @@ function consentCard() {
     } }, 'Utiliser cette ville'));
 }
 
+// Visage d'un point de la carte : sa photo, son alternative sans nudité en mode vanille, ou son initiale.
+function faceOf(x) {
+  const ph = shownPhoto(x);
+  return h('span', { class: `face${veil(ph.explicit)}` }, ph.id ? h('img', { src: `/photos/${ph.id}`, alt: '' }) : h('span', null, x.first_name[0]));
+}
+
 // ---------- carte ----------
 async function screenMap() {
   const me = state.me;
+  let mapRef = null; // la carte, une fois créée : le menu ajoute un plan ou un lieu au centre de ce qu'on regarde
+  const menuButton = () => h('button', { class: 'icon-btn', 'aria-label': 'Menu', title: 'Menu', onclick: () => menuSheet(() => (mapRef ? mapRef.getCenter() : { lat: 48.8566, lng: 2.3522 })) }, icon('menu', 20));
   const availableChip = () => h('button', { class: 'chip-btn small-chip', 'aria-pressed': String(live.onlyAvailable), onclick: () => { live.onlyAvailable = !live.onlyAvailable; screenMap(); } }, 'Dispos');
   const bar = h('div', { class: 'live-bar' },
     h('span', { class: 'live-brand' }, brand().name),
-    h('div', { class: 'row only-narrow' }, availableChip(), filterButton(screenMap)));
+    h('div', { class: 'row only-narrow' }, availableChip(), filterButton(screenMap), menuButton()));
   if (!me.location.enabled && !me.trip) {
     mount(h('main', { class: 'live-screen' },
       h('aside', { class: 'live-side' }, h('div', { class: 'side-head' }, h('h1', { class: 'title' }, 'Autour de toi'),
@@ -385,7 +509,7 @@ async function screenMap() {
   const sideCount = h('span', { class: 'small', role: 'status' });
   const side = h('aside', { class: 'live-side', 'aria-label': 'Autour de toi' },
     h('div', { class: 'side-head' },
-      h('div', { class: 'row between' }, h('h1', { class: 'title' }, me.trip ? me.trip.label : 'Autour de toi'), h('div', { class: 'row' }, availableChip(), filterButton(screenMap))),
+      h('div', { class: 'row between' }, h('h1', { class: 'title' }, me.trip ? me.trip.label : 'Autour de toi'), h('div', { class: 'row' }, availableChip(), filterButton(screenMap), menuButton())),
       sideCount),
     sideList,
     h('p', { class: 'side-foot' }, 'Points approximatifs : personne ne voit la position réelle de personne. Les dispos d’abord, puis les personnes en ligne.'));
@@ -403,6 +527,7 @@ async function screenMap() {
   const L = window.L;
   const start = live.view || null;
   map = L.map(box, { zoomControl: false, attributionControl: true });
+  mapRef = map;
   if (isWide()) L.control.zoom({ position: 'topright' }).addTo(map);
   onLeave(() => { alive = false; live.view = { center: map.getCenter(), zoom: map.getZoom() }; map.remove(); });
   if (state.meta.map.url) L.tileLayer(state.meta.map.url, { maxZoom: 17, minZoom: 9, attribution: state.meta.map.attribution }).addTo(map);
@@ -414,11 +539,34 @@ async function screenMap() {
 
   const markerEl = (x, size) => h('button', { class: `pin${x.presence ? ' on' : ''}${size < 50 ? ' small' : ''}`, style: { width: `${size}px`, height: `${size}px` },
     'aria-label': `${x.first_name}, ${x.age}${x.presence ? ', dispo' : ''}${x.online === 'now' ? ', en ligne' : ''}` },
-    h('span', { class: `face${veil(x.photo_explicit)}` }, x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : h('span', null, x.first_name[0])),
+    faceOf(x),
     x.online === 'now' && !x.presence ? h('span', { class: 'now' }) : null,
     x.position && ROLE[x.position] ? h('span', { class: 'tag role', 'aria-hidden': 'true' }, ROLE[x.position]) : null,
     x.presence && PLACE_ICON[x.presence.place] ? h('span', { class: `tag${x.presence.place === 'host' ? ' host' : ''}` }, icon(PLACE_ICON[x.presence.place], 13)) : null,
     x.trip ? h('span', { class: 'tag trip' }, icon('plane', 13)) : null);
+  const clusterPins = (pins, size) => {
+    const z = map.getZoom();
+    const cell = size * 0.95;
+    const cells = new Map();
+    for (const x of pins) {
+      const p = map.project([x.lat, x.lng], z);
+      const k = `${Math.floor(p.x / cell)}:${Math.floor(p.y / cell)}`;
+      if (!cells.has(k)) cells.set(k, []);
+      cells.get(k).push(x);
+    }
+    return [...cells.values()];
+  };
+  const clusterEl = (group, size) => {
+    const lead = group.find((x) => x.presence) || group.find((x) => x.online === 'now') || group[0];
+    const avail = group.filter((x) => x.presence).length;
+    return h('button', { class: `pin cluster${avail ? ' on' : ''}${size < 50 ? ' small' : ''}`, style: { width: `${size}px`, height: `${size}px` },
+      'aria-label': avail ? `${group.length} membres ici, dont ${avail} dispo` : `${group.length} membres ici` },
+      faceOf(lead), h('span', { class: 'count', 'aria-hidden': 'true' }, String(group.length)));
+  };
+  const clusterSheet = (group) => sheet((close) => [h('h2', null, `${group.length} membres ici`),
+    h('div', { class: 'people' }, group.map((x) => h('button', { onclick: () => { close(); personSheet(x); } }, avatarOf(x),
+      h('span', { class: 'who' }, h('b', null, `${x.first_name}, ${x.age}`), h('span', null, rowSub(x))), x.presence ? h('span', { class: 'live-dot', 'aria-label': 'Dispo' }) : null))),
+    h('button', { class: 'btn ghost', onclick: close }, 'Fermer')]);
   const spotLetter = (s) => raw(tr(label('spot_categories', s.category))[0]); // initiale de la catégorie, dans la langue affichée
   const spotEl = (s) => h('button', { class: 'spot-pin', 'aria-label': `${s.name}, ${tr(label('spot_categories', s.category))}` }, spotLetter(s), s.here ? h('b', null, String(s.here)) : null);
   const planEl = (p) => h('button', { class: `plan-pin${p.in_progress ? ' on' : ''}`, 'aria-label': `Plan à plusieurs : ${p.title}` }, icon('group', 20), h('b', null, String(p.going + 1)));
@@ -441,7 +589,7 @@ async function screenMap() {
       if (d.me) L.circleMarker([d.me.lat, d.me.lng], { radius: 8, color: '#ffffff', weight: 3, fillColor: cssVar('--text'), fillOpacity: 1 }).addTo(layer).bindTooltip(tr(me.trip ? 'Toi, en voyage' : 'Toi (point approximatif)'));
       const zoneSheet = (z) => sheet((close) => [h('h2', null, `${z.count} membres dans cette zone`),
         h('p', { class: 'small' }, 'Ils ont choisi de ne pas avoir de point à eux.'),
-        h('div', { class: 'people' }, z.people.map((x) => h('button', { onclick: () => { close(); personSheet(x); } }, avatar(x.photo, x.first_name, null, x.photo_explicit),
+        h('div', { class: 'people' }, z.people.map((x) => h('button', { onclick: () => { close(); personSheet(x); } }, avatarOf(x),
           h('span', { class: 'who' }, h('b', null, `${x.first_name}, ${x.age}`), h('span', null, rowSub(x))), x.presence ? h('span', { class: 'live-dot', 'aria-label': 'Dispo' }) : null))),
         h('button', { class: 'btn ghost', onclick: close }, 'Fermer')]);
       for (const z of d.zones) {
@@ -451,10 +599,25 @@ async function screenMap() {
       for (const s of d.spots) L.marker([s.lat, s.lng], { icon: divIcon(spotEl(s), 40) }).addTo(layer).on('click', () => spotSheet(s, load));
       for (const p of d.plans) L.marker([p.lat, p.lng], { icon: divIcon(planEl(p), 44), zIndexOffset: 500 }).addTo(layer).on('click', () => planSheet(p.id, load));
       const size = pinSize();
-      for (const x of d.pins) {
-        const el = markerEl(x, size);
-        els.set(x.id, el);
-        L.marker([x.lat, x.lng], { icon: divIcon(el, size), zIndexOffset: x.presence ? 1000 : x.online === 'now' ? 300 : 0 }).addTo(layer).on('click', () => personSheet(x));
+      // Regroupement (réglage du menu) : en dessous du zoom 16, les photos qui tombent dans la même case de la taille
+      // d'une photo deviennent une pastille avec leur nombre ; un geste et la carte zoome dessus.
+      const groups = prefs.cluster() && map.getZoom() < 16 ? clusterPins(d.pins, size) : d.pins.map((x) => [x]);
+      for (const group of groups) {
+        if (group.length === 1) {
+          const x = group[0];
+          const el = markerEl(x, size);
+          els.set(x.id, el);
+          L.marker([x.lat, x.lng], { icon: divIcon(el, size), zIndexOffset: x.presence ? 1000 : x.online === 'now' ? 300 : 0 }).addTo(layer).on('click', () => personSheet(x));
+          continue;
+        }
+        const el = clusterEl(group, size);
+        for (const x of group) els.set(x.id, el);
+        const at = [group.reduce((n, x) => n + x.lat, 0) / group.length, group.reduce((n, x) => n + x.lng, 0) / group.length];
+        L.marker(at, { icon: divIcon(el, size), zIndexOffset: group.some((x) => x.presence) ? 1100 : 400 }).addTo(layer).on('click', () => {
+          const b = L.latLngBounds(group.map((x) => [x.lat, x.lng]));
+          if (map.getZoom() >= 15 || b.getNorthEast().equals(b.getSouthWest())) clusterSheet(group);
+          else map.flyToBounds(b.pad(0.8), { maxZoom: Math.min(map.getZoom() + 3, 17), duration: 0.6 });
+        });
       }
       const avail = d.pins.filter((x) => x.presence).length;
       const inZones = d.zones.reduce((n, z) => n + z.count, 0);
@@ -472,7 +635,7 @@ async function screenMap() {
           p.my_status === 'host' && p.pending ? h('span', { class: 'chip blue' }, String(p.pending)) : null)))] : null,
         h('div', { class: 'side-label' }, `Membres (${people.length})`),
         people.length ? h('div', { class: 'people' }, people.map((x) => h('button', { onclick: () => personSheet(x), onmouseenter: () => hot(x.id, true), onmouseleave: () => hot(x.id, false), onfocus: () => hot(x.id, true), onblur: () => hot(x.id, false) },
-          avatar(x.photo, x.first_name, null, x.photo_explicit),
+          avatarOf(x),
           h('span', { class: 'who' }, h('b', null, `${x.first_name}, ${x.age}`), h('span', null, rowSub(x))),
           x.presence ? h('span', { class: 'live-dot', 'aria-label': 'Dispo' }) : x.new_profile ? h('span', { class: 'badge-new' }, 'Nouveau') : null)))
           : h('p', { class: 'empty' }, live.onlyAvailable ? "Personne n'est dispo ici pour le moment." : 'Personne dans cette partie de la carte.'),
@@ -502,7 +665,7 @@ async function screenList() {
   const d = await api('GET', `/api/live/people?${q}`);
   const people = live.onlyAvailable ? d.people.filter((x) => x.presence) : d.people;
   const cell = (x) => h('button', { class: 'cell cell-btn', onclick: () => personSheet(x) },
-    h('div', { class: `thumb${veil(x.photo_explicit)}` }, x.photo ? h('img', { src: `/photos/${x.photo}`, alt: '' }) : h('span', { class: 'thumb-initial' }, x.first_name[0])),
+    (() => { const ph = shownPhoto(x); return h('div', { class: `thumb${veil(ph.explicit)}` }, ph.id ? h('img', { src: `/photos/${ph.id}`, alt: '' }) : h('span', { class: 'thumb-initial' }, x.first_name[0])); })(),
     x.presence || x.online === 'now' ? h('span', { class: 'online', 'aria-label': x.presence ? 'Dispo' : 'En ligne' }) : null,
     h('span', { class: 'cell-name' }, `${x.first_name}, ${x.age}`),
     h('span', { class: 'cell-meta' }, x.presence ? `Dispo · ${hhmm(x.presence.until)}` : x.distance || ''));
@@ -543,6 +706,7 @@ async function render() {
       if (path === 'me' && arg === 'edit') return await screenEditProfile();
       return screenWaitlist();
     }
+    if (!sounds.started) { sounds.started = true; sounds.sync(); }
     switch (path) {
       case 'list': return await screenList();
       case 'u': return await screenProfile(arg);

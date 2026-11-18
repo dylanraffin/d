@@ -692,6 +692,31 @@ export default {
     'Choisis un pseudo.': 'Pick a nickname.',
     'Un pseudo suffit : pas besoin de ton vrai prénom. Ton âge est affiché, jamais ta date de naissance. Ta ville n’est pas dans la liste ? Choisis la plus proche.':
       'A nickname is enough: no need for your real name. Your age is shown, never your date of birth. Your city isn’t listed? Pick the closest one.',
+    // ---------- alternate photo without nudity ----------
+    'Photo alternative envoyée : visible après validation.': 'Alternate photo sent: visible once approved.',
+    'Supprimer la photo alternative': 'Delete the alternate photo',
+    'Ajouter une photo alternative': 'Add an alternate photo',
+    'Photo alternative sans nudité': 'Alternate photo without nudity',
+    'Elle s’affiche à la place de ta photo explicite pour les membres en mode vanille et dans les pays où ces photos sont interdites. Sans elle, ta photo y est floutée ou masquée.':
+      'It shows instead of your explicit photo for members in vanilla mode and in countries where such photos are banned. Without it, your photo is blurred or hidden there.',
+    'Remplacer': 'Replace',
+    'Une photo alternative doit être sans nudité.': 'An alternate photo must not contain nudity.',
+    // ---------- quick menu (map) ----------
+    'Menu': 'Menu',
+    'Réglages du compte': 'Account settings',
+    'Photos explicites floutées ou remplacées': 'Explicit photos blurred or replaced',
+    'Photos explicites affichées': 'Explicit photos shown',
+    'Mode vanille activé.': 'Vanilla mode on.',
+    'Mode vanille désactivé.': 'Vanilla mode off.',
+    'Regrouper les profils proches': 'Group nearby profiles',
+    'Une pastille avec le nombre quand les photos se chevauchent': 'A badge with the count when photos overlap',
+    'Sons': 'Sounds',
+    'Un son à chaque nouveau message, si ton appareil le permet': 'A sound for each new message, if your device allows it',
+    'Brouillage de ma position': 'Location randomizer',
+    'Brouillage enregistré.': 'Randomizer saved.',
+    'moins': 'less',
+    'plus': 'more',
+    'Actualiser l’app': 'Refresh the app',
     // ---------- membership request (Nuit) ----------
     'Ta demande': 'Your request',
     'Qui tu es, ce que tu aimes, ce que tu viens chercher ici.': 'Who you are, what you like, what you’re here for.',
@@ -1187,6 +1212,11 @@ export default {
     ['^#(\\d+) à (.+)$', '#$1 in $2'],
     ['^(.+) fonctionne sur demande d\'adhésion\\. Chaque demande est relue par une personne de l\'équipe\\.$', '$1 works by membership request. Every request is read by a person on the team.'],
     ['^Recommande-moi sur (.+) avec mon code : (.+)$', 'Recommend me on $1 with my code: $2'],
+    ['^Passer à (.+)\\+$', 'Upgrade to $1+'],
+    ['^Ce que comprend (.+)\\+$', 'What $1+ includes'],
+    ['^(.+)\\+ est offert pendant le lancement : tout est débloqué\\.$', '$1+ is free during launch: everything is unlocked.'],
+    ['^(\\d+) membres ici, dont (\\d+) dispo$', '$1 members here, $2 available now'],
+    ['^(\\d+) membres ici$', '$1 members here'],
     ['^(.+) ouvre par vagues\\. Complète ton dossier : le comité examine les dossiers complets en premier\\.$', '$1 opens in waves. Complete your application: the committee reviews complete applications first.'],
 
     // ---------- messages returned by the server ----------
