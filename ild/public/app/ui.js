@@ -57,6 +57,24 @@ export async function refreshMe() {
 
 export const label = (group, code) => (state.meta?.[group] || {})[code] || code;
 
+// Réglages propres à cet appareil (sons, regroupement, notifications…) : jamais envoyés au serveur.
+export const storage = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* stockage indisponible */ } }
+};
+
+// Lignes de menu : un lien (chevron) ou un interrupteur.
+export function linkRow(iconName, title, onclick, end, sub) {
+  return h('button', { class: 'menu-row', onclick }, icon(iconName, 20),
+    sub ? h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, title), h('span', { class: 'small' }, sub)) : h('span', { class: 'grow strong' }, title),
+    end === undefined ? icon('chevron', 16) : end);
+}
+export function switchRow(iconName, title, sub, on, onToggle, { disabled = false } = {}) {
+  return h('div', { class: `menu-row${disabled ? ' disabled' : ''}` }, icon(iconName, 20),
+    h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, title), sub ? h('span', { class: 'small' }, sub) : null),
+    h('button', { class: `switch${on ? ' on' : ''}`, role: 'switch', 'aria-checked': String(on), 'aria-label': title, disabled, onclick: onToggle }));
+}
+
 export function backBtn(hash, text = 'Retour') {
   return h('a', { class: 'icon-btn', href: hash, 'aria-label': text }, icon('back'));
 }
@@ -219,10 +237,27 @@ export function monthLabel(ym) {
   return new Date(y, m - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' });
 }
 
+// Unités : le serveur parle en km, cm et kg ; l'affichage suit le réglage du membre (Réglages du compte).
+const imperial = () => state.me?.units === 'imperial';
+const num = (v, digits = 1) => Number(v.toFixed(digits)).toLocaleString(locale());
+export function heightText(cm) {
+  if (!cm) return null;
+  if (!imperial()) return `${cm} cm`;
+  const inches = Math.round(cm / 2.54);
+  return `${Math.floor(inches / 12)}′${inches % 12}″`;
+}
+export const weightText = (kg) => (!kg ? null : imperial() ? `${Math.round(kg * 2.20462)} lb` : `${kg} kg`);
+export const lengthText = (cm) => (!cm ? null : imperial() ? `${num(cm / 2.54)} in` : `${cm} cm`);
+// « 1 à 2 km » devient « 0,6 à 1,2 mi » ; les autres textes passent tels quels.
+export function distText(text) {
+  if (!text || !imperial() || !/\bkm$/.test(text)) return text;
+  return String(text).replace(/\d+(?:[.,]\d+)?/g, (n) => num(Number(n.replace(',', '.')) * 0.621371)).replace(/km$/, 'mi');
+}
+
 // « 185 cm · 73 kg · Musclé · Actif »
 export function personSummary(x) {
   const s = x.stats || {};
-  return [s.height_cm ? `${s.height_cm} cm` : null, s.weight_kg ? `${s.weight_kg} kg` : null,
+  return [heightText(s.height_cm), weightText(s.weight_kg),
     s.body_type ? label('body_types', s.body_type) : null, x.position ? label('positions', x.position) : null].filter(Boolean).join(' · ');
 }
 
@@ -234,7 +269,7 @@ export function statusLine(x) {
   const parts = [];
   if (x.online === 'now') parts.push(h('span', null, h('span', { class: 'dot-on', 'aria-hidden': 'true' }), 'En ligne'));
   else if (x.online === 'recent') parts.push(h('span', null, h('span', { class: 'dot-recent', 'aria-hidden': 'true' }), 'Vu récemment'));
-  if (x.distance) parts.push(h('span', null, x.distance));
+  if (x.distance) parts.push(h('span', null, distText(x.distance)));
   if (x.trip) parts.push(h('span', { class: 'tag-blue' }, `En voyage : ${x.trip.label}`));
   if (x.new_profile) parts.push(h('span', { class: 'badge-new' }, 'Nouveau profil'));
   return parts.length ? h('div', { class: 'status-line' }, parts) : null;
@@ -248,7 +283,7 @@ export function cruiseRows(p) {
   add('Lieu', names('can', p.can));
   add('Ambiance', names('vibes', p.vibes));
   add('Style', [p.stats?.identity ? label('identities', p.stats.identity) : null, ...(p.tribes || [])].filter(Boolean).join(' · '));
-  const size = p.endowment ? [p.endowment.cm ? `${p.endowment.cm} cm` : null, p.endowment.cut ? label('cut', p.endowment.cut).toLowerCase() : null].filter(Boolean).join(', ') : null;
+  const size = p.endowment ? [lengthText(p.endowment.cm), p.endowment.cut ? label('cut', p.endowment.cut).toLowerCase() : null].filter(Boolean).join(', ') : null;
   add('Pratiques', [names('safer', p.safer), size].filter(Boolean).join(' · '));
   add('Santé', p.health ? [p.health.hiv_status ? label('hiv_status', p.health.hiv_status) : null,
     p.health.last_test ? `dépistage : ${monthLabel(p.health.last_test)}` : null].filter(Boolean).join(' · ') : null);

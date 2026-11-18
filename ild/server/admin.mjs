@@ -86,10 +86,18 @@ export function registerAdminRoutes(r) {
       spots_pending: one("SELECT COUNT(*) AS n FROM spots WHERE status = 'pending'"),
       plans_live: one("SELECT COUNT(*) AS n FROM plans WHERE status = 'open' AND ends_at > ?", Date.now()),
       online_now: one("SELECT COUNT(*) AS n FROM users WHERE status = 'member' AND last_seen_at > ?", Date.now() - 5 * 60e3),
+      marketing_optins: one("SELECT COUNT(*) AS n FROM users WHERE status = 'member' AND marketing_consent_at IS NOT NULL"),
       edition: ctx.config.edition,
       suspended: one("SELECT COUNT(*) AS n FROM users WHERE status IN ('suspended', 'banned')"),
       payments_enabled: paymentsEnabled(db)
     };
+  });
+
+  // E-mails promotionnels : seulement les membres qui l'ont accepté, avec la date de l'accord (preuve du consentement).
+  r.get('/api/admin/marketing-consents', (ctx) => {
+    requireAdmin(ctx);
+    return { consents: ctx.db.prepare(`SELECT email, first_name, marketing_consent_at AS consent_at FROM users
+      WHERE status = 'member' AND marketing_consent_at IS NOT NULL ORDER BY marketing_consent_at`).all() };
   });
 
   // --- candidatures ---

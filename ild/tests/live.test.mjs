@@ -171,3 +171,68 @@ test('payant activé : carte limitée autour de soi sans abonnement', async () =
   assert.equal((await a.c.get('/api/live/map?lat=43.2965&lng=5.3698')).status, 200);
   await admin.put('/api/admin/settings', { payments_enabled: false });
 });
+
+test('réglages du compte : e-mail, mot de passe (autres appareils déconnectés), unités, e-mails promo', async () => {
+  const a = await member();
+  const other = new Client(); // un deuxième appareil
+  await other.post('/api/auth/login', { email: a.email, password: 'motdepasse-solide' });
+  assert.equal((await other.get('/api/me')).status, 200);
+  // E-mail : le mot de passe est demandé, l'adresse doit être libre.
+  const b = await member();
+  assert.equal((await a.c.post('/api/me/email', { email: 'neuf@test.local', password: 'faux-mot-de-passe' })).status, 401);
+  assert.equal((await a.c.post('/api/me/email', { email: b.email, password: 'motdepasse-solide' })).status, 409);
+  assert.equal((await a.c.post('/api/me/email', { email: 'pas-un-email', password: 'motdepasse-solide' })).status, 400);
+  const changed = await a.c.post('/api/me/email', { email: 'Neuf.Live@test.local', password: 'motdepasse-solide' });
+  assert.equal(changed.status, 200, JSON.stringify(changed.data));
+  assert.equal((await a.c.get('/api/me')).data.email, 'neuf.live@test.local');
+  // Mot de passe : l'ancien est demandé ; l'autre appareil est déconnecté, celui-ci reste connecté.
+  assert.equal((await a.c.post('/api/me/password', { current: 'faux', password: 'nouveau-mot-de-passe' })).status, 401);
+  assert.equal((await a.c.post('/api/me/password', { current: 'motdepasse-solide', password: 'court' })).status, 400);
+  const pw = await a.c.post('/api/me/password', { current: 'motdepasse-solide', password: 'nouveau-mot-de-passe' });
+  assert.equal(pw.data.other_sessions_closed, 1);
+  assert.equal((await other.get('/api/me')).status, 401);
+  assert.equal((await a.c.get('/api/me')).status, 200);
+  const fresh = new Client();
+  assert.equal((await fresh.post('/api/auth/login', { email: 'neuf.live@test.local', password: 'motdepasse-solide' })).status, 401);
+  assert.equal((await fresh.post('/api/auth/login', { email: 'neuf.live@test.local', password: 'nouveau-mot-de-passe' })).status, 200);
+  // Préférences : unités, e-mails promo (accord daté, retirable), LivePlay, messages des profils sans photo.
+  let me = (await a.c.get('/api/me')).data;
+  assert.equal(me.units, 'metric');
+  assert.equal(me.marketing_emails, false); // jamais coché par défaut
+  assert.equal((await a.c.patch('/api/me', { units: 'yards' })).status, 400);
+  me = (await a.c.patch('/api/me', { units: 'imperial', marketing_emails: true, liveplay: true, messages_from: 'photo' })).data;
+  assert.equal(me.units, 'imperial');
+  assert.equal(me.marketing_emails, true);
+  assert.equal(me.liveplay, true);
+  assert.equal(me.messages_from, 'photo');
+  const consents = (await admin.get('/api/admin/marketing-consents')).data.consents;
+  assert.ok(consents.some((x) => x.email === 'neuf.live@test.local' && x.consent_at > 0));
+  assert.equal((await a.c.get('/api/admin/marketing-consents')).status, 403);
+  me = (await a.c.patch('/api/me', { marketing_emails: false })).data;
+  assert.equal(me.marketing_emails, false);
+  assert.ok(!(await admin.get('/api/admin/marketing-consents')).data.consents.some((x) => x.email === 'neuf.live@test.local'));
+});
+
+test('détecter les lieux où je suis : check-in automatique à moins de 100 m, avec une position précise', async () => {
+  const owner = await member();
+  const { id } = (await owner.c.post('/api/spots', { name: 'Sauna exemple', category: 'sauna', lat: 48.8700, lng: 2.3700 })).data;
+  await admin.post(`/api/admin/spots/${id}/review`, { decision: 'approve' });
+  // Sans le réglage : rien.
+  const off = await member({}, null);
+  assert.equal((await off.c.put('/api/me/location', { lat: 48.8702, lng: 2.3701, accuracy: 20, consent: true })).data.checked_in, null);
+  // Position imprécise (900 m) : rien, on se tromperait de lieu.
+  const vague = await member({}, null);
+  await vague.c.patch('/api/me', { auto_checkin: true });
+  assert.equal((await vague.c.put('/api/me/location', { lat: 48.8702, lng: 2.3701, accuracy: 900, consent: true })).data.checked_in, null);
+  // Trop loin (≈ 300 m) : rien.
+  const far = await member({}, null);
+  await far.c.patch('/api/me', { auto_checkin: true });
+  assert.equal((await far.c.put('/api/me/location', { lat: 48.8727, lng: 2.3700, accuracy: 15, consent: true })).data.checked_in, null);
+  // Avec le réglage, à 25 m : check-in de 2 h, compté sur le lieu.
+  const on = await member({}, null);
+  assert.equal((await on.c.patch('/api/me', { auto_checkin: true })).data.auto_checkin, true);
+  const r = (await on.c.put('/api/me/location', { lat: 48.8702, lng: 2.3701, accuracy: 20, consent: true })).data;
+  assert.deepEqual(r.checked_in, { id, name: 'Sauna exemple' });
+  const spot = (await owner.c.get('/api/live/map')).data.spots.find((s) => s.id === id);
+  assert.equal(spot.here, 1);
+});

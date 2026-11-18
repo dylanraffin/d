@@ -3,7 +3,8 @@ import { api, h } from '/shared/lib.js';
 import { state, mount, refreshMe, runCleanup } from './ui.js';
 import { screenWelcome, screenLogin, screenSignup, screenVerify, screenWaitlist, screenNotices, screenConsentUpdate } from './onboarding.js';
 import { screenDiscover, screenLikes, screenProfile, screenSharedAlbum, screenAround, screenTonight, screenMessages, screenChat } from './main.js';
-import { screenMe, screenEditProfile, screenMyAlbums, screenAlbumDetail, screenPlus, screenLocation, adminHint } from './me.js';
+import { screenMe, screenEditProfile, screenMyAlbums, screenAlbumDetail, screenPlus, screenLocation, screenSettings, adminHint } from './me.js';
+import { alerts } from './alerts.js';
 
 // Les erreurs déjà affichées à l'écran ne sont pas signalées une seconde fois.
 window.addEventListener('unhandledrejection', (e) => { if (e.reason?.handled) e.preventDefault(); });
@@ -30,6 +31,7 @@ async function render() {
       if (path === 'me' && arg === 'edit') return await screenEditProfile();
       return screenWaitlist();
     }
+    alerts.start();
     switch (path) {
       case 'u': return await screenProfile(arg);
       case 'shared': return await screenSharedAlbum(arg);
@@ -44,6 +46,7 @@ async function render() {
         if (arg === 'albums') return await screenMyAlbums();
         if (arg.startsWith('albums/')) return await screenAlbumDetail(arg.slice(7));
         if (arg === 'location') return await screenLocation();
+        if (arg === 'settings') return await screenSettings();
         if (arg === 'notices') return await screenNotices({ standalone: false });
         return await screenMe();
       default: return await screenDiscover();

@@ -7,7 +7,7 @@ import { requireMember } from './auth.mjs';
 import { getSetting } from './db.mjs';
 import { NEIGHBORHOODS, CITIES, POSITIONS, SEEKING, pickList } from './options.mjs';
 import { hasFeature } from './billing.mjs';
-import { snap, MIN_UPDATE_MS, distanceBetween, dailyShuffleKey, clusters, BUCKETS } from './geo.mjs';
+import { snap, MIN_UPDATE_MS, distanceBetween, dailyShuffleKey, clusters, BUCKETS, haversineKm } from './geo.mjs';
 import { DAY, ageOf, hiddenBetween, profilePhotoIds, shownProfilePhoto } from './core.mjs';
 import { cruiseCard, effectiveLocation } from './cruise.mjs';
 
@@ -68,6 +68,22 @@ export function passesFilters(viewer, x, f) {
   return true;
 }
 
+// « Détecter les lieux où je suis » : avec le GPS, un lieu validé à moins de 100 m reçoit un check-in de 2 h.
+// Rien n'est renvoyé si le membre y était déjà, pour ne pas le notifier à chaque mise à jour.
+export const AUTO_CHECKIN_KM = 0.1;
+function autoCheckin(db, u, lat, lng, now) {
+  const near = db.prepare("SELECT id, name, lat, lng FROM spots WHERE status = 'approved' AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?")
+    .all(lat - 0.002, lat + 0.002, lng - 0.003, lng + 0.003)
+    .map((s) => ({ ...s, km: haversineKm(lat, lng, s.lat, s.lng) }))
+    .filter((s) => s.km <= AUTO_CHECKIN_KM)
+    .sort((a, b) => a.km - b.km)[0];
+  if (!near) return null;
+  const already = db.prepare('SELECT 1 FROM spot_checkins WHERE spot_id = ? AND user_id = ? AND until > ?').get(near.id, u.id, now);
+  db.prepare(`INSERT INTO spot_checkins (spot_id, user_id, until) VALUES (?, ?, ?)
+    ON CONFLICT (spot_id, user_id) DO UPDATE SET until = excluded.until`).run(near.id, u.id, now + 2 * 3600e3);
+  return already ? null : { id: near.id, name: near.name };
+}
+
 export function registerNearbyRoutes(r) {
   r.put('/api/me/location', (ctx) => {
     const u = requireMember(ctx);
@@ -106,7 +122,11 @@ export function registerNearbyRoutes(r) {
       geo_consent_at = COALESCE(geo_consent_at, ?), neighborhood = CASE WHEN ? = 'city' THEN NULL ELSE COALESCE(?, neighborhood) END,
       city = COALESCE(?, city) WHERE id = ?`)
       .run(snap(lat), snap(lng), source, now, now, source, source === 'neighborhood' ? b.neighborhood : null, city, u.id);
-    return { ok: true, updated: true };
+    // Check-in automatique seulement avec une position assez précise (sinon on se tromperait de lieu).
+    const accuracy = Number(b.accuracy);
+    const precise = !Number.isFinite(accuracy) || accuracy <= 150;
+    const checked = source === 'gps' && u.auto_checkin && precise ? autoCheckin(ctx.db, u, lat, lng, now) : null;
+    return { ok: true, updated: true, checked_in: checked };
   });
 
   // Retrait du consentement : la position est effacée.

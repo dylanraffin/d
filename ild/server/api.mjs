@@ -128,6 +128,7 @@ function meView(db, u, edition = 'club') {
     hide_from_map: !!u.hide_from_map, show_distance: !!u.show_distance, incognito: !!u.incognito,
     album_matches_only: !!u.album_matches_only, blur_explicit: !!u.blur_explicit, discreet_icon: !!u.discreet_icon,
     map_precision: u.map_precision, messages_from: u.messages_from,
+    units: u.units || 'metric', marketing_emails: !!u.marketing_consent_at, auto_checkin: !!u.auto_checkin, liveplay: !!u.liveplay,
     presence: u.presence_until > Date.now() ? { until: u.presence_until, note: u.presence_note, place: u.presence_place } : null,
     location: { enabled: u.lat != null, source: u.location_source, consent: !!u.geo_consent_at, updated_at: u.location_updated_at },
     photos: db.prepare("SELECT id, status, explicit FROM photos WHERE user_id = ? AND kind = 'profile' ORDER BY position, id").all(u.id)
@@ -268,7 +269,7 @@ export function registerMemberRoutes(r) {
       if (b.neighborhood && !NEIGHBORHOODS[b.neighborhood]) fail(400, 'Quartier inconnu.');
       set.neighborhood = b.neighborhood || null;
     }
-    for (const k of ['hide_from_map', 'show_distance', 'album_matches_only', 'blur_explicit', 'discreet_icon', 'vanilla']) {
+    for (const k of ['hide_from_map', 'show_distance', 'album_matches_only', 'blur_explicit', 'discreet_icon', 'vanilla', 'auto_checkin', 'liveplay']) {
       if (k in b) set[k] = bool(b[k]);
     }
     if ('map_precision' in b) {
@@ -279,6 +280,12 @@ export function registerMemberRoutes(r) {
       if (!MESSAGES_FROM[b.messages_from]) fail(400, 'Réglage inconnu.');
       set.messages_from = b.messages_from;
     }
+    if ('units' in b) {
+      if (!['metric', 'imperial'].includes(b.units)) fail(400, 'Unités inconnues.');
+      set.units = b.units;
+    }
+    // E-mails promotionnels : seulement avec un accord explicite, daté (retirable à tout moment).
+    if ('marketing_emails' in b) set.marketing_consent_at = bool(b.marketing_emails) ? (u.marketing_consent_at || Date.now()) : null;
     if ('incognito' in b) {
       if (b.incognito) requireFeature(db, u, 'incognito');
       set.incognito = bool(b.incognito);
@@ -338,6 +345,34 @@ export function registerMemberRoutes(r) {
       verifications: db.prepare('SELECT provider, status, created_at, completed_at FROM verifications WHERE user_id = ?').all(u.id),
       subscriptions: db.prepare('SELECT plan, provider, status, started_at, current_period_end FROM subscriptions WHERE user_id = ?').all(u.id)
     };
+  });
+
+  // Réglages du compte : changer d'e-mail ou de mot de passe demande le mot de passe actuel.
+  r.post('/api/me/email', (ctx) => {
+    const u = requireAccount(ctx);
+    if (ctx.config.rateLimit) loginLimit(ctx.ip);
+    const db = ctx.db;
+    if (!verifyPassword(String(ctx.body.password || ''), u.pass_hash)) fail(401, 'Mot de passe incorrect.');
+    const email = str(ctx.body.email, 200, { required: true, label: 'E-mail' }).toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) fail(400, 'E-mail invalide.');
+    if (email === u.email) return { ok: true, email };
+    if (isBlocklisted(db, email)) fail(403, "Cet e-mail ne peut pas être utilisé.");
+    if (db.prepare('SELECT 1 FROM users WHERE email = ? AND id != ?').get(email, u.id)) fail(409, 'Un compte existe déjà avec cet e-mail.');
+    db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email, u.id);
+    return { ok: true, email };
+  });
+
+  r.post('/api/me/password', (ctx) => {
+    const u = requireAccount(ctx);
+    if (ctx.config.rateLimit) loginLimit(ctx.ip);
+    const db = ctx.db;
+    if (!verifyPassword(String(ctx.body.current || ''), u.pass_hash)) fail(401, 'Mot de passe actuel incorrect.');
+    const password = String(ctx.body.password || '');
+    if (password.length < 10) fail(400, 'Mot de passe : 10 caractères minimum.');
+    db.prepare('UPDATE users SET pass_hash = ? WHERE id = ?').run(hashPassword(password), u.id);
+    // Les autres appareils sont déconnectés ; celui-ci reste connecté.
+    const closed = db.prepare('DELETE FROM sessions WHERE user_id = ? AND token != ?').run(u.id, u._token).changes;
+    return { ok: true, other_sessions_closed: Number(closed) };
   });
 
   // RGPD : effacement. Les signalements visant le compte sont conservés (sécurité des membres).

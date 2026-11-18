@@ -1,7 +1,8 @@
 // Espace « Moi » : profil, albums, ILD+, position, confidentialité, décisions, informations légales.
 import { api, h, icon, toast, fmtDate, fileToJpeg, raw } from '/shared/lib.js';
 import { state, mount, go, run, refreshMe, backBtn, photoEl, chips, select, sheet, nav, logout, deleteAccount, label, euros, legalLinks, langSwitch, brand, isLive, personSummary,
-  placeSelect, placeLabel } from './ui.js';
+  placeSelect, placeLabel, linkRow, switchRow } from './ui.js';
+import { prefs, notifyPermission, enableNotifications, disableNotifications } from './alerts.js';
 
 export async function screenMe() {
   await refreshMe();
@@ -31,7 +32,8 @@ export async function screenMe() {
         me.album_requests ? h('span', { class: 'chip blue' }, String(me.album_requests)) : null, icon('chevron', 16, '#5c6085')),
       h('a', { href: '#/me/location', class: 'text' }, icon('map', 20), h('span', { class: 'grow' }, 'Ma position'),
         h('span', { class: 'small' }, placeLabel(me)), icon('chevron', 16, '#5c6085')),
-      h('a', { href: '#/me/notices', class: 'text' }, icon('flag', 20), h('span', { class: 'grow' }, 'Décisions de modération'), icon('chevron', 16, '#5c6085'))),
+      h('a', { href: '#/me/notices', class: 'text' }, icon('flag', 20), h('span', { class: 'grow' }, 'Décisions de modération'), icon('chevron', 16, '#5c6085')),
+      h('a', { href: '#/me/settings', class: 'text' }, icon('settings', 20), h('span', { class: 'grow' }, 'Réglages du compte'), icon('chevron', 16, '#5c6085'))),
     h('span', { class: 'section-label' }, 'Confidentialité'),
     h('div', { class: 'list' },
       toggle('show_distance', 'Afficher ma distance'),
@@ -382,6 +384,120 @@ export async function screenLocation() {
       await run(() => api('DELETE', '/api/me/location'), 'Position effacée.');
       go('#/me');
     } }, 'Effacer ma position et retirer mon accord') : h('a', { class: 'btn primary block', href: isLive() ? '#/map' : '#/around' }, isLive() ? 'Activer sur la carte' : 'Activer dans Autour')));
+}
+
+// ---------- Réglages du compte : Compte, Préférences, Réinitialiser ----------
+export async function screenSettings() {
+  await refreshMe();
+  const me = state.me;
+  const blocks = (await api('GET', '/api/blocks')).blocks;
+  const patch = async (body, msg) => { state.me = await run(() => api('PATCH', '/api/me', body), msg); screenSettings(); };
+  const name = brand().name;
+  const plusSub = !me.payments_enabled ? 'Offert pendant le lancement' : me.premium ? `Offert par ${name}` : me.entitlements.travel_mode ? 'Abonnement actif' : `Découvrir ${name}+`;
+  const permission = notifyPermission();
+  const notifyOn = prefs.notify();
+  const notifySub = permission === 'unsupported' ? 'Non pris en charge par ce navigateur'
+    : permission === 'denied' ? 'Bloquées dans les réglages du navigateur'
+      : 'Discrètes : jamais de prénom ni de contenu';
+  mount(h('main', { class: 'screen with-nav settings' },
+    h('div', { class: 'row' }, backBtn('#/me'), h('h1', { class: 'title' }, 'Réglages du compte')),
+    h('span', { class: 'section-label' }, 'Compte'),
+    h('div', { class: 'menu-list' },
+      linkRow('mail', 'Adresse e-mail', emailSheet, undefined, me.email),
+      linkRow('key', 'Mot de passe', passwordSheet, undefined, '••••••••••'),
+      linkRow('wallet', 'Abonnement et achats', () => go('#/plus'), h('span', { class: 'row' }, h('span', { class: 'plus-tag' }, `${name}+`), icon('chevron', 16)), plusSub)),
+    h('span', { class: 'section-label' }, 'Préférences'),
+    h('div', { class: 'menu-list' },
+      h('label', { class: 'menu-row' }, icon('ruler', 20), h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, 'Unités'),
+        h('span', { class: 'small' }, me.units === 'imperial' ? 'mi, ft, lb' : 'km, cm, kg')),
+      select({ metric: 'Métriques', imperial: 'Impériales' }, me.units, { class: 'inline-select', 'aria-label': 'Unités',
+        onchange: (e) => patch({ units: e.target.value }, 'Unités enregistrées.') })),
+      switchRow('mail', 'Recevoir les e-mails promotionnels', 'Nouveautés et soirées, jamais ton activité. Tu peux retirer ton accord à tout moment.', me.marketing_emails,
+        () => patch({ marketing_emails: !me.marketing_emails }, me.marketing_emails ? 'Tu ne recevras plus ces e-mails.' : 'Accord enregistré.')),
+      isLive() ? switchRow('video', 'Je suis dispo pour LivePlay', 'Appels vidéo avec les membres avec qui tu as une conversation. Tu acceptes chaque appel.', me.liveplay,
+        () => patch({ liveplay: !me.liveplay }, me.liveplay ? 'LivePlay désactivé.' : 'Tu es dispo pour LivePlay.')) : null,
+      isLive() ? switchRow('pin', 'Détecter les lieux où je suis', me.location.source === 'gps'
+        ? 'Avec le GPS : check-in de 2 h dans un lieu à moins de 100 m, quand la carte est ouverte.'
+        : 'Demande le GPS : active ta position sur la carte.', me.auto_checkin,
+      () => patch({ auto_checkin: !me.auto_checkin }, me.auto_checkin ? 'Détection désactivée.' : 'Détection activée.')) : null,
+      switchRow('shield', 'Bloquer les messages des profils sans photo', 'Seuls les profils avec une photo validée peuvent t’écrire', me.messages_from !== 'everyone',
+        () => patch({ messages_from: me.messages_from === 'everyone' ? 'photo' : 'everyone' }, 'Réglage enregistré.')),
+      switchRow('bell', 'Autoriser les notifications', notifySub, notifyOn, async () => {
+        if (notifyOn) { disableNotifications(); toast('Notifications désactivées.'); } else {
+          const r = await enableNotifications();
+          toast(r === 'granted' ? 'Notifications activées.' : r === 'unsupported' ? 'Non pris en charge par ce navigateur.' : 'Le navigateur a refusé. Change-le dans ses réglages.', r !== 'granted');
+        }
+        screenSettings();
+      }, { disabled: permission === 'unsupported' || permission === 'denied' })),
+    h('span', { class: 'section-label' }, 'Réinitialiser'),
+    h('div', { class: 'menu-list' },
+      linkRow('user', 'Débloquer des membres', () => unblockSheet(blocks), undefined,
+        blocks.length ? `${blocks.length} ${blocks.length > 1 ? 'personnes bloquées ou masquées' : 'personne bloquée ou masquée'}` : 'Personne pour l’instant'),
+      linkRow('cookie', 'Cookies et réglages de l’appareil', cookieSheet),
+      linkRow('trash', 'Supprimer mon compte', deleteAccount, null)),
+    h('p', { class: 'small center text2' }, 'Tes données : ', h('a', { href: '/api/me/export', download: 'mes-donnees.json' }, 'les télécharger')),
+    legalLinks()),
+  nav('me'));
+}
+
+function emailSheet() {
+  sheet((close) => {
+    const email = h('input', { type: 'email', class: 'input', value: state.me.email, autocomplete: 'email', 'aria-label': 'Nouvelle adresse e-mail' });
+    const pass = h('input', { type: 'password', class: 'input', placeholder: 'Ton mot de passe', autocomplete: 'current-password', 'aria-label': 'Mot de passe' });
+    return [h('h2', null, 'Adresse e-mail'),
+      h('p', { class: 'small' }, 'Elle sert à te connecter. Elle n’est jamais montrée aux autres membres.'),
+      email, pass,
+      h('button', { class: 'btn primary block', onclick: async () => {
+        await run(() => api('POST', '/api/me/email', { email: email.value, password: pass.value }), 'Adresse e-mail changée.');
+        close(); screenSettings();
+      } }, 'Enregistrer'),
+      h('button', { class: 'btn ghost', onclick: close }, 'Annuler')];
+  });
+}
+
+function passwordSheet() {
+  sheet((close) => {
+    const current = h('input', { type: 'password', class: 'input', placeholder: 'Mot de passe actuel', autocomplete: 'current-password', 'aria-label': 'Mot de passe actuel' });
+    const next = h('input', { type: 'password', class: 'input', placeholder: 'Nouveau (10 caractères minimum)', autocomplete: 'new-password', minlength: 10, 'aria-label': 'Nouveau mot de passe' });
+    return [h('h2', null, 'Mot de passe'),
+      h('p', { class: 'small' }, 'Tes autres appareils seront déconnectés ; celui-ci reste connecté.'),
+      current, next,
+      h('button', { class: 'btn primary block', onclick: async () => {
+        const r = await run(() => api('POST', '/api/me/password', { current: current.value, password: next.value }));
+        toast(r.other_sessions_closed ? `Mot de passe changé. ${r.other_sessions_closed} autre${r.other_sessions_closed > 1 ? 's' : ''} appareil${r.other_sessions_closed > 1 ? 's' : ''} déconnecté${r.other_sessions_closed > 1 ? 's' : ''}.` : 'Mot de passe changé.');
+        close();
+      } }, 'Changer le mot de passe'),
+      h('button', { class: 'btn ghost', onclick: close }, 'Annuler')];
+  });
+}
+
+function unblockSheet(blocks) {
+  sheet((close) => [h('h2', null, 'Débloquer des membres'),
+    blocks.length
+      ? h('div', { class: 'list' }, blocks.map((b) => h('div', null, h('span', { class: 'grow' }, `${b.first_name} · ${b.kind === 'hide' ? 'masqué' : 'bloqué'}`),
+        h('button', { class: 'btn ghost small', onclick: async () => { await run(() => api('DELETE', `/api/blocks/${b.id}`), `${b.first_name} débloqué.`); close(); screenSettings(); } }, 'Débloquer'))))
+      : h('p', { class: 'small' }, 'Tu n’as bloqué ni masqué personne.'),
+    blocks.length > 1 ? h('button', { class: 'btn block', onclick: async () => {
+      await run(async () => { for (const b of blocks) await api('DELETE', `/api/blocks/${b.id}`); }, 'Tout le monde est débloqué.');
+      close(); screenSettings();
+    } }, 'Tout débloquer') : null,
+    h('p', { class: 'small' }, 'Une personne débloquée peut de nouveau te voir et t’écrire. Un signalement déjà envoyé reste traité.'),
+    h('button', { class: 'btn ghost', onclick: close }, 'Fermer')]);
+}
+
+// Un seul cookie (la session). Le reste (sons, regroupement, notifications, langue) reste sur l'appareil.
+function cookieSheet() {
+  sheet((close) => [h('h2', null, 'Cookies et réglages de l’appareil'),
+    h('ul', { class: 'tips' },
+      h('li', null, 'Un seul cookie : ta session, indispensable pour rester connecté. Il est supprimé quand tu te déconnectes.'),
+      h('li', null, 'Aucun cookie publicitaire, aucune mesure d’audience, aucun pisteur.'),
+      h('li', null, 'Sons, regroupement des profils, notifications et langue sont gardés sur cet appareil seulement.')),
+    h('button', { class: 'btn block', onclick: () => {
+      try { localStorage.clear(); sessionStorage.clear(); } catch { /* stockage indisponible */ }
+      window.dispatchEvent(new Event('nuit-prefs'));
+      close(); toast('Réglages de cet appareil effacés.'); setTimeout(() => location.reload(), 600);
+    } }, 'Effacer les réglages de cet appareil'),
+    h('button', { class: 'btn ghost', onclick: close }, 'Fermer')]);
 }
 
 export function adminHint() {

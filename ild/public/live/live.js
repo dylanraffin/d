@@ -3,19 +3,16 @@
 import { api, h, icon, toast, fmtDate, raw } from '/shared/lib.js';
 import { tr } from '/shared/i18n.js';
 import { state, mount, go, run, refreshMe, runCleanup, onLeave, sheet, chips, select, nav, reportSheet, setNav, label, logout, brand, avatar, backBtn, clean,
-  isWide, hhmm, personSummary, presenceText, statusLine, cruiseRows, placeSelect, veil, cssVar, shownPhoto, avatarOf } from '/app/ui.js';
+  isWide, hhmm, personSummary, presenceText, statusLine, cruiseRows, placeSelect, veil, cssVar, shownPhoto, avatarOf, distText, storage, switchRow, linkRow } from '/app/ui.js';
 import { screenLogin, screenSignup, screenVerify, screenWaitlist, screenNotices, screenConsentUpdate } from '/app/onboarding.js';
 import { screenProfile, screenSharedAlbum, screenMessages, screenChat, filterQuery, filterButton } from '/app/main.js';
-import { screenMe, screenEditProfile, screenMyAlbums, screenAlbumDetail, screenPlus, screenLocation, adminHint } from '/app/me.js';
+import { screenMe, screenEditProfile, screenMyAlbums, screenAlbumDetail, screenPlus, screenLocation, screenSettings, adminHint } from '/app/me.js';
+import { prefs, chime, alerts } from '/app/alerts.js';
 
 const DURATIONS = { 30: '30 min', 60: '1 h', 120: '2 h', 240: '4 h' };
 const PLACE_ICON = { host: 'home', travel: 'arrow', venue: 'pin', out: 'chat' };
 const live = { onlyAvailable: false, onlyFavorites: false, view: null };
 
-const storage = {
-  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch { /* stockage indisponible */ } }
-};
 const siteHome = () => document.querySelector('meta[name="site-home"]')?.content || '/';
 const rerender = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
 
@@ -224,7 +221,7 @@ function planSheet(id, after) {
         h('div', { class: 'row wrap' }, h('span', { class: 'chip plan' }, 'Plan à plusieurs'), h('span', { class: 'chip' }, label('plan_kinds', p.place_kind)),
           p.in_progress ? h('span', { class: 'chip live-chip' }, 'En cours') : null),
         h('h2', null, raw(p.title)),
-        h('p', { class: 'small text2' }, [planWhen(p), p.distance].filter(Boolean).join(' · ')),
+        h('p', { class: 'small text2' }, [planWhen(p), distText(p.distance)].filter(Boolean).join(' · ')),
         h('a', { class: 'row text', href: `#/u/${p.host.id}`, onclick: close }, avatarOf(p.host),
           h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, raw(p.host.first_name)), h('span', { class: 'small' }, 'Hôte'))),
         p.description ? h('p', { class: 'body-text text2' }, raw(p.description)) : null,
@@ -295,65 +292,6 @@ function addSheet(center, after) {
 }
 
 // ---------- menu rapide : les réglages qu'on change en pleine soirée, à un geste de la carte ----------
-const prefs = {
-  cluster: () => storage.get('live-cluster') !== '0', // regrouper les photos qui se chevauchent (activé par défaut)
-  sounds: () => storage.get('live-sounds') === '1'
-};
-
-// Un petit carillon synthétisé (aucun fichier). Le navigateur ne joue un son qu'après un premier geste sur la page.
-let audio = null;
-function chime() {
-  try {
-    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-    audio.resume?.();
-    const t = audio.currentTime;
-    for (const [freq, at] of [[660, 0], [880, 0.13]]) {
-      const o = audio.createOscillator();
-      const g = audio.createGain();
-      o.type = 'sine';
-      o.frequency.value = freq;
-      g.gain.setValueAtTime(0.0001, t + at);
-      g.gain.exponentialRampToValueAtTime(0.12, t + at + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + at + 0.35);
-      o.connect(g).connect(audio.destination);
-      o.start(t + at);
-      o.stop(t + at + 0.4);
-    }
-  } catch { /* son indisponible sur cet appareil */ }
-}
-document.addEventListener('pointerdown', () => { if (prefs.sounds()) { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch { /* rien */ } } }, { passive: true });
-
-// Sons : on regarde les conversations toutes les 20 s, page visible ; un message non lu de plus, un carillon.
-const sounds = {
-  timer: null,
-  last: null,
-  sync() {
-    clearInterval(this.timer);
-    this.timer = null;
-    this.last = null;
-    if (!prefs.sounds()) return;
-    const check = async () => {
-      if (document.visibilityState !== 'visible' || state.me?.status !== 'member') return;
-      try {
-        const n = (await api('GET', '/api/matches')).matches.filter((m) => m.unread).length;
-        if (this.last !== null && n > this.last) chime();
-        this.last = n;
-      } catch { /* hors ligne : on réessaie au prochain tour */ }
-    };
-    check();
-    this.timer = setInterval(check, 20000);
-  }
-};
-
-function switchRow(iconName, title, sub, on, onToggle) {
-  return h('div', { class: 'menu-row' }, icon(iconName, 20),
-    h('span', { class: 'grow stack small-gap' }, h('span', { class: 'strong' }, title), sub ? h('span', { class: 'small' }, sub) : null),
-    h('button', { class: `switch${on ? ' on' : ''}`, role: 'switch', 'aria-checked': String(on), 'aria-label': title, onclick: onToggle }));
-}
-function linkRow(iconName, title, onclick, end) {
-  return h('button', { class: 'menu-row', onclick }, icon(iconName, 20), h('span', { class: 'grow strong' }, title), end === undefined ? icon('chevron', 16) : end);
-}
-
 function menuSheet(getCenter) {
   sheet((close) => {
     const me = state.me;
@@ -370,7 +308,7 @@ function menuSheet(getCenter) {
       h('h2', null, 'Menu'),
       h('div', { class: 'menu-list' },
         linkRow('user', 'Ma fiche', () => { close(); go('#/me/edit'); }),
-        linkRow('settings', 'Réglages du compte', () => { close(); go('#/me'); })),
+        linkRow('settings', 'Réglages du compte', () => { close(); go('#/me/settings'); })),
       h('div', { class: 'menu-list' },
         switchRow('eyeoff', 'Mode vanille', me.vanilla ? 'Photos explicites floutées ou remplacées' : 'Photos explicites affichées', !!me.vanilla, async () => {
           state.me = await run(() => api('PATCH', '/api/me', { vanilla: !me.vanilla }), me.vanilla ? 'Mode vanille désactivé.' : 'Mode vanille activé.');
@@ -386,7 +324,7 @@ function menuSheet(getCenter) {
           const on = !prefs.sounds();
           storage.set('live-sounds', on ? '1' : '0');
           if (on) chime();
-          sounds.sync();
+          window.dispatchEvent(new Event('nuit-prefs'));
           close();
           menuSheet(getCenter);
         })),
@@ -447,12 +385,22 @@ function tripSheet(getMap, after) {
 }
 
 // ---------- accord de localisation ----------
-function locate() {
+function locate(precise = false) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) { reject(new Error('Géolocalisation indisponible sur cet appareil.')); return; }
-    navigator.geolocation.getCurrentPosition((p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => reject(new Error('Position refusée. Tu peux choisir une ville à la place.')), { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 });
+    navigator.geolocation.getCurrentPosition((p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: Math.round(p.coords.accuracy) }),
+      () => reject(new Error('Position refusée. Tu peux choisir une ville à la place.')),
+      precise ? { enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 } : { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 });
   });
+}
+
+// Position GPS renvoyée au serveur (il en garde une par minute au plus). Avec « Détecter les lieux où je suis »,
+// la position est demandée plus précise et le serveur fait le check-in dans un lieu tout proche.
+async function refreshGps() {
+  try {
+    const r = await api('PUT', '/api/me/location', await locate(!!state.me?.auto_checkin));
+    if (r.checked_in) toast(`Check-in automatique : ${r.checked_in.name}, pour 2 h.`);
+  } catch { /* position indisponible : la carte garde la précédente */ }
 }
 
 function consentCard() {
@@ -497,7 +445,7 @@ async function screenMap() {
       h('div', { class: 'live-stage' }, h('div', { class: 'live-map' }), bar, h('div', { class: 'live-consent-wrap' }, consentCard()))), nav('map'));
     return;
   }
-  if (me.location.source === 'gps') locate().then((pos) => api('PUT', '/api/me/location', pos)).catch(() => {});
+  if (me.location.source === 'gps') refreshGps();
   // L'app ne reçoit jamais la position du membre : seulement son point approximatif, comme pour les autres.
   const first = await api('GET', `/api/live/map?${filterQuery()}${live.onlyAvailable ? '&available=1' : ''}`);
   const home = first.me ? { lat: first.me.lat, lng: first.me.lng } : { lat: 48.8566, lng: 2.3522 };
@@ -529,7 +477,8 @@ async function screenMap() {
   map = L.map(box, { zoomControl: false, attributionControl: true });
   mapRef = map;
   if (isWide()) L.control.zoom({ position: 'topright' }).addTo(map);
-  onLeave(() => { alive = false; live.view = { center: map.getCenter(), zoom: map.getZoom() }; map.remove(); });
+  const gpsTimer = me.location.source === 'gps' ? setInterval(() => { if (document.visibilityState === 'visible') refreshGps(); }, 120000) : null;
+  onLeave(() => { alive = false; clearInterval(gpsTimer); live.view = { center: map.getCenter(), zoom: map.getZoom() }; map.remove(); });
   if (state.meta.map.url) L.tileLayer(state.meta.map.url, { maxZoom: 17, minZoom: 9, attribution: state.meta.map.attribution }).addTo(map);
   const layer = L.layerGroup().addTo(map);
   const divIcon = (el, size) => L.divIcon({ html: el, className: 'zone-icon', iconSize: [size, size] });
@@ -570,7 +519,7 @@ async function screenMap() {
   const spotLetter = (s) => raw(tr(label('spot_categories', s.category))[0]); // initiale de la catégorie, dans la langue affichée
   const spotEl = (s) => h('button', { class: 'spot-pin', 'aria-label': `${s.name}, ${tr(label('spot_categories', s.category))}` }, spotLetter(s), s.here ? h('b', null, String(s.here)) : null);
   const planEl = (p) => h('button', { class: `plan-pin${p.in_progress ? ' on' : ''}`, 'aria-label': `Plan à plusieurs : ${p.title}` }, icon('group', 20), h('b', null, String(p.going + 1)));
-  const rowSub = (x) => (x.presence ? presenceText(x.presence) : [x.online === 'now' ? 'En ligne' : null, personSummary(x), x.distance].filter(Boolean).join(' · '));
+  const rowSub = (x) => (x.presence ? presenceText(x.presence) : [x.online === 'now' ? 'En ligne' : null, personSummary(x), distText(x.distance)].filter(Boolean).join(' · '));
 
   let timer;
   let loading = false;
@@ -668,7 +617,7 @@ async function screenList() {
     (() => { const ph = shownPhoto(x); return h('div', { class: `thumb${veil(ph.explicit)}` }, ph.id ? h('img', { src: `/photos/${ph.id}`, alt: '' }) : h('span', { class: 'thumb-initial' }, x.first_name[0])); })(),
     x.presence || x.online === 'now' ? h('span', { class: 'online', 'aria-label': x.presence ? 'Dispo' : 'En ligne' }) : null,
     h('span', { class: 'cell-name' }, `${x.first_name}, ${x.age}`),
-    h('span', { class: 'cell-meta' }, x.presence ? `Dispo · ${hhmm(x.presence.until)}` : x.distance || ''));
+    h('span', { class: 'cell-meta' }, x.presence ? `Dispo · ${hhmm(x.presence.until)}` : distText(x.distance) || ''));
   const toggle = (key, text) => h('button', { class: 'chip-btn small-chip', 'aria-pressed': String(live[key]), onclick: () => { live[key] = !live[key]; screenList(); } }, text);
   const empty = live.onlyFavorites ? "Aucun favori ici. Ajoute quelqu'un avec l'étoile de sa fiche." : live.onlyAvailable ? "Personne n'est dispo pour le moment." : 'Personne autour de toi pour le moment.';
   mount(h('main', { class: 'screen with-nav wide' },
@@ -706,7 +655,7 @@ async function render() {
       if (path === 'me' && arg === 'edit') return await screenEditProfile();
       return screenWaitlist();
     }
-    if (!sounds.started) { sounds.started = true; sounds.sync(); }
+    alerts.start();
     switch (path) {
       case 'list': return await screenList();
       case 'u': return await screenProfile(arg);
@@ -720,6 +669,7 @@ async function render() {
         if (arg === 'albums') return await screenMyAlbums();
         if (arg.startsWith('albums/')) return await screenAlbumDetail(arg.slice(7));
         if (arg === 'location') return await screenLocation();
+        if (arg === 'settings') return await screenSettings();
         if (arg === 'notices') return await screenNotices({ standalone: false });
         return await screenMe();
       default: return await screenMap();

@@ -358,7 +358,10 @@ const ADDED_COLUMNS = {
     hiv_status: 'TEXT', last_test: 'TEXT', health_visibility: "TEXT NOT NULL DEFAULT 'matches'", health_consent_at: 'INTEGER',
     last_seen_at: 'INTEGER', vanilla: 'INTEGER NOT NULL DEFAULT 0',
     // Mode voyage : point choisi par le membre, pas sa position
-    trip_lat: 'REAL', trip_lng: 'REAL', trip_label: 'TEXT', trip_until: 'INTEGER'
+    trip_lat: 'REAL', trip_lng: 'REAL', trip_label: 'TEXT', trip_until: 'INTEGER',
+    // Réglages du compte : unités d'affichage, accord pour les e-mails promotionnels (date), check-in automatique, LivePlay
+    units: "TEXT NOT NULL DEFAULT 'metric'", marketing_consent_at: 'INTEGER', auto_checkin: 'INTEGER NOT NULL DEFAULT 0',
+    liveplay: 'INTEGER NOT NULL DEFAULT 0'
   },
   matches: { origin: "TEXT NOT NULL DEFAULT 'like'", opened_by: 'INTEGER', replied_at: 'INTEGER', a_read_at: 'INTEGER', b_read_at: 'INTEGER' },
   photos: { album_id: 'INTEGER REFERENCES albums(id) ON DELETE CASCADE', match_id: 'INTEGER REFERENCES matches(id) ON DELETE CASCADE', explicit: 'INTEGER NOT NULL DEFAULT 0' },

@@ -2,7 +2,7 @@
 import { api, h, icon, toast, fmtDate, ago, fileToJpeg, raw } from '/shared/lib.js';
 import { tr } from '/shared/i18n.js';
 import { state, mount, go, run, refreshMe, onLeave, backBtn, photoEl, avatar, avatarOf, chips, select, sheet, nav, reportSheet, label, isLive, isWide, brand,
-  personSummary, presenceText, statusLine, cruiseRows, veil, cssVar } from './ui.js';
+  personSummary, presenceText, statusLine, cruiseRows, veil, cssVar, distText } from './ui.js';
 
 const DURATION_LABEL = { '1h': '1 heure', '24h': '24 heures', '7d': '7 jours', forever: "Jusqu'à ce que je retire" };
 const DISTANCES = { '': 'Toutes', 1: 'Moins de 1 km', 2: 'Moins de 2 km', 5: 'Moins de 5 km', 10: 'Moins de 10 km', 25: 'Moins de 25 km' };
@@ -24,7 +24,7 @@ function filtersSheet(onApply) {
   sheet((close) => {
     const ageMin = h('input', { class: 'input', type: 'number', min: 18, max: 99, value: f.age_min || '', placeholder: '18', 'aria-label': 'Âge minimum' });
     const ageMax = h('input', { class: 'input', type: 'number', min: 18, max: 99, value: f.age_max || '', placeholder: '99', 'aria-label': 'Âge maximum' });
-    const dist = select(DISTANCES, String(f.max_km || ''), { 'aria-label': 'Distance maximale' });
+    const dist = select(Object.fromEntries(Object.entries(DISTANCES).map(([k, v]) => [k, distText(v)])), String(f.max_km || ''), { 'aria-label': 'Distance maximale' });
     const pos = chips(state.meta.positions, f.position, { ariaLabel: 'Position' });
     const seek = chips(state.meta.seeking, f.seeking, { ariaLabel: 'Cherche' });
     const locked = !state.me.entitlements.advanced_filters;
@@ -74,7 +74,7 @@ export async function screenDiscover() {
         h('a', { class: 'overlay', href: `#/u/${p.id}` },
           p.music_title ? h('span', { class: 'pill' }, icon('music', 12), p.music_title) : null,
           h('span', { class: 'big' }, `${p.first_name}, ${p.age}`),
-          h('span', { class: 'text2' }, [p.job, p.neighborhood, p.distance].filter(Boolean).join(' · ')),
+          h('span', { class: 'text2' }, [p.job, p.neighborhood, distText(p.distance)].filter(Boolean).join(' · ')),
           h('span', { class: 'row tags' },
             p.position ? h('span', { class: 'mini-chip' }, label('positions', p.position)) : null,
             p.seeking.slice(0, 2).map((s) => h('span', { class: 'mini-chip' }, label('seeking', s))),
@@ -137,7 +137,7 @@ export async function screenProfile(id) {
       h('div', { class: 'overlay' },
         p.music_title ? h('span', { class: 'pill' }, icon('music', 12), p.music_title) : null,
         h('span', { class: 'big', style: { fontSize: '36px' } }, `${p.first_name}, ${p.age}`),
-        h('span', { class: 'text2' }, [p.job, p.neighborhood, p.distance].filter(Boolean).join(' · ')))
+        h('span', { class: 'text2' }, [p.job, p.neighborhood, distText(p.distance)].filter(Boolean).join(' · ')))
     ].filter(Boolean));
   };
   drawPhoto();
@@ -269,7 +269,7 @@ function personCell(x) {
     photoEl(x.photo, x.first_name),
     x.online_recently ? h('span', { class: 'online', 'aria-label': 'Actif récemment' }) : null,
     h('span', { class: 'cell-name' }, `${x.first_name}, ${x.age}`),
-    h('span', { class: 'cell-meta' }, x.distance || ''));
+    h('span', { class: 'cell-meta' }, distText(x.distance) || ''));
 }
 
 export async function screenAround() {
@@ -512,7 +512,7 @@ export async function screenChat(matchId) {
       h('div', { class: 'row chat-head' },
         h('span', { class: 'only-narrow' }, backBtn('#/messages')), avatarOf({ first_name: other.first_name, photo: other.photos[0], photo_explicit: (other.explicit_photos || []).includes(other.photos[0]), photo_alt: other.photo_alt }),
         h('a', { class: 'grow stack text', style: { gap: '0' }, href: `#/u/${other.id}` }, h('span', { class: 'strong' }, raw(other.first_name)),
-          h('span', { class: 'small' }, [other.online === 'now' ? 'En ligne' : null, other.distance, other.vouched_by.length ? 'Parrainé' : other.neighborhood].filter(Boolean).join(' · '))),
+          h('span', { class: 'small' }, [other.online === 'now' ? 'En ligne' : null, distText(other.distance), other.vouched_by.length ? 'Parrainé' : other.neighborhood].filter(Boolean).join(' · '))),
         h('button', { class: 'btn small', onclick: reportConv }, 'Signaler')),
       box,
       h('p', { class: 'small center' }, 'Appui long ou clic droit sur un message ou une photo pour le signaler. Le signalement garde une copie sécurisée : pas besoin de captures.'),

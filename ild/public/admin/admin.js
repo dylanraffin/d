@@ -115,9 +115,20 @@ function pageDashboard() {
       kpi('Lieux à valider', s.spots_pending, '#/spots'),
       kpi('Plans à plusieurs en cours', s.plans_live, '#/plans'),
       kpi(s.payments_enabled ? 'Abonnés' : 'Abonnés (payant désactivé)', s.subscribers, '#/subscriptions'),
-      kpi('Suspendus ou bannis', s.suspended, '#/members?status=banned')),
+      kpi('Suspendus ou bannis', s.suspended, '#/members?status=banned'),
+      h('div', { class: 'kpi' }, h('span', { class: 'muted' }, 'Accord e-mails promo'), h('b', null, String(s.marketing_optins)),
+        h('a', { href: '#', onclick: (e) => { e.preventDefault(); exportConsents(); } }, 'Exporter (CSV)'))),
     h('h2', null, '7 derniers jours'),
     h('div', { class: 'kpis' }, kpi('Candidatures', s.signups_7d), kpi('Matchs', s.matches_7d), kpi('Messages', s.messages_7d)));
+}
+
+// Liste des membres qui acceptent les e-mails promotionnels, à importer dans l'outil d'envoi.
+async function exportConsents() {
+  const { consents } = await api('GET', '/api/admin/marketing-consents');
+  const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = ['email,first_name,consent_at', ...consents.map((c) => [c.email, c.first_name, new Date(c.consent_at).toISOString()].map(cell).join(','))].join('\n');
+  const a = h('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), download: 'accords-emails.csv' });
+  document.body.append(a); a.click(); a.remove();
 }
 
 async function pageApplications(params) {
