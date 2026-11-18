@@ -1,0 +1,16 @@
+{
+  "name": "ild",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nuit : la carte du cruising entre mecs (site d'abord), avec back office. Édition « club » sur invitation : ILD.",
+  "type": "module",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/start.mjs",
+    "seed": "node --disable-warning=ExperimentalWarning server/seed.mjs",
+    "test": "node --disable-warning=ExperimentalWarning --test tests/*.test.mjs",
+    "demo": "node --disable-warning=ExperimentalWarning tools/demo/build.mjs"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}

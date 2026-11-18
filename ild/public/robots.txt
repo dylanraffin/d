@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /photos/
+Disallow: /admin
+Disallow: /carte
