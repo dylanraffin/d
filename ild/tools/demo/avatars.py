@@ -1,99 +1,177 @@
-# Photos de démonstration : portraits dessinés, sans visage (aucune personne réelle).
-# Aplats clairs, lumière de jour : neutres chauds, gris et quelques bleus pâles. Elles tiennent la place des vraies photos.
+# Photos de démonstration : portraits de nuit à l'allure photographique, sans visage (aucune personne réelle).
+# Silhouette en contre-jour devant les lumières floues d'un bar ou d'une rue, grain : comme beaucoup de profils discrets.
+# Les visages restent dans l'ombre. Elles tiennent la place des vraies photos.
 #   python3 tools/demo/avatars.py server/seed-assets
 import random, sys
-from PIL import Image, ImageDraw, ImageFilter, ImageChops
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
 
-S = 2                      # dessin à double taille, réduit ensuite : bords nets
-W, H = 600 * S, 800 * S
-BACKGROUNDS = [(236, 239, 254), (241, 243, 250), (246, 239, 224), (234, 220, 198), (215, 222, 252), (226, 222, 214), (240, 212, 190), (203, 211, 244),
-               (232, 234, 242), (242, 232, 216), (230, 213, 190), (222, 228, 250)]
-SKINS = [(241, 201, 165), (224, 172, 134), (198, 142, 99), (168, 115, 74), (138, 90, 56), (107, 66, 38), (246, 215, 189), (212, 154, 106)]
-HAIRS = [(32, 32, 32), (59, 42, 32), (90, 61, 40), (42, 42, 42), (122, 90, 58), (176, 138, 90), (138, 138, 138)]
-SHIRTS = [(52, 57, 96), (255, 255, 255), (206, 210, 226), (84, 90, 128), (246, 239, 224), (124, 134, 182)]
+W, H = 600, 800
+YY, XX = np.mgrid[0:H, 0:W].astype(np.float32)
 
-
-def shade(color, k):
-    return tuple(max(0, min(255, int(c * k))) for c in color)
+SKINS = [(232, 190, 160), (214, 160, 122), (190, 132, 96), (160, 104, 70), (128, 82, 54), (98, 62, 42), (240, 205, 180), (205, 150, 108)]
+HAIRS = [(18, 14, 12), (34, 24, 18), (52, 36, 26), (24, 22, 22), (80, 58, 40), (120, 96, 70), (90, 90, 92)]
+CLOTHES = [(16, 16, 18), (26, 26, 30), (44, 44, 50), (120, 116, 110), (30, 36, 52), (54, 40, 34), (86, 84, 82)]
+# Lumières de nuit : ambre de bar, blanc de vitrine, bleu de néon froid, rose de club, sodium de rue.
+LIGHTS = [(255, 168, 88), (255, 226, 190), (128, 156, 255), (230, 120, 160), (255, 140, 60), (170, 190, 255)]
 
 
-def light(size, center, radius, strength):
-    """Halo clair et doux : la lumière de jour qui vient d'un côté."""
-    layer = Image.new('L', size, 0)
-    cx, cy = center
-    ImageDraw.Draw(layer).ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=int(255 * strength))
-    return layer.filter(ImageFilter.GaussianBlur(radius * 0.5))
+def blur(a, r):
+    """Flou gaussien d'un tableau 2D (0..1) via Pillow."""
+    im = Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8), 'L').filter(ImageFilter.GaussianBlur(r))
+    return np.asarray(im).astype(np.float32) / 255
+
+
+def blur_rgb(a, r):
+    im = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), 'RGB').filter(ImageFilter.GaussianBlur(r))
+    return np.asarray(im).astype(np.float32)
+
+
+def background(rng):
+    """Fond flou d'une rue ou d'un bar la nuit : dégradé sombre et disques de lumière hors champ."""
+    base_top = np.array(rng.choice([(26, 20, 18), (16, 18, 28), (22, 16, 22), (12, 14, 16), (28, 22, 16)]), np.float32)
+    base_bot = base_top * 0.35
+    t = (YY / H)[..., None]
+    img = base_top * (1 - t) + base_bot * t
+    lights = Image.new('RGB', (W, H), (0, 0, 0))
+    d = ImageDraw.Draw(lights)
+    palette = rng.sample(LIGHTS, 3)
+    for _ in range(rng.randint(10, 22)):
+        x = rng.uniform(-40, W + 40)
+        y = rng.uniform(-60, H * 0.62)
+        r = rng.uniform(14, 62)
+        c = palette[rng.randrange(3)]
+        k = rng.uniform(0.18, 0.62)
+        d.ellipse([x - r, y - r, x + r, y + r], fill=tuple(int(v * k) for v in c))
+    lights = np.asarray(lights.filter(ImageFilter.GaussianBlur(5))).astype(np.float32)
+    glow = blur_rgb(lights, 40) * 0.9
+    img = img + lights * 0.85 + glow
+    return img, palette
+
+
+def figure(rng, kind):
+    """Masques de la silhouette : corps, peau, cheveux. Épaules en pente douce, tête un peu inclinée."""
+    body = Image.new('L', (W, H), 0)
+    skin = Image.new('L', (W, H), 0)
+    hair = Image.new('L', (W, H), 0)
+    db, dh = ImageDraw.Draw(body), ImageDraw.Draw(hair)
+    cx = W / 2 + rng.uniform(-70, 70)
+    close = kind == 'closer'
+    hy = rng.uniform(300, 350) if close else rng.uniform(240, 300)
+    rx = rng.uniform(100, 114) if close else rng.uniform(80, 94)
+    ry = rx * rng.uniform(1.24, 1.34)
+    sw = rx * rng.uniform(2.3, 2.65)
+    neck = rx * rng.uniform(0.5, 0.58)
+    sy = hy + ry * 1.18
+    # Buste : cou qui s'élargit vers les trapèzes, épaules arrondies, bras qui tombent hors du cadre.
+    pts = [(cx - neck, hy + ry * 0.5), (cx - neck * 1.08, sy - 4), (cx - sw * 0.5, sy + ry * 0.14), (cx - sw * 0.8, sy + ry * 0.3),
+           (cx - sw * 0.96, sy + ry * 0.62), (cx - sw * 1.0, sy + ry * 1.1), (cx - sw * 1.02, H + 80), (cx + sw * 1.02, H + 80),
+           (cx + sw * 1.0, sy + ry * 1.1), (cx + sw * 0.96, sy + ry * 0.62), (cx + sw * 0.8, sy + ry * 0.3), (cx + sw * 0.5, sy + ry * 0.14),
+           (cx + neck * 1.08, sy - 4), (cx + neck, hy + ry * 0.5)]
+    db.polygon(pts, fill=255)
+    body = body.filter(ImageFilter.GaussianBlur(17)).point(lambda v: 255 if v > 128 else 0)
+    # Peau visible : le cou et l'encolure (col rond ou en V).
+    sk = ImageDraw.Draw(skin)
+    sk.rectangle([cx - neck, hy + ry * 0.4, cx + neck, sy + 10], fill=255)
+    if rng.random() < 0.4:
+        sk.polygon([(cx - neck * 1.3, sy - 4), (cx + neck * 1.3, sy - 4), (cx, sy + ry * 0.55)], fill=255)
+    else:
+        sk.ellipse([cx - neck * 1.35, sy - neck * 0.6, cx + neck * 1.35, sy + neck * 0.7], fill=255)
+    # Tête : un œuf (crâne plus large que le menton), oreilles discrètes, légèrement inclinée.
+    head = Image.new('L', (W, H), 0)
+    dhd = ImageDraw.Draw(head)
+    dhd.ellipse([cx - rx, hy - ry, cx + rx, hy + ry * 0.55], fill=255)
+    dhd.ellipse([cx - rx * 0.8, hy - ry * 0.2, cx + rx * 0.8, hy + ry], fill=255)
+    dhd.ellipse([cx - rx - 5, hy + 4, cx - rx + 9, hy + 34], fill=255)
+    dhd.ellipse([cx + rx - 9, hy + 4, cx + rx + 5, hy + 34], fill=255)
+    style = rng.choice(['short', 'short', 'cap', 'buzz', 'curly', 'bald', 'short'])
+    if style == 'cap':
+        dh.chord([cx - rx * 1.06, hy - ry * 1.08, cx + rx * 1.06, hy + ry * 0.12], 180, 360, fill=255)
+        side = rng.choice([-1, 1])
+        dh.ellipse([cx + side * rx * 0.25 - rx * 1.12, hy - ry * 0.5, cx + side * rx * 0.25 + rx * 1.12, hy - ry * 0.2], fill=255)
+    elif style == 'curly':
+        for _ in range(30):
+            ang = rng.uniform(np.pi * 1.02, np.pi * 1.98)
+            rr = rng.uniform(0.88, 1.04)
+            x, y = cx + np.cos(ang) * rx * rr, hy + np.sin(ang) * ry * rr
+            q = rx * rng.uniform(0.18, 0.28)
+            dh.ellipse([x - q, y - q, x + q, y + q], fill=255)
+        dh.chord([cx - rx, hy - ry, cx + rx, hy + ry * 0.05], 180, 360, fill=255)
+    elif style in ('short', 'buzz'):
+        # Ligne des cheveux arrondie, dégagée aux tempes (pas un trait droit).
+        low = 0.42 if style == 'short' else 0.2
+        dh.ellipse([cx - rx * 1.04, hy - ry * 1.08, cx + rx * 1.04, hy + ry * low], fill=255)
+        dh.ellipse([cx - rx * 0.78, hy - ry * (0.62 if style == 'short' else 0.74), cx + rx * 0.78, hy + ry * 1.2], fill=0)
+    if rng.random() < 0.5:
+        dh.ellipse([cx - rx * 0.86, hy + ry * 0.15, cx + rx * 0.86, hy + ry * 1.02], fill=255)
+        dh.ellipse([cx - rx * 0.52, hy - ry * 0.3, cx + rx * 0.52, hy + ry * 0.45], fill=0)
+    tilt = rng.uniform(-7, 7)
+    head = head.rotate(tilt, center=(cx, hy + ry * 0.6), resample=Image.BICUBIC)
+    hair = hair.rotate(tilt, center=(cx, hy + ry * 0.6), resample=Image.BICUBIC)
+    skin.paste(255, (0, 0), head)
+    m_body = np.asarray(body.filter(ImageFilter.GaussianBlur(1.4))).astype(np.float32) / 255
+    m_skin = np.asarray(skin.filter(ImageFilter.GaussianBlur(1.4))).astype(np.float32) / 255
+    m_hair = np.asarray(hair.filter(ImageFilter.GaussianBlur(2.0))).astype(np.float32) / 255
+    if style != 'cap':
+        m_hair = m_hair * m_skin
+    return m_body, m_skin, m_hair, (cx, hy, rx, ry, style)
+
+
+def shade(mask, light, rim_side):
+    """Volume approché (hauteur tirée du masque flouté) pour une lumière principale faible, et liseré net
+    du contre-jour : seuls les bords tournés vers la lumière arrière s'allument."""
+    h = blur(mask, 46) * mask
+    gy, gx = np.gradient(h)
+    n = np.stack([-gx * 26, -gy * 26, np.ones_like(h)], -1)
+    n /= np.linalg.norm(n, axis=-1, keepdims=True)
+    key = np.clip((n * np.array(light, np.float32)).sum(-1), 0, 1)
+    m2 = blur(mask, 2.2)
+    ey, ex = np.gradient(m2)
+    mag = np.sqrt(ex ** 2 + ey ** 2) + 1e-6
+    facing = np.clip((-ex * rim_side[0] - ey * rim_side[1]) / mag, 0, 1)
+    edge = np.clip(mag * 9, 0, 1) * facing
+    rim = blur(edge, 1.6) * 1.6 + blur(edge, 6) * 0.9
+    return key, np.clip(rim, 0, 1.4) * mask
 
 
 def make(seed, kind, path):
     rng = random.Random(seed)
-    bg = BACKGROUNDS[seed % len(BACKGROUNDS)]
-    skin = SKINS[(seed * 5 + 1) % len(SKINS)]
-    hair = HAIRS[(seed * 3 + 2) % len(HAIRS)]
-    shirts = [c for c in SHIRTS if sum(abs(c[i] - bg[i]) for i in range(3)) > 90]
-    shirt = shirts[(seed * 7) % len(shirts)]
-    img = Image.new('RGB', (W, H), bg)
+    img, palette = background(rng)
+    m_body, m_skin, m_hair, head = figure(rng, kind)
     side = rng.choice([-1, 1])
-    # fond : un halo plus clair d'un côté, un peu plus dense en bas
-    img = Image.composite(Image.new('RGB', (W, H), shade(bg, 1.1)), img, light((W, H), (W / 2 + side * 260 * S, 200 * S), 420 * S, 0.5))
-    img = Image.composite(Image.new('RGB', (W, H), shade(bg, 0.9)), img, light((W, H), (W / 2 - side * 220 * S, 820 * S), 380 * S, 0.45))
-
-    d = ImageDraw.Draw(img)
-    cx = W / 2 + rng.uniform(-36, 36) * S
-    close = kind == 'closer'
-    hy = (rng.uniform(300, 340) if close else rng.uniform(330, 380)) * S
-    rx = (rng.uniform(112, 126) if close else rng.uniform(92, 104)) * S
-    ry = rx * rng.uniform(1.2, 1.3)
-    sw = (rng.uniform(290, 330) if close else rng.uniform(235, 275)) * S
-    sy = hy + ry * 1.3
-    neck = rx * 0.46
-    # épaules et haut du corps
-    d.rounded_rectangle([cx - sw, sy, cx + sw, H + 260 * S], radius=int(rng.uniform(120, 170) * S), fill=shirt)
-    # encolure
-    d.ellipse([cx - neck * 1.5, sy - neck * 0.7, cx + neck * 1.5, sy + neck * 1.1], fill=skin)
-    # cou, avec l'ombre du menton
-    d.rectangle([cx - neck, hy + ry * 0.55, cx + neck, sy + neck * 0.3], fill=skin)
-    d.ellipse([cx - neck, hy + ry * 0.62, cx + neck, hy + ry * 1.22], fill=shade(skin, 0.86))
-    # oreilles, tête
-    ear = rx * 0.16
-    d.ellipse([cx - rx - ear * 0.7, hy - ear, cx - rx + ear * 1.2, hy + ear * 1.6], fill=shade(skin, 0.94))
-    d.ellipse([cx + rx - ear * 1.2, hy - ear, cx + rx + ear * 0.7, hy + ear * 1.6], fill=shade(skin, 0.94))
-    d.ellipse([cx - rx, hy - ry, cx + rx, hy + ry], fill=skin)
-    head = Image.new('L', (W, H), 0)
-    ImageDraw.Draw(head).ellipse([cx - rx, hy - ry, cx + rx, hy + ry], fill=255)
-    # barbe : le bas du visage, dans la couleur des cheveux
-    style = rng.choice(['short', 'short', 'cap', 'buzz', 'bald'])
-    if rng.random() < 0.45:
-        beard = Image.new('L', (W, H), 0)
-        bd = ImageDraw.Draw(beard)
-        bd.ellipse([cx - rx * 1.04, hy + ry * 0.08, cx + rx * 1.04, hy + ry * 1.5], fill=255)
-        bd.ellipse([cx - rx * 0.62, hy - ry * 0.3, cx + rx * 0.62, hy + ry * 0.5], fill=0)
-        img.paste(Image.new('RGB', (W, H), hair if style != 'bald' else shade(hair, 1.25)), (0, 0), ImageChops.multiply(beard, head))
-        d = ImageDraw.Draw(img)
-    # cheveux
-    if style != 'bald':
-        cap = Image.new('L', (W, H), 0)
-        cd = ImageDraw.Draw(cap)
-        depth = {'short': 0.42, 'cap': 0.56, 'buzz': 0.34}[style]
-        over = {'short': 1.07, 'cap': 1.1, 'buzz': 1.0}[style]
-        cd.ellipse([cx - rx * over, hy - ry * (over + 0.06), cx + rx * over, hy + ry * 0.9], fill=255)
-        cd.rectangle([0, hy - ry * depth, W, H], fill=0)
-        if style != 'buzz':   # la ligne des cheveux n'est pas droite : une mèche d'un côté
-            cd.ellipse([cx + side * rx * 0.05 - rx * 0.75, hy - ry * (depth + 0.38), cx + side * rx * 0.05 + rx * 0.75, hy - ry * (depth - 0.2)], fill=255)
-            cd.ellipse([cx - side * rx * 0.55 - rx * 0.5, hy - ry * (depth + 0.05), cx - side * rx * 0.55 + rx * 0.5, hy - ry * (depth - 0.34)], fill=0)
-        color = hair if style != 'buzz' else tuple(int(hair[i] * 0.55 + skin[i] * 0.45) for i in range(3))
-        img.paste(Image.new('RGB', (W, H), color), (0, 0), cap)
-    # lumière sur la silhouette, du même côté que celle du fond
-    img = Image.composite(Image.new('RGB', (W, H), (255, 255, 255)), img, light((W, H), (cx + side * rx * 0.9, hy - ry * 0.2), rx * 1.5, 0.16))
-    img = Image.composite(Image.new('RGB', (W, H), (34, 38, 75)), img, light((W, H), (cx - side * sw * 0.8, sy + 360 * S), 300 * S, 0.08))
-    img = img.resize((450, 600), Image.LANCZOS)
-    grain = Image.effect_noise((450, 600), 9).convert('RGB')
-    img = Image.blend(img, ImageChops.overlay(img, grain), 0.22)
-    img.save(path, 'JPEG', quality=86)
+    key_col = np.array(rng.choice([palette[0], (255, 196, 150), (255, 214, 180)]), np.float32) / 255
+    rim_col = np.array(rng.choice(palette[1:]), np.float32) / 255
+    key_dir = np.array([side * 0.8, -0.3, 0.22], np.float32)
+    key_dir /= np.linalg.norm(key_dir)
+    rim_side = (-side * 0.92, -0.38)
+    mask = np.clip(m_body + m_skin, 0, 1)
+    key, rim = shade(mask, key_dir, rim_side)
+    skin_col = np.array(SKINS[rng.randrange(len(SKINS))], np.float32)
+    cloth_col = np.array(CLOTHES[rng.randrange(len(CLOTHES))], np.float32)
+    hair_col = np.array(HAIRS[rng.randrange(len(HAIRS))], np.float32)
+    albedo = cloth_col * (1 - m_skin[..., None]) + skin_col * m_skin[..., None]
+    albedo = albedo * (1 - m_hair[..., None]) + hair_col * m_hair[..., None]
+    # Contre-jour : le visage reste sombre, la lumière principale est faible et rasante.
+    key_strength = rng.uniform(0.16, 0.34)
+    lit = albedo * (0.05 + key_strength * key[..., None] ** 1.4 * key_col * 1.6)
+    lit += rim[..., None] * rim_col * 255 * rng.uniform(0.7, 0.95) * (0.6 + 0.4 * albedo / 255)
+    fig = np.clip(lit, 0, 255)
+    fig = blur_rgb(fig, 0.9)
+    out = img * (1 - mask[..., None]) + fig * mask[..., None]
+    # Halo de lumière autour du contour (diffusion de l'objectif).
+    bloom = blur_rgb(np.clip(out - 150, 0, 255), 18) * 0.55
+    out = out + bloom
+    # Vignette, grain, courbe de film.
+    r = np.sqrt(((XX - W / 2) / (W * 0.62)) ** 2 + ((YY - H * 0.45) / (H * 0.62)) ** 2)
+    out *= np.clip(1.15 - r * 0.55, 0.35, 1)[..., None]
+    out += np.random.default_rng(seed).normal(0, 7.5, (H, W, 1)).astype(np.float32)
+    out = 255 * (1 - np.exp(-np.clip(out, 0, None) / 205)) / (1 - np.exp(-255 / 205))
+    out = out * 0.94 + np.array([10, 9, 12], np.float32)
+    Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), 'RGB').resize((450, 600), Image.LANCZOS).save(path, 'JPEG', quality=86)
 
 
 out = sys.argv[1]
-kinds = ['portrait', 'closer', 'portrait', 'portrait', 'closer']
+kinds = ['portrait', 'closer', 'portrait', 'closer', 'portrait']
 for i in range(1, 41):
     make(100 + i * 7, kinds[i % len(kinds)], f'{out}/profile-{i:02d}.jpg')
 for i in range(1, 7):

@@ -146,12 +146,12 @@ writeFileSync(join(OUT, 'carte.html'), `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#b3bffc">
+<meta name="theme-color" content="#0d0d0f">
 <meta name="robots" content="noindex">
 <meta name="site-home" content="index.html">
 <title>${meta.brand.name} · démo</title>
 <link rel="icon" href="live/icons/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&amp;family=DM+Sans:opsz,wght@9..40,400..700&amp;display=swap">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="app/app.css">
 <link rel="stylesheet" href="live/live.css">
@@ -181,7 +181,7 @@ const demoBar = (text, cta) => `<div class="demo-bar" role="note"><span>${text}<
 writeFileSync(join(OUT, 'index.html'), `<title>Démo ${meta.brand.name}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 ${pick(/<meta name="description"[^>]*>/)}
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&amp;family=DM+Sans:opsz,wght@9..40,400..700&amp;display=swap">
 <link rel="stylesheet" href="live/site.css">
 <link rel="stylesheet" href="demo/demo.css">
 ${demoBar("<b>Démo cliquable.</b> Profils, messages et lieux fictifs. Rien n'est enregistré ni envoyé.", 'Ouvrir la carte')}

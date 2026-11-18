@@ -1,79 +1,77 @@
 /* Nuit : la carte du cruising. Téléphone : carte plein écran. Grand écran : liste à gauche, carte à droite.
-   Style « heure bleue » : carte claire et pâle, photos cerclées de blanc, bleu pour qui est dispo, bleu nuit pour tout le reste. */
+   Style « nuit adulte » : carte sombre et neutre, photos cerclées d'ivoire, bleu lune pour qui est dispo. */
 
 .live-screen { position: relative; height: calc(100vh - 72px); height: calc(100dvh - 72px); overflow: hidden; }
 .live-side { display: none; }
 .live-stage { position: absolute; inset: 0; }
-.live-map { position: absolute; inset: 0; background: #ececec; }
-.live-map.leaflet-container { background: #ececec; }
-/* Tuiles standard passées en gris clair : seuls les visages et le bleu portent la couleur. */
-.live-map .leaflet-tile-pane { filter: grayscale(1) contrast(0.8) brightness(1.12); }
+.live-map { position: absolute; inset: 0; background: #17171a; }
+.live-map.leaflet-container { background: #17171a; }
+/* Tuiles standard passées en gris anthracite neutre : seuls les visages et le bleu lune portent la couleur. */
+.live-map .leaflet-tile-pane { filter: invert(1) grayscale(1) brightness(0.72) contrast(0.95); }
 
-/* Bandeau du haut (téléphone) : le bleu en pleine largeur, comme l'en-tête du grand écran. */
+/* Bandeau du haut (téléphone) : noir, un filet en dessous, le nom en capitales espacées. */
 .live-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 500; display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  min-height: 56px; padding: 8px 12px 8px 16px; background: var(--accent); }
-.live-brand { font-weight: 700; font-size: 28px; line-height: 1; letter-spacing: 0.01em; color: var(--on-accent); }
-.live-bar .icon-btn { background: #fff; }
-/* Sur le bandeau : filtre éteint en blanc, filtre actif en bleu nuit. */
-.live-bar .small-chip:not([aria-pressed="true"]) { background: #fff; border-color: #fff; }
+  min-height: 56px; padding: 8px 12px 8px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.live-brand { font-size: 17px; line-height: 1; color: var(--text); }
+.live-bar .icon-btn { background: var(--raised); }
 .live-actions { position: absolute; left: 12px; right: 72px; bottom: 30px; z-index: 500; display: flex; gap: 10px; align-items: center; pointer-events: none; }
 .live-actions > * { pointer-events: auto; }
 .live-info { position: absolute; left: 12px; top: 66px; z-index: 450; max-width: calc(100% - 24px); margin: 0; padding: 4px 10px; border-radius: 9px;
-  background: rgba(255, 255, 255, 0.9); font-size: 13px; line-height: 1.3; color: var(--text-2); text-align: left; pointer-events: none; }
+  background: rgba(13, 13, 15, 0.82); font-size: 13px; line-height: 1.3; color: var(--text-2); text-align: left; pointer-events: none; }
 .live-info:empty { display: none; }
 .trip-banner ~ .live-info { top: 126px; }
 .live-consent-wrap { position: absolute; inset: 72px 12px auto; z-index: 500; max-width: 460px; margin: 0 auto; }
 /* Commandes de la carte : colonne à droite */
 .live-tools { position: absolute; right: 12px; bottom: 34px; z-index: 500; display: flex; flex-direction: column; gap: 10px; }
-.live-tools .icon-btn { width: 48px; height: 48px; border-radius: 16px; background: #fff; box-shadow: var(--shadow); }
+.live-tools .icon-btn { width: 48px; height: 48px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .live-tools .icon-btn.on { background: var(--accent-mark); color: var(--on-accent-mark); }
 .trip-banner { position: absolute; top: 68px; left: 12px; right: 12px; z-index: 500; display: flex; align-items: center; gap: 10px; max-width: 520px; margin: 0 auto;
-  padding: 10px 10px 10px 16px; border-radius: 16px; background: var(--text); color: #fff; font-size: 14px; box-shadow: var(--shadow); }
-.trip-banner .btn { min-height: 36px; padding: 0 14px; font-size: 14px; background: #fff; }
+  padding: 8px 8px 8px 18px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--text); font-size: 14px; box-shadow: var(--shadow); }
+.trip-banner .btn { min-height: 36px; padding: 0 14px; font-size: 14px; background: var(--raised-2); }
 
 .small-chip { min-height: 38px; font-size: 14px; }
-.presence-btn { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 22px; border-radius: 16px; border: 2px solid var(--text);
-  background: var(--text); color: #fff; font-weight: 600; font-size: 16px; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; }
+.presence-btn { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 24px; border-radius: 999px; border: 1px solid var(--text);
+  background: var(--text); color: var(--on-text); font-weight: 600; font-size: 16px; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap; }
 .presence-btn.on { background: var(--accent); border-color: var(--accent-mark); color: var(--on-accent); }
 .presence-btn.flat { box-shadow: none; width: 100%; justify-content: center; }
 .live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--control); flex-shrink: 0; display: inline-block; }
 /* Dispo : un point bleu soutenu, avec un halo blanc quand il est posé sur le pastel. */
 .list .live-dot, .people .live-dot { background: var(--accent-mark); }
-.presence-btn .live-dot { background: #9a9fbd; }
-.presence-btn.on .live-dot, .live-presence .live-dot { background: var(--accent-mark); box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.65); }
+.presence-btn .live-dot { background: #8d8b92; }
+.presence-btn.on .live-dot, .live-presence .live-dot { background: var(--on-accent); box-shadow: 0 0 0 4px rgba(13, 13, 15, 0.16); }
 .notice.live-presence { background: var(--accent); color: var(--on-accent); font-weight: 500; }
 
 /* Points de la carte : les photos en « carré arrondi », la signature de Nuit. */
-.pin { position: relative; width: 46px; height: 46px; padding: 0; border: 3px solid #fff; border-radius: 30%; background: var(--raised-2); color: var(--text);
+.pin { position: relative; width: 46px; height: 46px; padding: 0; border: 2.5px solid var(--ring); border-radius: 30%; background: var(--raised-2); color: var(--text);
   display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; cursor: pointer;
-  box-shadow: 0 0 0 1px rgba(34, 38, 75, 0.22), var(--shadow); transition: transform 0.12s ease; }
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55); transition: transform 0.12s ease; }
 .pin .face { width: 100%; height: 100%; border-radius: 26%; overflow: hidden; display: flex; align-items: center; justify-content: center; }
 .pin img { width: 100%; height: 100%; object-fit: cover; }
 .pin:hover { transform: scale(1.06); z-index: 6; }
-.pin.on { border: 4px solid var(--accent-mark); box-shadow: 0 0 0 1.5px #fff, var(--shadow); }
+.pin.on { border: 3.5px solid var(--accent-mark); box-shadow: 0 0 0 4px rgba(178, 191, 240, 0.22), 0 6px 18px rgba(0, 0, 0, 0.55); }
 .pin.hot { transform: scale(1.14); z-index: 7; box-shadow: 0 0 0 2.5px var(--text), var(--shadow); }
-.pin .tag { position: absolute; right: -5px; bottom: -5px; width: 26px; height: 26px; border-radius: 1000px; background: #fff; border: 1.5px solid var(--text); color: var(--text);
+.pin .tag { position: absolute; right: -5px; bottom: -5px; width: 26px; height: 26px; border-radius: 1000px; background: var(--surface); border: 1.5px solid var(--ring); color: var(--text);
   display: flex; align-items: center; justify-content: center; }
-.pin .tag.host { background: var(--accent-mark); border-color: #fff; color: var(--on-accent-mark); }
+.pin .tag.host { background: var(--accent-mark); border-color: var(--bg); color: var(--on-accent-mark); }
 .pin .tag.trip { right: auto; left: -5px; }
-.pin .tag.role { right: -7px; bottom: auto; top: -6px; width: auto; min-width: 24px; height: 22px; padding: 0 6px; background: var(--text); color: #fff; font: 700 13px/1 var(--font); }
-.pin .now { position: absolute; top: -4px; left: -4px; width: 15px; height: 15px; border-radius: 50%; background: var(--accent-mark); border: 2.5px solid #fff; }
+.pin .tag.role { right: -7px; bottom: auto; top: -6px; width: auto; min-width: 24px; height: 22px; padding: 0 6px; background: var(--text); color: var(--on-text); border-color: var(--bg); font: 700 13px/1 var(--font); }
+.pin .now { position: absolute; top: -4px; left: -4px; width: 15px; height: 15px; border-radius: 50%; background: var(--accent-mark); border: 2.5px solid var(--bg); }
 .pin.small { border-width: 2px; font-size: 15px; }
 .pin.small.on { border-width: 3px; }
 .pin.small .tag { width: 20px; height: 20px; }
 .pin.small .tag.role { display: none; }
 /* Zone : des membres comptés sans point à eux. Lieu : un établissement vérifié. Plan : un plan à plusieurs. */
-.zone-count { width: 48px; height: 48px; border-radius: 50%; border: 3px solid #fff; background: var(--accent-mark); color: var(--on-accent-mark); font-weight: 700; font-size: 17px; cursor: pointer; box-shadow: var(--shadow); }
-.spot-pin { position: relative; width: 40px; height: 40px; border-radius: 12px; border: 2px solid var(--text); background: #fff; color: var(--text);
+.zone-count { width: 48px; height: 48px; border-radius: 50%; border: 3px solid var(--bg); background: var(--accent-mark); color: var(--on-accent-mark); font-weight: 700; font-size: 17px; cursor: pointer; box-shadow: var(--shadow); }
+.spot-pin { position: relative; width: 40px; height: 40px; border-radius: 12px; border: 1.5px solid var(--ring); background: var(--surface); color: var(--text);
   font-weight: 700; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); }
-.plan-pin { position: relative; width: 48px; height: 48px; border-radius: 50%; border: 3px solid #fff; background: var(--text); color: #fff; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 1px rgba(34, 38, 75, 0.22), var(--shadow); }
-.plan-pin.on { border-color: var(--accent-mark); box-shadow: 0 0 0 1.5px #fff, var(--shadow); }
-.spot-pin b, .plan-pin b { position: absolute; top: -8px; right: -8px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 1000px; background: var(--accent-mark); border: 1.5px solid #fff;
+.plan-pin { position: relative; width: 48px; height: 48px; border-radius: 50%; border: 3px solid var(--bg); background: var(--text); color: var(--on-text); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55); }
+.plan-pin.on { border-color: var(--accent-mark); box-shadow: 0 0 0 4px rgba(178, 191, 240, 0.22), 0 6px 18px rgba(0, 0, 0, 0.55); }
+.spot-pin b, .plan-pin b { position: absolute; top: -8px; right: -8px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 1000px; background: var(--accent-mark); border: 1.5px solid var(--bg);
   color: var(--on-accent-mark); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .people .plan-pin, .people .spot-pin { box-shadow: none; flex-shrink: 0; }
 .people .plan-pin { border-width: 0; width: 44px; height: 44px; }
-.chip.plan { background: var(--text); color: #fff; }
+.chip.plan { background: var(--text); color: var(--on-text); }
 .chip.live-chip { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 
 .cell-btn { border: none; background: none; padding: 0; text-align: left; cursor: pointer; font: inherit; }
@@ -100,23 +98,23 @@
 .person-head .avatar.xl { width: 72px; height: 72px; border-radius: 30%; font-size: 26px; }
 .person-name { font-weight: 700; font-size: 24px; letter-spacing: 0.015em; }
 .say { display: flex; gap: 8px; align-items: center; }
-.say input { flex: 1; min-width: 0; min-height: 52px; border-radius: 16px; border: 1.5px solid var(--field); background: #fff; padding: 0 18px; font-size: 16px; outline: none; }
+.say input { flex: 1; min-width: 0; min-height: 52px; border-radius: 999px; border: 1px solid var(--field); background: var(--bg); padding: 0 18px; font-size: 16px; outline: none; }
 .say input:focus-visible { border-color: var(--accent-mark); box-shadow: 0 0 0 3px var(--accent-soft); }
-.say .icon-btn { width: 52px; height: 52px; border-radius: 16px; }
+.say .icon-btn { width: 52px; height: 52px; }
 .live-profile { height: 46vh; }
 
 .sheet:has(.person-cover) { padding-top: 0; }
-.sheet:has(.person-cover) .grab { position: absolute; top: 8px; left: 50%; margin-left: -18px; z-index: 3; background: rgba(255, 255, 255, 0.75); }
-.person-cover { position: relative; flex-shrink: 0; margin: 0 -16px; height: 340px; background: var(--accent-soft); overflow: hidden; border-radius: 24px 24px 0 0; }
+.sheet:has(.person-cover) .grab { position: absolute; top: 8px; left: 50%; margin-left: -18px; z-index: 3; background: rgba(241, 239, 233, 0.7); }
+.person-cover { position: relative; flex-shrink: 0; margin: 0 -16px; height: 360px; background: var(--raised-2); overflow: hidden; border-radius: 20px 20px 0 0; }
 .person-cover img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; display: block; }
 .person-cover .initial { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 700 150px/1 var(--font); color: var(--accent-mark); opacity: 0.25; }
 .person-cover .cover-text { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 4px; padding: 90px 76px 18px 18px;
-  background: linear-gradient(to top, rgba(34, 38, 75, 0.86), rgba(34, 38, 75, 0)); color: #fff; }
-.person-cover .person-name { font-size: 30px; line-height: 1.1; color: #fff; }
+  background: linear-gradient(to top, rgba(13, 13, 15, 0.92), rgba(13, 13, 15, 0)); color: #fff; }
+.person-cover .person-name { font-family: var(--display); font-weight: 600; font-size: 36px; line-height: 1.05; letter-spacing: 0; color: #fff; }
 .person-cover .cover-text .small { font-size: 15px; color: rgba(255, 255, 255, 0.92); }
 .person-cover.empty .cover-text { background: none; }
 .person-cover.empty .person-name, .person-cover.empty .cover-text .small { color: var(--text); }
-.person-cover .icon-btn { position: absolute; right: 16px; bottom: 16px; width: 48px; height: 48px; border-radius: 16px; background: #fff; color: var(--text); box-shadow: var(--shadow); }
+.person-cover .icon-btn { position: absolute; right: 16px; bottom: 16px; width: 48px; height: 48px; background: rgba(13, 13, 15, 0.6); border: 1px solid rgba(241, 239, 233, 0.3); color: #fff; backdrop-filter: blur(8px); }
 .person-cover .icon-btn.on { background: var(--accent); color: var(--on-accent); }
 
 @media (min-width: 900px) {
@@ -131,5 +129,5 @@
   .live-consent-wrap { inset: 24px auto auto 24px; }
   .side-head .icon-btn { border-radius: 16px; }
   .person-cover { margin: 0 -22px; height: 420px; border-radius: 0; }
-  .sheet:has(.person-cover) .sheet-close { background: #fff; box-shadow: var(--shadow); }
+  .sheet:has(.person-cover) .sheet-close { background: rgba(13, 13, 15, 0.6); color: #fff; backdrop-filter: blur(8px); }
 }
